@@ -62,7 +62,7 @@ Lua means @Q{moon} in Portuguese and is pronounced LOO-ah.
 
 
 @C{-------------------------------------------------------------------------}
-@section{The Language}@label{language}
+@label{language: @section{The Language}}
 
 This section describes the lexis, the syntax, and the semantics of Lua.
 In other words,
@@ -80,7 +80,7 @@ keywords are shown in @bf{bold},
 and other terminal symbols are shown in @T{typewriter} font,
 enclosed in single quotes.
 
-@subsection{Lexical Conventions} @label{lexical}
+@label{lexical: @subsection{Lexical Conventions}}
 
 @IndexEmph{Identifiers} in Lua can be any string of letters,
 digits, and underscores,
@@ -187,7 +187,7 @@ This facility allows the use of Lua as a script interpreter
 in Unix systems @see{lua-sa}.
 
 
-@subsection{@Index{Values and Types}} @label{TypesSec}
+@label{TypesSec: @subsection{@Index{Values and Types}}}
 
 Lua is a @emph{dynamically typed language}.
 That means that
@@ -269,7 +269,7 @@ The library function @verb{type} returns a string describing the type
 of a given value @see{pdf-type}.
 
 
-@subsubsection{Coercion} @label{coercion}
+@label{coercion: @subsubsection{Coercion}}
 
 Lua provides automatic conversion between
 string and number values at run time.
@@ -281,7 +281,7 @@ For complete control of how numbers are converted to strings,
 use the @verb{format} function from the string library @see{format}.
 
 
-@subsection{Variables}@label{variables}
+@label{variables: @subsection{Variables}}
 
 Variables are places that store values.
 @C{In Lua, variables are given by simple identifiers or by table fields.}
@@ -347,9 +347,11 @@ which in turn is equivalent to
        gettable_event(_env, "x")
 }
 where @verb{_env} is the environment of the running function.
+(The @verb{_env} variable is not defined in Lua.
+We use it here only for explanatory purposes.)
 
 
-@subsection{Statements}@label{stats}
+@label{stats: @subsection{Statements}}
 
 Lua supports an almost conventional set of @Index{statements},
 similar to those in Pascal or C.
@@ -357,7 +359,7 @@ This set includes
 assignment, control structures, procedure calls,
 table constructors, and variable declarations.
 
-@subsubsection{Chunks}@label{chunks}
+@label{chunks: @subsubsection{Chunks}}
 
 The unit of execution of Lua is called a @Def{chunk}.
 A chunk is simply a sequence of statements,
@@ -402,7 +404,7 @@ of another block @see{control}.
 @IndexKW{do}
 
 
-@subsubsection{@Index{Assignment}} @label{assignment}
+@label{assignment: @subsubsection{@Index{Assignment}}}
 
 Lua allows @Index{multiple assignment}.
 Therefore, the syntax for assignment
@@ -461,9 +463,11 @@ which in turn is equivalent to
        settable_event(_env, "x", val)
 }
 where @verb{_env} is the environment of the running function.
+(The @verb{_env} variable is not defined in Lua.
+We use it here only for explanatory purposes.)
 
 
-@subsubsection{Control Structures}@label{control}
+@label{control: @subsubsection{Control Structures}}
 The control structures
 @rwd{if}, @rwd{while}, and @rwd{repeat} have the usual meaning and
 familiar syntax:
@@ -487,7 +491,6 @@ All values different from @nil{} and @False{} are considered true
 
 The @rwd{return} statement is used to return values
 from a function or from a chunk.@IndexKW{return}
-@label{return}
 @index{return statement}
 Functions and chunks may return more than one value,
 so the syntax for the @rwd{return} statement is
@@ -517,7 +520,7 @@ their (inner) blocks.
 In practice,
 those idioms are only used during debugging.
 
-@subsubsection{For Statement} @label{for}@index{for statement}
+@label{for: @subsubsection{For Statement}}@index{for statement}
 
 The @rwd{for} statement has two forms:
 one numeric and one generic.
@@ -607,7 +610,7 @@ then assign them to other variables before breaking or exiting the loop.
 }
 
 
-@subsubsection{Function Calls as Statements} @label{funcstat}
+@label{funcstat: @subsubsection{Function Calls as Statements}}
 To allow possible side-effects,
 function calls can be executed as statements:
 @Produc{
@@ -616,7 +619,7 @@ function calls can be executed as statements:
 In this case, all returned values are thrown away.
 Function calls are explained in @See{functioncall}.
 
-@subsubsection{Local Declarations} @label{localvar}
+@label{localvar: @subsubsection{Local Declarations}}
 @Index{Local variables} may be declared anywhere inside a block.
 The declaration may include an initial assignment:@IndexKW{local}
 @Produc{
@@ -634,7 +637,7 @@ Such local variables die when the chunk ends.
 The visibility rules for local variables are explained in @See{visibility}.
 
 
-@subsection{@Index{Expressions}}@label{expressions}
+@label{expressions: @subsection{@Index{Expressions}}}
 
 @C{@subsubsection{@Index{Basic Expressions}}}
 The basic expressions in Lua are the following:
@@ -680,7 +683,7 @@ The standard mathematical library defines function @verb{__pow},
 giving the expected meaning to @Index{exponentiation}
 @see{mathlib}.
 
-@subsubsection{Relational Operators}@label{rel-ops}
+@label{rel-ops: @subsubsection{Relational Operators}}
 The @Index{relational operators} in Lua are
 @verbatim{
        ==    ~=    <     >     <=    >=
@@ -750,7 +753,7 @@ For example,
        10 and 20           -> 20
 }
 
-@subsubsection{Concatenation} @label{concat}
+@label{concat: @subsubsection{Concatenation}}
 The string @Index{concatenation} operator in Lua is
 denoted by two dots (@Char{..}).
 If both operands are strings or numbers, then they are converted to
@@ -775,7 +778,7 @@ The concatenation (@Char{..}) and exponentiation (@Char{^})
 operators are right associative.
 All other binary operators are left associative.
 
-@subsubsection{Table Constructors} @label{tableconstructor}
+@label{tableconstructor: @subsubsection{Table Constructors}}
 Table @Index{constructors} are expressions that create tables.
 Every time a constructor is evaluated, a new table is created.
 Constructors can be used to create empty tables,
@@ -827,7 +830,7 @@ The field list may have an optional trailing separator,
 as a convenience for machine-generated code.
 
 
-@subsubsection{Function Calls}  @label{functioncall}
+@label{functioncall: @subsubsection{Function Calls}}
 A @Index{function call} in Lua has the following syntax:
 @Produc{
 @producname{functioncall}@producbody{prefixexp args}
@@ -867,7 +870,7 @@ A call of the form @verb{f'...'}
 the argument list is a single literal string.
 
 Because a function can return any number of results
-@see{return},
+@see{control},
 the number of results must be adjusted before they are used.
 If the function is called as a statement @see{funcstat},
 then its return list is adjusted to zero elements,
@@ -937,7 +940,7 @@ So, all the following examples are not tails calls:
   return x or f(x)     -- results adjusted to 1
 }
 
-@subsubsection{@Index{Function Definitions}} @label{func-def}
+@label{func-def: @subsubsection{@Index{Function Definitions}}}
 
 The syntax for function definition is@IndexKW{function}
 @Produc{
@@ -1003,10 +1006,9 @@ indicated by three dots (@Char{...}) at the end of its parameter list.
 A vararg function does not adjust its argument list;
 instead, it collects all extra arguments into an implicit parameter,
 called @IndexLIB{arg}.
-The value of @verb{arg} is a table,
+The value of @label{vararg: @verb{arg}} is a table,
 with a field@Nb{}@verb{n} that holds the number of extra arguments
 and with the extra arguments at positions 1,@Nb{}2,@Nb{}@ldots{},@Nb{}@verb{n}.
-@label{vararg}
 
 As an example, consider the following definitions:
 @verbatim{
@@ -1030,7 +1032,7 @@ Then, we have the following mapping from arguments to parameters:
        g(5, r())        a=5, b=1,   arg={2, 3; n=2}
 }
 
-Results are returned using the @rwd{return} statement @see{return}.
+Results are returned using the @rwd{return} statement @see{control}.
 If control reaches the end of a function
 without encountering a @rwd{return} statement,
 then the function returns with no results.
@@ -1048,7 +1050,7 @@ is syntactic sugar for
 }
 
 
-@subsection{Visibility Rules} @label{visibility}
+@label{visibility: @subsection{Visibility Rules}}
 @index{visibility}
 
 Lua is a lexically scoped language.
@@ -1105,7 +1107,7 @@ The loop creates ten closures
 Each of these closures uses a different @verb{y} variable,
 while all of them share the same @verb{x}.
 
-@subsection{Error Handling} @label{error}
+@label{error: @subsection{Error Handling}}
 
 Because Lua is an extension language,
 all Lua actions start from C@Nb{}code in the host program
@@ -1121,7 +1123,7 @@ If you need to catch errors in Lua,
 you can use the @verb{pcall} function @see{pdf-pcall}.
 
 
-@subsection{Metatables} @label{metatable}
+@label{metatable: @subsection{Metatables}}
 
 Every table and userdata object in Lua may have a @emph{metatable}.
 This @IndexEmph{metatable} is an ordinary Lua table
@@ -1438,7 +1440,7 @@ called when Lua calls a value.
 }
 
 
-@subsection{Garbage Collection}@label{GC}
+@label{GC: @subsection{Garbage Collection}}
 
 Lua does automatic memory management.
 That means that
@@ -1502,7 +1504,7 @@ That is, the first finalizer to be called is the one associated
 with the userdata created last in the program.
 
 
-@subsubsection{Weak Tables}@label{weak-table}
+@label{weak-table: @subsubsection{Weak Tables}}
 
 A @IndexEmph{weak table} is a table whose elements are
 @IndexEmph{weak references}.
@@ -1532,7 +1534,7 @@ metatable is undefined.
 
 
 
-@subsection{Coroutines}@label{coroutine}
+@label{coroutine: @subsection{Coroutines}}
 
 Lua supports coroutines,
 also called @emph{semi-coroutines}
@@ -1633,7 +1635,7 @@ main    false   cannot resume dead coroutine
 
 
 @C{-------------------------------------------------------------------------}
-@section{The Application Program Interface}@label{API}
+@label{API: @section{The Application Program Interface}}
 @index{C API}
 
 This section describes the C API for Lua, that is,
@@ -1649,7 +1651,7 @@ All such macros use each of its arguments exactly once
 and so do not generate hidden side-effects.
 
 
-@subsection{States} @label{mangstate}
+@label{mangstate: @subsection{States}}
 
 The Lua library is fully reentrant:
 it has no global variables.
@@ -1894,7 +1896,7 @@ are equivalent to their counterparts in Lua @see{rel-ops}.
 without metamethods.
 These functions return 0 (false) if any of the indices are non-valid.
 
-@subsection{Getting Values from the Stack}@label{lua-to}
+@label{lua-to: @subsection{Getting Values from the Stack}}
 
 To translate a value in the stack to a specific C@Nb{}type,
 you can use the following conversion functions:
@@ -1959,7 +1961,7 @@ The type @verb{lua_CFunction} is explained in @See{LuacallC}.
 @verb{lua_touserdata} is explained in @See{userdata}.
 
 
-@subsection{Pushing Values onto the Stack}
+@label{pushing: @subsection{Pushing Values onto the Stack}}
 
 The API has the following functions to
 push C@Nb{}values onto the stack:
@@ -1975,7 +1977,7 @@ push C@Nb{}values onto the stack:
 
 @DefAPI{lua_pushnumber}@DefAPI{lua_pushlstring}@DefAPI{lua_pushstring}
 @DefAPI{lua_pushcfunction}@DefAPI{lua_pushlightuserdata}@DefAPI{lua_pushboolean}
-@DefAPI{lua_pushnil}@label{pushing}
+@DefAPI{lua_pushnil}
 These functions receive a C@Nb{}value,
 convert it to a corresponding Lua value,
 and push the result onto the stack.
@@ -2025,7 +2027,7 @@ Concatenation is done following the usual semantics of Lua
 @see{concat}.
 
 
-@subsection{Controlling Garbage Collection}@label{GC-API}
+@label{GC-API: @subsection{Controlling Garbage Collection}}
 
 Lua uses two numbers to control its garbage collection:
 the @emph{count} and the @emph{threshold} @see{GC}.
@@ -2059,7 +2061,7 @@ After the collection,
 a new threshold is set according to the previous rule.
 
 
-@subsection{Userdata}@label{userdata}
+@label{userdata: @subsection{Userdata}}
 
 Userdata represents C values in Lua.
 Lua supports two types of userdata:
@@ -2256,7 +2258,7 @@ unless you know that the key is actually a string.
 Recall that @verb{lua_tostring} @emph{changes} the value at the given index;
 this confuses the next call to @verb{lua_next}.
 
-@subsection{Manipulating Environments} @label{globals}
+@label{globals: @subsection{Manipulating Environments}}
 
 All global variables are kept in ordinary Lua tables,
 called environments.
@@ -2363,7 +2365,7 @@ that provide higher level access to Lua.
 See the source code of the standard libraries for examples.)
 
 
-@subsection{Protected Calls}@label{lua_pcall}
+@label{lua_pcall: @subsection{Protected Calls}}
 
 When you call a function with @verb{lua_call},
 any error inside the called function is propagated upwards
@@ -2411,7 +2413,7 @@ error while running the error handler function.
 }
 
 
-@subsection{Defining C Functions} @label{LuacallC}
+@label{LuacallC: @subsection{Defining C Functions}}
 
 Lua can be extended with functions written in@Nb{}C.
 These functions must be of type @verb{lua_CFunction},
@@ -2479,7 +2481,7 @@ the C@Nb{}function @verb{foo} above may be registered in Lua as
        lua_register(L, "average", foo);
 }
 
-@subsection{Defining C Closures} @label{c-closure}
+@label{c-closure: @subsection{Defining C Closures}}
 
 When a C@Nb{}function is created,
 it is possible to associate some values with it,
@@ -2515,7 +2517,7 @@ see the standard libraries in the official Lua distribution
 (@verb{src/lib/*.c}).
 
 
-@subsection{Registry} @label{registry}
+@label{registry: @subsection{Registry}}
 
 Lua provides a registry,
 a pre-defined table that can be used by any C@Nb{}code to
@@ -2654,7 +2656,7 @@ that are passed as results to @verb{lua_resume}.
 
 
 @C{-------------------------------------------------------------------------}
-@section{The Debug Interface} @label{debugI}
+@label{debugI: @section{The Debug Interface}}
 
 Lua has no built-in debugging facilities.
 Instead, it offers a special interface
@@ -2862,7 +2864,7 @@ local variables and upvalues for a function at a given level of the stack:
 }
 
 
-@subsection{Hooks}@label{sub-hooks}
+@label{sub-hooks: @subsection{Hooks}}
 
 Lua offers a mechanism of hooks, which are
 user-defined C functions that are called during the program execution.
@@ -2939,7 +2941,7 @@ that execution occurs without any calls to hooks.
 
 
 @C{-------------------------------------------------------------------------}
-@section{Standard Libraries}@label{libraries}
+@label{libraries: @section{Standard Libraries}}
 
 The standard libraries provide useful functions
 that are implemented directly through the C API.
@@ -2983,7 +2985,7 @@ These functions are declared in @verb{lualib.h}.
 @DefAPI{luaopen_debug}
 
 
-@subsection{Basic Functions} @label{predefined}
+@label{predefined: @subsection{Basic Functions}}
 
 The basic library provides some core functions to Lua.
 If you do not include this library in your application,
@@ -3015,8 +3017,8 @@ Returns any value returned by the chunk.
 In case of errors, @verb{dofile} propagates the error
 to its caller (that is, it does not run in protected mode).
 
-@Sectiondef{@T{error (message [, level])}}
-@DefLIB{error}@label{pdf-error}
+@label{pdf-error: @Sectiondef{@T{error (message [, level])}}}
+@DefLIB{error}
 Terminates the last protected function called,
 and returns @verb{message} as the error message.
 Function @verb{error} never returns.
@@ -3048,8 +3050,8 @@ The default for @verb{f} is 1.
 if the environment has a @verb{"__globals"} field,
 returns the associated value, instead of the environment.
 
-@Sectiondef{@T{getmetatable (object)}}
-@DefLIB{getmetatable}@label{pdf-getmetatable}
+@label{pdf-getmetatable: @Sectiondef{@T{getmetatable (object)}}}
+@DefLIB{getmetatable}
 
 If the object does not have a metatable, returns @nil{}.
 Otherwise,
@@ -3146,8 +3148,8 @@ so that the construction
 }
 will iterate over all key@En{}value pairs of table @verb{t}.
 
-@Sectiondef{@T{pcall (f, arg1, arg2, @ldots{})}}@DefLIB{pcall}
-@label{pdf-pcall}
+@label{pdf-pcall: @Sectiondef{@T{pcall (f, arg1, arg2, @ldots{})}}}@DefLIB{pcall}
+
 Calls function @verb{f} with
 the given arguments in protected mode.
 That means that any error inside @verb{f} is not propagated;
@@ -3237,8 +3239,8 @@ While running a file,
 with the package name.
 The package being loaded always runs within the global environment.
 
-@Sectiondef{@T{setfenv (f, table)}}@DefLIB{setfenv}
-@label{setfenv}
+@label{setfenv: @Sectiondef{@T{setfenv (f, table)}}}@DefLIB{setfenv}
+
 Sets the current environment to be used by the given function.
 @verb{f} can be a Lua function or a number,
 which specifies the function at that stack level:
@@ -3284,7 +3286,7 @@ If the metatable of @verb{e} has a @verb{"__tostring"} field,
 with @verb{e} as argument,
 and uses the result of the call as its result.
 
-@Sectiondef{@T{type (v)}}@DefLIB{type}@label{pdf-type}
+@label{pdf-type: @Sectiondef{@T{type (v)}}}@DefLIB{type}
 Returns the type of its only argument, coded as a string.
 The possible results of this function are
 @verb{"nil"} (a string, not the value @nil{}),
@@ -3477,8 +3479,8 @@ lowercase letters changed to uppercase.
 All other characters are left unchanged.
 The definition of what is a lowercase letter depends on the current locale.
 
-@Sectiondef{@T{string.format (formatstring, e1, e2, @ldots{})}}
-@DefLIB{string.format}@label{format}
+@label{format: @Sectiondef{@T{string.format (formatstring, e1, e2, @ldots{})}}}
+@DefLIB{string.format}
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the @verb{printf} family of
@@ -3596,7 +3598,7 @@ Here are some examples:
 }
 
 
-@subsubsectionX{Patterns} @label{pm}
+@label{pm: @subsubsectionX{Patterns}}
 
 @paragraph{Character Class:}
 a @Def{character class} is used to represent a set of characters.
@@ -3773,7 +3775,7 @@ If @verb{f} returns a non-@nil{} value,
 then the loop is broken and this value is returned
 as the result of @verb{foreachi}.
 
-@Sectiondef{@T{table.getn (table)}}@DefLIB{table.getn}@label{getn}
+@label{getn: @Sectiondef{@T{table.getn (table)}}}@DefLIB{table.getn}
 Returns the size of a table, when seen as a list.
 If the table has an @verb{n} field with a numeric value,
 this value is the size of the table.
@@ -3831,7 +3833,7 @@ Otherwise, it updates an internal state
 so that subsequent calls to @verb{table.getn(table)} return @verb{n}.
 
 
-@subsection{Mathematical Functions} @label{mathlib}
+@label{mathlib: @subsection{Mathematical Functions}}
 
 This library is an interface to most of the functions of the
 standard C@Nb{}math library.
@@ -3887,7 +3889,7 @@ for the pseudo-random generator:
 Equal seeds produce equal sequences of numbers.
 
 
-@subsection{Input and Output Facilities} @label{libio}
+@label{libio: @subsection{Input and Output Facilities}}
 
 The I/O library provides two different styles for file manipulation.
 The first one uses implicit file descriptors,
@@ -4083,7 +4085,7 @@ To write other values,
 use @verb{tostring} or @verb{string.format} before @verb{write}.
 
 
-@subsection{Operating System Facilities} @label{libiosys}
+@label{libiosys: @subsection{Operating System Facilities}}
 
 This library is implemented through table @IndexLIB{os}.
 
@@ -4338,7 +4340,7 @@ better error messages.
 
 
 @C{-------------------------------------------------------------------------}
-@section{@Index{Lua Stand-alone}} @label{lua-sa}
+@label{lua-sa: @section{@Index{Lua Stand-alone}}}
 
 Although Lua has been designed as an extension language,
 to be embedded in a host C@Nb{}program,
@@ -4578,7 +4580,7 @@ Use @verb{lua_newuserdata} or @verb{lua_pushlightuserdata} instead.
 
 @C{[===============================================================}
 @newpage{}
-@sectionX{The Complete Syntax of Lua} @label{BNF}
+@label{BNF: @sectionX{The Complete Syntax of Lua}}
 @Addcontentsline{The Complete Syntax of Lua}
 
 
