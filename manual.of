@@ -1907,11 +1907,12 @@ you can use the following conversion functions:
        size_t         lua_strlen      (lua_State *L, int index);
        lua_CFunction  lua_tocfunction (lua_State *L, int index);
        void          *lua_touserdata  (lua_State *L, int index);
-       lua_State     *lua_totrhead    (lua_State *L, int index);
+       lua_State     *lua_tothread    (lua_State *L, int index);
+       void          *lua_topointer   (lua_State *L, int index);
 }
 @DefAPI{lua_tonumber}@DefAPI{lua_tostring}@DefAPI{lua_strlen}
 @DefAPI{lua_tocfunction}@DefAPI{lua_touserdata}@DefAPI{lua_toboolean}
-@DefAPI{lua_tothread}
+@DefAPI{lua_tothread}@DefAPI{lua_topointer}
 These functions can be called with any acceptable index.
 When called with a non-valid index,
 they act as if the given value had an incorrect type.
@@ -1957,6 +1958,20 @@ then you should duplicate it or put it into the registry @see{registry}.
 This value must be a C@Nb{}function;
 otherwise, @verb{lua_tocfunction} returns @verb{NULL}.
 The type @verb{lua_CFunction} is explained in @See{LuacallC}.
+
+@verb{lua_tothread} converts a value in the stack to a Lua thread
+(represented as @verb{lua_State *}).
+This value must be a thread;
+otherwise, @verb{lua_tothread} returns @verb{NULL}.
+
+@verb{lua_topointer} converts a value in the stack to a generic
+C pointer (@verb{void *}).
+The value may be a userdata, a table, a thread, or a function;
+otherwise, @verb{lua_topointer} returns @verb{NULL}.
+Lua ensures that different objects of the
+same type return different pointers.
+There is no direct way to convert the pointer back to its original value.
+Typically this function is used for debug information.
 
 @verb{lua_touserdata} is explained in @See{userdata}.
 
@@ -2116,13 +2131,13 @@ of an object:
        int lua_setmetatable (lua_State *L, int index);
 }
 @DefAPI{lua_getmetatable}@DefAPI{lua_setmetatable}
-Both get at @verb{index} a valid index for an object in the stack.
-@verb{lua_getmetatable} pushes on the stack the metatable of that object;
-@verb{lua_setmetatable} sets the table on the top of the stack as the
-new metatable for that object (and pops the table).
-
-If the object does not have a metatable,
+@verb{lua_getmetatable} pushes on the stack the metatable of a given object.
+If the index is not valid,
+or if the object does not have a metatable,
 @verb{lua_getmetatable} returns 0 and pushes nothing on the stack.
+
+@verb{lua_setmetatable} pops a table from the stack and
+sets it as the new metatable for the given object.
 @verb{lua_setmetatable} returns 0 when it cannot
 set the metatable of the given object
 (that is, when the object is not a userdata nor a table);
@@ -2652,7 +2667,14 @@ the running coroutine suspends its execution,
 and the call to @verb{lua_resume} that started this coroutine returns.
 The parameter @verb{nresults} is the number of values from the stack
 that are passed as results to @verb{lua_resume}.
->>>
+
+To exchange values between different threads,
+you may use @IndexAPI{lua_xmove}:
+@verbatim{
+       void lua_xmove (lua_State *from, lua_State *to, int n);
+}
+It pops @verb{n} values from the stack @verb{from},
+and puhses them into the stack @verb{to}.
 
 
 @C{-------------------------------------------------------------------------}
@@ -3043,7 +3065,7 @@ Returns the current environment in use by the function.
 which specifies the function at that stack level:
 Level 1 is the function calling @verb{getfenv}.
 If the given function is not a Lua function,
-of if @verb{f} is 0,
+or if @verb{f} is 0,
 @verb{getfenv} returns the global environment.
 The default for @verb{f} is 1.
 
@@ -3819,7 +3841,7 @@ shifting down other elements to close the space, if necessary.
 Returns the value of the removed element.
 The default value for @verb{pos} is @verb{n},
 where @verb{n} is the size of the table @see{getn},
-so that a call @verb{tremove(t)} removes the last element
+so that a call @verb{table.remove(t)} removes the last element
 of table @verb{t}.
 This function also updates the size of the table by
 calling @verb{table.setn(table, n-1)}.
