@@ -5,7 +5,7 @@
 Lua is an extension programming language designed to support
 general procedural programming with data description
 facilities.
-It also offers good suport for object-oriented programming,
+It also offers good support for object-oriented programming,
 functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, light-weight
 configuration language for any program that needs one.
@@ -22,7 +22,7 @@ Through the use of C@Nb{}functions, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
 
-The Lua distribuition includes a stand-alone embedding program,
+The Lua distribution includes a stand-alone embedding program,
 @verb{lua}, that uses the Lua library to offer a complete Lua interpreter.
 
 Lua is free software,
@@ -97,8 +97,7 @@ and cannot be used as identifiers:
        and       break     do        else      elseif
        end       false     for       function  if
        in        local     nil       not       or
-       repeat    return    then      true      until
-       while
+       repeat    return    then      true      until     while
 }
 
 Lua is a case-sensitive language:
@@ -439,7 +438,7 @@ Thus the code
 }
 sets @verb{a[3]} to 20, without affecting @verb{a[4]}
 because the @verb{i} in @verb{a[i]} is evaluated (to 3)
-before it is assigned 4.
+before it is assigned@Nb{}4.
 Similarly, the line
 @verbatim{
        x, y = y, x
@@ -500,7 +499,7 @@ so the syntax for the @rwd{return} statement is
 
 The @rwd{break} statement can be used to terminate the execution of a
 @rwd{while}, @rwd{repeat}, or @rwd{for} loop,
-skiping to the next statement after the loop:@IndexKW{break}
+skipping to the next statement after the loop:@IndexKW{break}
 @index{break statement}
 @Produc{
 @producname{stat}@producbody{@rwd{break}}
@@ -773,7 +772,7 @@ from lower to higher priority:
        not   - (unary)
        ^
 }
-As usual, you can use parentheses to change the precedences of an expression.
+You can use parentheses to change the precedences of an expression.
 The concatenation (@Char{..}) and exponentiation (@Char{^})
 operators are right associative.
 All other binary operators are left associative.
@@ -935,7 +934,7 @@ So, all the following examples are not tails calls:
 @verbatim{
   return (f(x))        -- results adjusted to 1
   return 2 * f(x)
-  return x, f(x)       -- adicional results
+  return x, f(x)       -- additional results
   f(x); return         -- results discarded
   return x or f(x)     -- results adjusted to 1
 }
@@ -1308,7 +1307,7 @@ and the same metamethod for the selected operation.
 The @Q{eq} event is defined as follows:
 @verbatim{
  function eq_event (op1, op2)
-   if type(op1) ~= type(op2) then  -- diferent types?
+   if type(op1) ~= type(op2) then  -- different types?
      return false   -- different objects
    end
    if op1 == op2 then   -- primitive equal?
@@ -1522,7 +1521,7 @@ In any case, if either the key or the value is collected,
 the whole pair is removed from the table.
 The weakness of a table is controlled by the value of the
 @verb{__mode} field of its metatable.
-If the @verb{__mode} field is a string containing the character @Char{k},
+If the @verb{__mode} field is a string containing the character@Nb{}@Char{k},
 the keys in the table are weak.
 If @verb{__mode} contains @Char{v},
 the values in the table are weak.
@@ -1552,7 +1551,8 @@ returns a handle to it (an object of type @emph{thread});
 it does not start the coroutine execution.
 
 When you first call @IndexVerb{coroutine.resume},
-passing as argument the thread returned by @verb{coroutine.create},
+passing as its first argument
+the thread returned by @verb{coroutine.create},
 the coroutine starts its execution,
 at the first line of its main function.
 Extra arguments passed to @verb{coroutine.resume} are given as
@@ -1698,8 +1698,8 @@ Whenever Lua calls C, the called function gets a new stack,
 which is independent of previous stacks and of stacks of
 C functions that are still active.
 That stack initially contains any arguments to the C function,
-and it is where the C function pushes its results @see{LuacallC}
-to be returned to the caller.
+and it is where the C function pushes its results
+to be returned to the caller @see{LuacallC}.
 
 For convenience,
 most query operations in the API do not follow a strict stack discipline.
@@ -1743,7 +1743,7 @@ if the stack is already larger than the new size,
 it is left unchanged.
 
 Whenever Lua calls C, @DefAPI{LUA_MINSTACK}
-it ensures that at least @verb{LUA_MINSTACK} positions are available.
+it ensures that at least @verb{LUA_MINSTACK} stack positions are available.
 @verb{LUA_MINSTACK} is defined in @verb{lua.h} as 20,
 so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
@@ -2006,8 +2006,7 @@ which accepts an explicit size.
 You can also push @Q{formatted} strings:
 @verbatim{
        const char *lua_pushfstring  (lua_State *L, const char *fmt, ...);
-       const char *lua_pushvfstring (lua_State *L, const char *fmt,
-                                                   va_list argp);
+       const char *lua_pushvfstring (lua_State *L, const char *fmt, va_list argp);
 }
 @DefAPI{lua_pushfstring}@DefAPI{lua_pushvfstring}
 These functions push onto the stack a formatted string
@@ -2035,7 +2034,7 @@ The function
 @DefAPI{lua_concat}
 concatenates the @verb{n} values at the top of the stack,
 pops them, and leaves the result at the top.
-If @verb{n} is 1, the result is that single string
+If @verb{n}@Nb{}is@Nb{}1, the result is that single string
 (that is, the function does nothing);
 if @verb{n} is 0, the result is the empty string.
 Concatenation is done following the usual semantics of Lua
@@ -2055,7 +2054,7 @@ and the threshold  is set to twice the count value.
 You can access the current values of these two numbers through the
 following functions:
 @verbatim{
-       int  lua_getgccount (lua_State *L);
+       int  lua_getgccount     (lua_State *L);
        int  lua_getgcthreshold (lua_State *L);
 }
 @DefAPI{lua_getgcthreshold} @DefAPI{lua_getgccount}
@@ -2170,9 +2169,9 @@ Otherwise, it pushes an error message.
 @verb{lua_load} automatically detects whether the chunk is text or binary,
 and loads it accordingly (see program @IndexVerb{luac}).
 
-@verb{lua_load} uses an user-supplied @emph{reader} function to read the chunk.
-Everytime it needs another piece of the chunk,
-it calls the reader,
+@verb{lua_load} uses a user-supplied @emph{reader} function to read the chunk.
+Every time it needs another piece of the chunk,
+@verb{lua_load} calls the reader,
 passing along its @verb{data} parameter.
 The reader must return a pointer to a block of memory
 with a new piece of the chunk
@@ -2558,19 +2557,19 @@ When Lua faces any error
 (such as memory allocation errors, type errors, syntax errors)
 it @emph{raises} an error, that is, it does a long jump.
 A @emph{protected environment} uses @verb{setjmp}
-to set a recover point,
-and any error jumps to the most recent active recover point.
+to set a recover point;
+any error jumps to the most recent active recover point.
 
 If an error happens outside any protected environment,
-Lua calls a @IndexEmph{panic function},
+Lua calls a @IndexEmph{panic function}
 and then calls @verb{exit(EXIT_FAILURE)}.
 You can change the panic function with
 @verbatim{
        lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
 }
 Your new panic function may avoid the application exit by
-never returning (e.g. doing a long jump).
-Nevertheless, the corresponding Lua will not be consistent;
+never returning (e.g., doing a long jump).
+Nevertheless, the corresponding Lua state will not be consistent;
 the only safe operation with it is to close it.
 
 Almost any function in the API may raise an error,
@@ -2594,7 +2593,7 @@ In case of errors,
 @see{lua_pcall},
 plus the error object on the top of the stack;
 otherwise, it returns zero, and does not change the stack.
-Any value returned by @verb{func} is dicarded.
+Any value returned by @verb{func} is discarded.
 
 C code can generate a Lua error calling the function
 @verbatim{
@@ -2639,7 +2638,7 @@ To manipulate threads as coroutines,
 Lua offers the following functions:
 @verbatim{
        int lua_resume (lua_State *L, int narg);
-       int lua_yield (lua_State *L, int nresults);
+       int lua_yield  (lua_State *L, int nresults);
 }
 @DefAPI{lua_resume}@DefAPI{lua_yield}
 To start a coroutine, you first create a new thread;
@@ -2649,7 +2648,7 @@ with @verb{narg} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
 When it returns, the stack contains all values passed to @verb{lua_yield},
 or all values returned by the body function.
-@verb{lua_resume} returns 0 if there is no errors running the coroutine,
+@verb{lua_resume} returns 0 if there are no errors running the coroutine,
 or an error code @see{lua_pcall}.
 In case of errors,
 the stack contains only the error message.
@@ -2699,7 +2698,7 @@ an identification of the @emph{activation record}
 of the function executing at a given level.
 Level@Nb{}0 is the current running function,
 whereas level @Math{n+1} is the function that has called level @Math{n}.
-When there is no errors, @verb{lua_getstack} returns 1;
+When there are no errors, @verb{lua_getstack} returns 1;
 when called with a level greater than the stack depth,
 it returns 0.
 
@@ -3041,7 +3040,7 @@ to its caller (that is, it does not run in protected mode).
 
 @label{pdf-error: @Sectiondef{@T{error (message [, level])}}}
 @DefLIB{error}
-Terminates the last protected function called,
+Terminates the last protected function called
 and returns @verb{message} as the error message.
 Function @verb{error} never returns.
 
@@ -3069,7 +3068,7 @@ or if @verb{f} is 0,
 @verb{getfenv} returns the global environment.
 The default for @verb{f} is 1.
 
-if the environment has a @verb{"__fenv"} field,
+If the environment has a @verb{"__fenv"} field,
 returns the associated value, instead of the environment.
 
 @label{pdf-getmetatable: @Sectiondef{@T{getmetatable (object)}}}
@@ -3174,7 +3173,7 @@ will iterate over all key@En{}value pairs of table @verb{t}.
 
 Calls function @verb{f} with
 the given arguments in protected mode.
-That means that any error inside @verb{f} is not propagated;
+That means that any error inside@Nb{}@verb{f} is not propagated;
 instead, @verb{pcall} catches the error
 and returns a status code.
 Its first result is the status code (a boolean),
@@ -3358,7 +3357,7 @@ In case of any error,
 @subsection{Coroutine Manipulation}
 
 The operations related to coroutines comprise a sub-library of
-the basic library, and come inside the table @DefAPI{coroutine}.
+the basic library and come inside the table @DefAPI{coroutine}.
 See @See{coroutine} for a general description of coroutines.
 
 @Sectiondef{@T{coroutine.create (f)}}@DefLIB{coroutine.create}
@@ -3623,7 +3622,7 @@ Here are some examples:
 @label{pm: @subsubsectionX{Patterns}}
 
 @paragraph{Character Class:}
-a @Def{character class} is used to represent a set of characters.
+A @Def{character class} is used to represent a set of characters.
 The following combinations are allowed in describing a character class:
 @description{
 @item{@emph{x}} (where @emph{x} is not one of the magic characters
@@ -3679,7 +3678,7 @@ In particular, the class @verb{[a-z]} may not be equivalent to @verb{%l}.
 The second form should be preferred for portability.
 
 @paragraph{Pattern Item:}
-a @Def{pattern item} may be
+A @Def{pattern item} may be
 @itemize{
 @item{} 
 a single character class,
@@ -3716,7 +3715,7 @@ balanced parentheses.
 }
 
 @paragraph{Pattern:}
-a @Def{pattern} is a sequence of pattern items.
+A @Def{pattern} is a sequence of pattern items.
 A @Char{^} at the beginning of a pattern anchors the match at the
 beginning of the subject string.
 A @Char{$} at the end of a pattern anchors the match at the
@@ -4133,7 +4132,7 @@ if @verb{format} is @verb{*t},
 then @verb{date} returns a table with the following fields:
 @verb{year} (four digits), @verb{month} (1--12), @verb{day} (1--31),
 @verb{hour} (0--23), @verb{min} (0--59), @verb{sec} (0--61),
-@verb{wday} (weekday, Sunday is 1),
+@verb{wday} (weekday, Sunday is@Nb{}1),
 @verb{yday} (day of the year),
 and @verb{isdst} (daylight saving flag, a boolean).
 
@@ -4501,7 +4500,7 @@ Stephan Herrmann,
 Steve Dekorte,
 Thatcher Ulrich,
 Tomás Gorham,
-Vincent Penquerc'h,
+Vincent Penquerc'h.
 Thank you!
 
 
@@ -4653,13 +4652,13 @@ Use @verb{lua_newuserdata} or @verb{lua_pushlightuserdata} instead.
 
 @producname{exp}@producbody{
 	@rwd{nil}
-	@rwd{false}
-	@rwd{true}
+@Or{}	@rwd{false}
+@Or{}	@rwd{true}
 @Or{}	@Nter{Number}
-@OrNL{}	@Nter{Literal}
-@Or{}	function
+@Or{}	@Nter{Literal}
+@OrNL{}	function
 @Or{}	prefixexp
-@OrNL{}	tableconstructor
+@Or{}	tableconstructor
 @Or{}	exp binop exp
 @Or{}	unop exp
 }
