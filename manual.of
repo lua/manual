@@ -1,3 +1,4 @@
+TODO: rever abstract
 
 @C{-------------------------------------------------------------------------}
 @section{Introduction}
@@ -51,263 +52,10 @@ The evolution of an extension language: a history of Lua,
 
 Lua means @Q{moon} in Portuguese.
 
-@C{-------------------------------------------------------------------------}
-@section{Lua Concepts}@label{concepts}
 
-This section describes the main concepts of Lua as a language.
-The syntax and semantics of Lua are described in @See{language}.
-The discussion below is not purely conceptual;
-it includes references to the C@Nb{}API @see{API},
-because Lua is designed to be embedded in host programs.
-It also includes references to the standard libraries @see{libraries}.
+@subsection{State and Chunks}
 
 
-@subsection{Environment and Chunks}
-
-All statements in Lua are executed in a @Def{global environment}.
-This environment is initialized with a call from the embedding program to
-@verb{lua_open} and
-persists until a call to @verb{lua_close}
-or the end of the embedding program.
-The host program can create multiple independent global
-environments, and freely switch among them @see{mangstate}.
-
-The unit of execution of Lua is called a @Def{chunk}.
-A chunk is simply a sequence of statements.
-Statements are described in @See{stats}.
-
-A chunk may be stored in a file or in a string inside the host program.
-When a chunk is executed, first it is pre-compiled into opcodes for
-a virtual machine,
-and then the compiled statements are executed
-by an interpreter for the virtual machine.
-All modifications that a chunk makes to the global environment persist
-after the chunk ends.
-
-Chunks may also be pre-compiled into binary form and stored in files;
-see program @IndexVerb{luac} for details.
-Programs in source and compiled forms are interchangeable;
-Lua automatically detects the file type and acts accordingly.
-@index{pre-compilation}
-
-
-@subsection{Table of Globals} @label{global-table}
-
-????
-
-@subsection{@Index{Values and Types}} @label{TypesSec}
-
-Lua is a @emph{dynamically typed language}.
-That means that
-variables do not have types; only values do.
-There are no type definitions in the language.
-All values carry their own type.
-
-There are eight @Index{basic types} in Lua:
-@Def{nil}, @Def{boolean}, @Def{number},
-@Def{string}, @Def{function}, @Def{userdata}, @Def{thread}, and @Def{table}.
-@emph{Nil} is the type of the value @nil{},
-whose main property is to be different from any other value;
-usually it represents the absence of a useful value.
-@emph{Boolean} is the type of the values @False{} and @True{}.
-In Lua, both @nil{} and @False{} make a condition false,
-and any other value makes it true.
-@emph{Number} represents real (double-precision floating-point) numbers.
-(It is not difficult to build Lua interpreters that use other
-internal representations for numbers,
-such as single-precision float or long integers.)
-@emph{String} represents arrays of characters.
-@index{eight-bit clean}
-Lua is 8-bit clean,
-so strings may contain any 8-bit character,
-including embedded zeros (@verb{'\0'}) @see{lexical}.
-
-Functions are @emph{first-class values} in Lua.
-That means that functions can be stored in variables,
-passed as arguments to other functions, and returned as results.
-Lua can call (and manipulate) functions written in Lua and
-functions written in C
-@see{functioncall}.
-
-The type @emph{userdata} is provided to allow arbitrary C data to
-be stored in Lua variables.
-This type corresponds to a block of raw memory
-and has no pre-defined operations in Lua,
-except assignment and identity test.
-However, by using @emph{metatables},
-the programmer can define operations for userdata values
-@see{metatable}.
-Userdata values cannot be created or modified in Lua,
-only through the C@Nb{}API.
-This guarantees the integrity of data owned by the host program.
-
-The type @Def{thread} represents independent threads of execution,
-and it is used to implement coroutines.
-(This is an experimental area; it needs more documentation,
-and is subject to changes in the future.)
-
-The type @emph{table} implements @Index{associative arrays},
-that is, @Index{arrays} that can be indexed not only with numbers,
-but with any value (except @nil{}).
-Moreover,
-tables can be @emph{heterogeneous},
-that is, they can contain values of all types (except @nil{}).
-Tables are the sole data structuring mechanism in Lua;
-they may be used to represent not only ordinary arrays,
-but also symbol tables, sets, records, graphs, trees, etc.
-To represent @Index{records}, Lua uses the field name as an index.
-The language supports this representation by
-providing @verb{a.name} as syntactic sugar for @verb{a["name"]}.
-There are several convenient ways to create tables in Lua
-@see{tableconstructor}.
-
-Like indices, the value of a table field can be of any type.
-In particular,
-because functions are first class values,
-table fields may contain functions.
-Thus tables may also carry @emph{methods} @see{func-def}.
-
-Tables, functions, and userdata values are @emph{objects}:
-variables do not actually @emph{contain} these values,
-only @emph{references} to them.
-Assignment, parameter passing, and function returns
-always manipulate references to these values,
-and do not imply any kind of copy.
-
-The library function @verb{type} returns a string describing the type
-of a given value @see{pdf-type}.
-
-
-@subsubsection{Metatables}
-
-Each table and userdata object in Lua may have a @Index{metatable}.
-
-You can change several aspects of the behavior
-of an object by setting specific fields in its metatable.
-For instance, when an object is the operand of an addition,
-Lua checks for a function in the field @verb{"__add"} in its metatable.
-If it finds one,
-Lua calls that function to perform the addition.
-
-We call the keys in a metatable @Index{events},
-and the values @Index{metamethods}.
-In the previous example, @verb{"add"} is the event,
-and the function is the metamethod that performs the addition.
-
-A metatable controls how an object behaves in arithmetic operations,
-order comparisons, concatenation, and indexing.
-A metatable can also define a function to be called when a userdata
-is garbage collected.
-@See{metatable} gives a detailed description of which events you
-can control with metatables.
-
-You can query and change the metatable of an object
-through the @verb{setmetatable} and @verb{getmetatable}
-functions @see{pdf-getmetatable}.
-
-
-
-@subsection{Coercion} @label{coercion}
-
-Lua provides automatic conversion between
-string and number values at run time.
-Any arithmetic operation applied to a string tries to convert
-that string to a number, following the usual rules.
-Conversely, whenever a number is used where a string is expected,
-the number is converted to a string, in a reasonable format.
-The format is chosen so that
-a conversion from number to string then back to number
-reproduces the original number @emph{exactly}.
-For complete control of how numbers are converted to strings,
-use the @verb{format} function @see{format}.
-
-
-@subsection{Variables}
-
-There are two kinds of variables in Lua:
-global variables
-and local variables.
-Variables are assumed to be global unless explicitly declared local
-@see{localvar}.
-Before the first assignment to a variable, its value is @nil{}.
-
-All global variables live as fields in ordinary Lua tables.
-Usually, globals live in a table called @Index{table of globals}.
-However, a function can individually change its global table,
-so that all global variables in that function will refer to that table.
-This mechanism allows the creation of @Index{namespaces} and other
-modularization facilities.
-
-@Index{Local variables} are lexically scoped.
-Therefore, local variables can be freely accessed by functions
-defined inside their scope @see{visibility}.
-
-
-@subsection{Garbage Collection}@label{GC}
-
-Lua does automatic memory management.
-That means that
-you do not have to worry about allocating memory for new objects
-and freeing it when the objects are no longer needed.
-Lua manages memory automatically by running
-a @Index{garbage collector} from time to time
-and
-collecting all dead objects
-(all objects that are no longer accessible from Lua).
-All objects in Lua are subject to automatic management:
-tables, userdata, functions, and strings.
-
-Using the C@Nb{}API,
-you can set garbage-collector metamethods for userdata @see{metatable}.
-When it is about to free a userdata,
-Lua calls the metamethod associated with event @verb{gc} in the
-userdata's metatable.
-Using such facility, you can coordinate Lua's garbage collection
-with external resource management
-(such as closing files, network or database connections,
-or freeing your own memory).
-
-Lua uses two numbers to control its garbage-collection cycles.
-One number counts how many bytes of dynamic memory Lua is using,
-and the other is a threshold.
-When the number of bytes crosses the threshold,
-Lua runs the garbage collector,
-which reclaims the memory of all dead objects.
-The byte counter is adjusted,
-and then the threshold is reset to twice the new value of the byte counter.
-
-Through the C@Nb{}API, you can query those numbers,
-and change the threshold @see{GC-API}.
-Setting the threshold to zero actually forces an immediate
-garbage-collection cycle,
-while setting it to a huge number effectively stops the garbage collector.
-Using Lua code you have a more limited control over garbage-collection cycles,
-through the functions @verb{gcinfo} and @verb{collectgarbage}
-@see{predefined}.
-
-
-@subsubsection{Weak Tables}@label{weak-table}
-
-A @IndexEmph{weak table} is a table whose elements are
-@IndexEmph{weak references}.
-A weak reference is ignored by the garbage collector.
-In other words,
-if the only references to an object are weak references,
-then the garbage collector will collect that object.
-
-A weak table can have weak keys, weak values, or both.
-A table with weak keys allows the collection of its keys,
-but prevents the collection of its values.
-A table with both weak keys and weak values allows the collection of
-both keys and values.
-In any case, if either the key or the value is collected,
-the whole pair is removed from the table.
-The weakness of a table is controlled by the value of the
-@verb{__mode} field of its metatable.
-If the @verb{__mode} field is a string containing the character @verb{k},
-the keys in the table are weak.
-If @verb{__mode} contains @verb{v},
-the values in the table are weak.
 
 
 @C{-------------------------------------------------------------------------}
@@ -390,9 +138,6 @@ and do not interpret escape sequences.
 For convenience,
 when the opening @verb{[[} is immediately followed by a newline,
 the newline is not included in the string.  @C{ ]]}
-That form is specially convenient for
-writing strings that contain program pieces or
-other quoted strings.
 As an example, in a system using ASCII
 (in which @Sq{@verb{a}} is coded as@Nb{}97,
 newline is coded as@Nb{}10, and @Sq{@verb{1}} is coded as@Nb{}49),
@@ -418,9 +163,9 @@ Examples of valid numerical constants are
 double hyphen (@verb{--});
 If the text immediately after @verb{--} is different from @verb{[[},
 the comment is a short comment,
-that runs until the end of the line.
+which runs until the end of the line.
 Otherwise, it is a long comment,
-that runs until the corresponding @verb{]]}.
+which runs until the corresponding @verb{]]}.
 Long comments may run for several lines,
 and may contain nested @verb{[[} @Mathdots{} @verb{]]} pairs.
 For convenience,
@@ -429,23 +174,131 @@ This facility allows the use of Lua as a script interpreter
 in Unix systems @see{lua-sa}.
 
 
+@subsection{@Index{Values and Types}} @label{TypesSec}
+
+Lua is a @emph{dynamically typed language}.
+That means that
+variables do not have types; only values do.
+There are no type definitions in the language.
+All values carry their own type.
+
+There are eight @Index{basic types} in Lua:
+@Def{nil}, @Def{boolean}, @Def{number},
+@Def{string}, @Def{function}, @Def{userdata}, @Def{thread}, and @Def{table}.
+@emph{Nil} is the type of the value @nil{},
+whose main property is to be different from any other value;
+usually it represents the absence of a useful value.
+@emph{Boolean} is the type of the values @False{} and @True{}.
+In Lua, both @nil{} and @False{} make a condition false,
+and any other value makes it true.
+@emph{Number} represents real (double-precision floating-point) numbers.
+(It is not difficult to build Lua interpreters that use other
+internal representations for numbers,
+such as single-precision float or long integers.)
+@emph{String} represents arrays of characters.
+@index{eight-bit clean}
+Lua is 8-bit clean,
+so strings may contain any 8-bit character,
+including embedded zeros (@verb{'\0'}) @see{lexical}.
+
+Functions are @emph{first-class values} in Lua.
+That means that functions can be stored in variables,
+passed as arguments to other functions, and returned as results.
+Lua can call (and manipulate) functions written in Lua and
+functions written in C
+@see{functioncall}.
+
+The type @emph{userdata} is provided to allow arbitrary C data to
+be stored in Lua variables.
+This type corresponds to a block of raw memory
+and has no pre-defined operations in Lua,
+except assignment and identity test.
+However, by using @emph{metatables},
+the programmer can define operations for userdata values
+@see{metatable}.
+Userdata values cannot be created or modified in Lua,
+only through the C@Nb{}API.
+This guarantees the integrity of data owned by the host program.
+
+The type @Def{thread} represents independent threads of execution,
+and it is used to implement coroutines.
+(This is an experimental area; it needs more documentation,
+and is subject to changes in the future.)
+
+The type @emph{table} implements @Index{associative arrays},
+that is, @Index{arrays} that can be indexed not only with numbers,
+but with any value (except @nil{}).
+Moreover,
+tables can be @emph{heterogeneous},
+that is, they can contain values of all types (except @nil{}).
+Tables are the sole data structuring mechanism in Lua;
+they may be used to represent not only ordinary arrays,
+but also symbol tables, sets, records, graphs, trees, etc.
+To represent @Index{records}, Lua uses the field name as an index.
+The language supports this representation by
+providing @verb{a.name} as syntactic sugar for @verb{a["name"]}.
+There are several convenient ways to create tables in Lua
+@see{tableconstructor}.
+
+Like indices,
+the value of a table field can be of any type (except @nil{}).
+In particular,
+because functions are first class values,
+table fields may contain functions.
+Thus tables may also carry @emph{methods} @see{func-def}.
+
+Tables, functions, and userdata values are @emph{objects}:
+variables do not actually @emph{contain} these values,
+only @emph{references} to them.
+Assignment, parameter passing, and function returns
+always manipulate references to these values,
+and do not imply any kind of copy.
+
+The library function @verb{type} returns a string describing the type
+of a given value @see{pdf-type}.
+
+
+@subsubsection{Coercion} @label{coercion}
+
+Lua provides automatic conversion between
+string and number values at run time.
+Any arithmetic operation applied to a string tries to convert
+that string to a number, following the usual rules.
+Conversely, whenever a number is used where a string is expected,
+the number is converted to a string, in a reasonable format.
+For complete control of how numbers are converted to strings,
+use the @verb{format} function @see{format}.
+
+
 @subsection{Variables}@label{variables}
 
 Variables are places that store values.
 @C{In Lua, variables are given by simple identifiers or by table fields.}
+There are three kinds of variables in Lua:
+global variables, local variables, and table fields.
 
-A single name can denote a global variable, a local variable,
-or a formal parameter in a function
-(formal parameters are just local variables):
+A single name can denote a global variable or a local variable
+(or a formal parameter of a function,
+which is a particular form of local variable):
 @Produc{
 @producname{var}@producbody{@Nter{Name}}
 }
+Variables are assumed to be global unless explicitly declared local
+@see{localvar}.
+@Index{Local variables} are lexically scoped.
+Therefore, local variables can be freely accessed by functions
+defined inside their scope @see{visibility}.
+
+Before the first assignment to a variable, its value is @nil{}.
+
 Square brackets are used to index a table:
 @Produc{
 @producname{var}@producbody{prefixexp @ter{[} exp @ter{]}}
 }
 The first expression should result in a table value,
 and the second expression identifies a specific entry inside that table.
+The expression denoting the table to be indexed has a restricted syntax;
+see @See{expressions} for details.
 
 The syntax @verb{var.NAME} is just syntactic sugar for
 @verb{var["NAME"]}:
@@ -453,27 +306,34 @@ The syntax @verb{var.NAME} is just syntactic sugar for
 @producname{var}@producbody{prefixexp @ter{.} @Nter{Name}}
 }
 
-The expression denoting the table to be indexed has a restricted syntax;
-see @See{expressions} for details.
-
-The meaning of assignments and evaluations of global and
+The meaning of accesses to global and
 indexed variables can be changed via metatables.
-An assignment to a global variable @verb{x = val}
-is equivalent to the assignment
-@verb{_glob.x = val},
-where @verb{_glob} is the table of globals of the running function
-(see @See{global-table} for a discussion about the table of globals).
-An assignment to an indexed variable @verb{t[i] = val} is equivalent to
-@verb{settable_event(t,i,val)}.
-An access to a global variable @verb{x}
-is equivalent to @verb{_glob.x}
-(again, see @See{global-table} for a discussion about @verb{_glob}).
 An access to an indexed variable @verb{t[i]} is equivalent to
 a call @verb{gettable_event(t,i)}.
-See @See{metatable} for a complete description of the
-@verb{settable_event} and @verb{gettable_event} functions.
-(These functions are not defined or callable in Lua.
-We use them here only for explanatory purposes.)
+(See @See{metatable} for a complete description of the
+@verb{gettable_event} function.
+This function is not defined or callable in Lua.
+We use it here only for explanatory purposes.)
+
+All global variables live as fields in ordinary Lua tables,
+called @IndexEmph{environment tables} or simply @emph{environments}.
+Functions written in C (@emph{C functions}) all share a common
+@emph{global environment}.
+Each function written in Lua (a @emph{Lua function})
+has its own reference to an environment,
+so that all global variables in that function
+will refer to that environment table.
+When a function is created,
+it inherits the environment from the function that created it.
+To change (get) the environment table of a Lua function,
+you call @verb{setenvtable} (@verb{getenvtable}) @see{setenvtable}.
+The global environment defines a global variable @IndexVerb{_G}
+that holds the global environment (that is, @verb{_G._G = _G}).
+
+An access to a global variable @verb{x}
+is equivalent to @verb{_env.x}
+(which in turn is equivalent to @verb{gettable_event(_env, "x")}),
+where @verb{_env} is the environment of the running function.
 
 
 @subsection{Statements}@label{stats}
@@ -486,6 +346,7 @@ Non-conventional commands include table constructors
 and variable declarations.
 
 @subsubsection{Chunks}@label{chunks}
+
 The unit of execution of Lua is called a @Def{chunk}.
 A chunk is simply a sequence of statements,
 which are executed sequentially.
@@ -493,6 +354,24 @@ Each statement can be optionally followed by a semicolon:
 @Produc{
 @producname{chunk}@producbody{@rep{stat @opt{@ter{;}}}}
 }
+
+Lua handles a chunk as the body of an anonymous function @see{func-def}.
+As such, chunks can define local variables and return values.
+
+A chunk may be stored in a file or in a string inside the host program.
+When a chunk is executed, first it is pre-compiled into opcodes for
+a virtual machine,
+and then the compiled statements are executed
+by an interpreter for the virtual machine.
+All modifications that a chunk makes to the global state persist
+after the chunk ends.
+
+Chunks may also be pre-compiled into binary form and stored in files;
+see program @IndexVerb{luac} for details.
+Programs in source and compiled forms are interchangeable;
+Lua automatically detects the file type and acts accordingly.
+@index{pre-compilation}
+
 
 @subsubsection{Blocks}
 A @Index{block} is a list of statements;
@@ -512,7 +391,9 @@ Explicit blocks are also sometimes used to
 add a @rwd{return} or @rwd{break} statement in the middle
 of another block @see{control}.
 
+
 @subsubsection{@Index{Assignment}} @label{assignment}
+
 Lua allows @Index{multiple assignment}.
 Therefore, the syntax for assignment
 defines a list of variables on the left side
@@ -553,6 +434,22 @@ Similarly, the line
 }
 exchanges the values of @verb{x} and @verb{y}.
 
+The meaning of assignments to global and
+indexed variables can be changed via metatables.
+An assignment to an indexed variable @verb{t[i] = val} is equivalent to
+@verb{settable_event(t,i,val)}.
+(See @See{metatable} for a complete description of the
+@verb{settable_event} function.
+This function is not defined or callable in Lua.
+We use it here only for explanatory purposes.)
+
+An assignment to a global variable @verb{x = val}
+is equivalent to the assignment
+@verb{_env.x = val}
+(which in turn is equivalent to @verb{settable_event(_env, "x", val)}),
+where @verb{_env} is the environment of the running function.
+
+
 @subsubsection{Control Structures}@label{control}
 The control structures
 @rwd{if}, @rwd{while}, and @rwd{repeat} have the usual meaning and
@@ -587,14 +484,13 @@ so the syntax for the @rwd{return} statement is
 
 The @rwd{break} statement can be used to terminate the execution of a
 @rwd{while}, @rwd{repeat}, or @rwd{for} loop,
-and to skip to the next statement after the loop:@IndexKW{break}
+skiping to the next statement after the loop:@IndexKW{break}
 @index{break statement}
 @Produc{
 @producname{stat}@producbody{@rwd{break}}
 }
 A @rwd{break} ends the innermost enclosing loop.
 
-@NOTE{}
 For syntactic reasons, @rwd{return} and @rwd{break}
 statements can only be written as the @emph{last} statement of a block.
 If it is really necessary to @rwd{return} or @rwd{break} in the
@@ -637,7 +533,7 @@ is equivalent to the code:
          if not (var and _limit and _step) then error() end
          while (_step>0 and var<=_limit) or (_step<=0 and var>=_limit) do
            block
-           var = var+_step
+           var = var + _step
          end
        end
 }
@@ -658,8 +554,8 @@ then assign it to another variable before breaking or exiting the loop.
 }
 
 The generic @rwd{for} statement works over functions,
-called @Index{iterators}.
-It calls its iterator function to produce a new value for each iteration,
+called @IndexEmph{iterators}.
+For each iteration, it calls its iterator function to produce a new value,
 stopping when the new value is @nil{}.
 It has the following syntax:
 @Produc{
@@ -673,7 +569,8 @@ A @rwd{for} statement like
 is equivalent to the code:
 @verbatim{
        do
-         local _f, _s, var_1, ..., var_n = explist
+         local _f, _s, var_1 = explist
+         local var_2, ... , var_n
          while true do
            var_1, ..., var_n = _f(_s, var_1)
            if var_1 == nil then break end
@@ -684,8 +581,8 @@ is equivalent to the code:
 Note the following:
 @itemize{
 @item{} @verb{explist} is evaluated only once.
-Its results are an @Q{iterator} function,
-a @Q{state}, and an initial value for the first @Q{iterator variable}.
+Its results are an @emph{iterator} function,
+a @emph{state}, and an initial value for the first @emph{iterator variable}.
 @item{} @verb{_f} and @verb{_s} are invisible variables.
 The names are here for explanatory purposes only.
 @item{} The behavior is @emph{undefined} if you assign to any
@@ -740,18 +637,18 @@ The basic expressions in Lua are the following:
 }
 @IndexKW{nil}@IndexKW{false}@IndexKW{true}
 
+@emph{Numbers} and @emph{literal strings} are explained in @See{lexical};
+variables are explained in @See{variables};
+function definitions are explained in @See{func-def};
+function calls are explained in @See{functioncall};
+table constructors are explained in @See{tableconstructor}.
+
 An expression enclosed in parentheses always results in only one value.
 Thus,
 @verb{(f(x,y,z))} is always a single value,
 even if @verb{f} returns several values.
 (The value of @verb{(f(x,y,z))} is the first value returned by @verb{f}
 or @nil{} if @verb{f} does not return any values.)
-
-@emph{Numbers} and @emph{literal strings} are explained in @See{lexical};
-variables are explained in @See{variables};
-function definitions are explained in @See{func-def};
-function calls are explained in @See{functioncall};
-table constructors are explained in @See{tableconstructor}.
 
 Expressions can also be built with arithmetic operators, relational operators,
 and logical operators, all of which are explained below.
@@ -782,16 +679,16 @@ Equality (@verb{==}) first compares the type of its operands.
 If the types are different, then the result is @False{}.
 Otherwise, the values of the operands are compared.
 Numbers and strings are compared in the usual way.
-Objects (tables, userdata, and functions) are compared by @emph{reference},
+Objects (tables, userdata, threads, and functions)
+are compared by @emph{reference},
 that is,
 two objects are considered equal only if they are the @emph{same} object.
-Every time you create a new object (a table, userdata, or function),
+Every time you create a new object (a table, userdatum, or function),
 this new object is different from any previously existing object.
 
 You can change the way that Lua compares tables and userdata 
 using the @Q{eq} metamethod @see{metatable}.
 
-@NOTE{}
 The conversion rules of @See{coercion}
 @emph{do not} apply to equality comparisons.
 Thus, @verb{"0"==0} evaluates to @emph{false},
@@ -805,7 +702,8 @@ The order operators work as follows.
 If both arguments are numbers, then they are compared as such.
 Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
-Otherwise, the @Q{lt} or the @Q{le} metamethod is called @see{metatable}.
+Otherwise, Lua tries to call the @Q{lt} or the @Q{le}
+metamethod @see{metatable}.
 
 
 @subsubsection{Logical Operators}
@@ -822,10 +720,10 @@ and anything else as true.
 The operator @rwd{not} always return @False{} or @True{}.
 
 The conjunction operator @rwd{and} returns its first argument
-if its value is @False{} or @nil{};
+if this value is @False{} or @nil{};
 otherwise, @rwd{and} returns its second argument.
 The disjunction operator @rwd{or} returns its first argument
-if it is different from @nil{} and @False{};
+if this value is different from @nil{} and @False{};
 otherwise, @rwd{or} returns its second argument.
 Both @rwd{and} and @rwd{or} use @Index{short-cut evaluation},
 that is,
@@ -906,7 +804,8 @@ is equivalent to
        end
 }
 
-If the last expression in the list is a function call,
+If the last field in the list has the form @verb{exp},
+and the expression is a function call,
 then all values returned by the call enter the list consecutively
 @see{functioncall}.
 If you want to avoid this,
@@ -959,11 +858,11 @@ Because a function can return any number of results
 @see{return},
 the number of results must be adjusted before they are used.
 If the function is called as a statement @see{funcstat},
-then its return list is adjusted to@Nb{}0 elements,
+then its return list is adjusted to zero elements,
 thus discarding all returned values.
 If the function is called inside another expression,
 or in the middle of a list of expressions,
-then its return list is adjusted to@Nb{}1 element,
+then its return list is adjusted to one element,
 thus discarding all returned values but the first one.
 If the function is called as the last element of a list of expressions,
 then no adjustment is made
@@ -975,8 +874,8 @@ Here are some examples:
        g(f(), x)          -- f() is adjusted to 1 result
        g(x, f())          -- g gets x plus all values returned by f()
        a,b,c = f(), x     -- f() is adjusted to 1 result (and c gets nil)
-       a,b,c = x, f()     -- f() is adjusted to 2
-       a,b,c = f()        -- f() is adjusted to 3
+       a,b,c = x, f()     -- f() is adjusted to 2 results
+       a,b,c = f()        -- f() is adjusted to 3 results
        return f()         -- returns all values returned by f()
        return x,y,f()     -- returns x, y, and all values returned by f()
        {f()}              -- creates a list with all values returned by f()
@@ -991,7 +890,7 @@ then it is adjusted to return exactly one value:
 }
 
 As an exception to the format-free syntax of Lua,
-you cannot put a line break before the @verb{(} in a function call.
+you cannot put a line break before the @Char{(} in a function call.
 That restriction avoids some ambiguities in the language.
 If you write
 @verbatim{
@@ -1003,6 +902,28 @@ So, if you want two statements, you must add a semi-colon between them.
 If you actually want to call @verb{f},
 you must remove the line break before @verb{(g)}.
 
+A call of the form @verb{return}@emph{functioncall} is called
+a @IndexEmph{tail call}.
+Lua implements @IndexEmph{proper tail call}
+(or @emph{proper tail recursion}).
+That means that, in a tail call,
+the called function reuses the stack entry of the calling function.
+Therefore, there is no limit on the number of nested tail calls that
+a program can execute.
+However, a tail call erases any debug information about the
+calling function.
+Note that a tail call only happens for a very particular syntax,
+where the @Rw{return} has one single function call as argument;
+this syntax makes the calling function returns exactly
+the returns of the called function.
+So, all the following examples are not tails calls:
+@verbatim{
+  return (f(x))        -- results adjusted to 1
+  return 2 * f(x)
+  return x, f(x)       -- adicional results
+  f(x); return         -- results discarded
+  return x or f(x)     -- results adjusted to 1
+}
 
 @subsubsection{@Index{Function Definitions}} @label{func-def}
 
@@ -1052,8 +973,8 @@ the function is @emph{instantiated} (or @emph{closed}).
 This function instance (or @emph{closure})
 is the final value of the expression.
 Different instances of the same function
-may refer to different non-local variables @see{visibility}
-and may have different tables of globals @see{global-table}.
+may refer to different  external local variables
+and may have different environment tables.
 
 Parameters act as local variables that are
 initialized with the argument values:
@@ -1072,7 +993,7 @@ A vararg function does not adjust its argument list;
 instead, it collects all extra arguments into an implicit parameter,
 called @IndexLIB{arg}.
 The value of @verb{arg} is a table,
-with a field@Nb{}@verb{n} whose value is the number of extra arguments,
+with a field@Nb{}@verb{n} which is the number of extra arguments,
 and with the extra arguments at positions 1,@Nb{}2,@Nb{}@ldots{},@Nb{}@verb{n}.
 
 As an example, consider the following definitions:
@@ -1139,9 +1060,9 @@ For instance:
 }
 Notice that, in a declaration like @verb{local x = x},
 the new @verb{x} being declared is not in scope yet,
-so the second @verb{x} refers to the @Q{outside} variable.
+so the second @verb{x} refers to the outside variable.
 
-Because of these @Index{lexical scoping} rules,
+Because of the @Index{lexical scoping} rules,
 local variables can be freely accessed by functions
 defined inside their scope.
 For instance:
@@ -1154,7 +1075,7 @@ For instance:
 }
 
 Notice that each execution of a @rwd{local} statement
-@Q{creates} new local variables.
+creates new local variables.
 Consider the following example:
 @verbatim{
   a = {}
@@ -1165,7 +1086,7 @@ Consider the following example:
   end
 }
 The loop creates ten closures
-(that is, instances of the anonymous function).
+(that is, ten instances of the anonymous function).
 Each of these closures uses a different @verb{y} variable,
 while all of them share the same @verb{x}.
 
@@ -1187,15 +1108,32 @@ you can use the @verb{pcall} function @see{pdf-pcall}.
 
 @subsection{Metatables} @label{metatable}
 
-Every table and userdata value in Lua may have a @emph{metatable}.
+Every table and userdata object in Lua may have a @emph{metatable}.
 This @IndexEmph{metatable} is a table that defines the behavior of
 the original table and userdata under certain special operations.
-You can query and change the metatable of an object with
-functions @verb{setmetatable} and @verb{getmetatable} @see{pdf-getmetatable}.
+You can change several aspects of the behavior
+of an object by setting specific fields in its metatable.
+For instance, when an object is the operand of an addition,
+Lua checks for a function in the field @verb{"__add"} in its metatable.
+If it finds one,
+Lua calls that function to perform the addition.
 
+We call the keys in a metatable @IndexEmph{events},
+and the values @IndexEmph{metamethods}.
+In the previous example, @verb{"add"} is the event,
+and the function that performs the addition is the metamethod.
+
+You can query and change the metatable of an object
+through the @verb{setmetatable} and @verb{getmetatable}
+functions @see{pdf-getmetatable}.
+
+A metatable may control how an object behaves in arithmetic operations,
+order comparisons, concatenation, and indexing.
+A metatable can also define a function to be called when a userdatum
+is garbage collected.
 For each of those operations Lua associates a specific key
 called an @emph{event}.
-When Lua performs one of those operations over a table or a userdata,
+When Lua performs one of those operations over a table or a userdatum,
 it checks whether that object has a metatable with the corresponding event.
 If so, the value associated with that key (the @IndexEmph{metamethod})
 controls how Lua will perform the operation.
@@ -1208,16 +1146,26 @@ for instance, the key for operation @Q{add} is the
 string @verb{"__add"}.
 The semantics of these operations is better explained by a Lua function
 describing how the interpreter executes that operation.
-@C{Each function shows how a handler is called,
-its arguments (that is, its signature),
-its results,
-and the default behavior in the absence of a handler.}
+
 The code shown here in Lua is only illustrative;
 the real behavior is hard coded in the interpreter,
 and it is much more efficient than this simulation.
 All functions used in these descriptions
 (@verb{rawget}, @verb{tonumber}, etc.)
 are described in @See{predefined}.
+In particular, to retrieve the metamethod of a given object,
+we use the expression
+@verbatim{
+  metatable(obj)[event]
+}
+This should be read as
+@verbatim{
+  rawget(metatable(obj) or {}, event)
+}
+That is, the access to a metamethod does not invoke other metamethods,
+and the access to objects with no metatables does not fail
+(it simply results in @nil{}).
+
 
 @description{
 
@@ -1235,7 +1183,7 @@ then Lua tries the second operand.
  end
 }
 Using that function,
-the behavior of the @Q{add} operation is
+the behavior of the @verb{op1 + op2} is
 @verbatim{
  function add_event (op1, op2)
    local o1, o2 = tonumber(op1), tonumber(op2)
@@ -1287,7 +1235,7 @@ the unary @verb{-} operation.
    if o then  -- operand is numeric
      return -o  -- '-' here is the primitive 'unm'
    else  -- the operand is not numeric.
-     -- Try to get a handler from the operand;
+     -- Try to get a handler from the operand
      local h = metatable(op).__unm
      if h then
        -- call the handler with the operand and nil
@@ -1341,7 +1289,7 @@ The @Q{eq} event is defined as follows:
      return false   -- different objects
    end
    if op1 == op2 then   -- primitive equal?
-     return true end    -- objects are equal
+     return true   -- objects are equal
    end
    -- try metamethod
    local h = getcomphandler(op1, op2, "__eq")
@@ -1405,7 +1353,7 @@ equivalent to @verb{not (b<a)}.
 
 
 @item{@Q{index}:}@IndexTM{index}
-The @Q{gettable} operation @verb{table[key]}.
+The indexing access @verb{table[key]}.
 @verbatim{
  function gettable_event (table, key)
    local h
@@ -1422,12 +1370,12 @@ The @Q{gettable} operation @verb{table[key]}.
    end
    if type(h) == "function" then
      return h(table, key)      -- call the handler
-   else return h[key]          -- or repeat operation with it
+   else return h[key]          -- or repeat operation on it
  end
 }
 
 @item{@Q{newindex}:}@IndexTM{index}
-The @Q{settable} operation @verb{table[key] = value}.
+The indexing assignment @verb{table[key] = value}.
 @verbatim{
  function settable_event (table, key, value)
    local h
@@ -1444,7 +1392,7 @@ The @Q{settable} operation @verb{table[key] = value}.
    end
    if type(h) == "function" then
      return h(table, key,value)    -- call the handler
-   else h[key] = value             -- or repeat operation with it
+   else h[key] = value             -- or repeat operation on it
  end
 }
 
@@ -1454,12 +1402,11 @@ called when Lua calls a value.
 @verbatim{
  function function_event (func, ...)
    if type(func) == "function" then
-     return func(unpack(arg))   -- regular call
+     return func(unpack(arg))   -- primitive call
    else
      local h = metatable(func).__call
      if h then
-       table.insert(arg, 1, func)
-       return h(unpack(arg))
+       return h(func, unpack(arg))
      else
        error("call expression not a function")
      end
@@ -1469,11 +1416,52 @@ called when Lua calls a value.
 
 }
 
-@subsubsection{Metatables and Garbage collection}
 
-Metatables may also define @IndexEmph{finalizer} methods
-for userdata values.
-For each userdata to be collected,
+@subsection{Garbage Collection}@label{GC}
+
+Lua does automatic memory management.
+That means that
+you do not have to worry about allocating memory for new objects
+and freeing it when the objects are no longer needed.
+Lua manages memory automatically by running
+a @IndexEmph{garbage collector} from time to time
+and
+collecting all dead objects
+(all objects that are no longer accessible from Lua).
+All objects in Lua are subject to automatic management:
+tables, userdata, functions, threads, and strings.
+
+Lua uses two numbers to control its garbage-collection cycles.
+One number counts how many bytes of dynamic memory Lua is using,
+and the other is a threshold.
+When the number of bytes crosses the threshold,
+Lua runs the garbage collector,
+which reclaims the memory of all dead objects.
+The byte counter is adjusted,
+and then the threshold is reset to twice the new value of the byte counter.
+
+Through the C@Nb{}API, you can query those numbers,
+and change the threshold @see{GC-API}.
+Setting the threshold to zero actually forces an immediate
+garbage-collection cycle,
+while setting it to a huge number effectively stops the garbage collector.
+Using Lua code you have a more limited control over garbage-collection cycles,
+through the functions @verb{gcinfo} and @verb{collectgarbage}
+@see{predefined}.
+
+@subsubsection{Garbage-Collection Metamethods}
+
+Using the C@Nb{}API,
+you can set garbage-collector metamethods for userdata @see{metatable}.
+This facility allows you to coordinate Lua's garbage collection
+with external resource management
+(such as closing files, network or database connections,
+or freeing your own memory).
+
+When it is about to free a userdatum,
+Lua calls the metamethod associated with event @verb{gc} in the
+userdatum's metatable.
+For each userdatum to be collected,
 Lua does the equivalent of the following function:
 @verbatim{
  function gc_event (obj)
@@ -1486,9 +1474,33 @@ Lua does the equivalent of the following function:
 In a garbage-collection cycle,
 the finalizers for userdata are called in @emph{reverse}
 order of their creation,
-that is, the first finalizer to be called is the one associated
-with the last userdata created in the program
-(among those to be collected in the same cycle).
+among those to be collected in the same cycle.
+That is, the first finalizer to be called is the one associated
+with the userdatum created last in the program.
+
+
+@subsubsection{Weak Tables}@label{weak-table}
+
+A @IndexEmph{weak table} is a table whose elements are
+@IndexEmph{weak references}.
+A weak reference is ignored by the garbage collector.
+In other words,
+if the only references to an object are weak references,
+then the garbage collector will collect that object.
+
+A weak table can have weak keys, weak values, or both.
+A table with weak keys allows the collection of its keys,
+but prevents the collection of its values.
+A table with both weak keys and weak values allows the collection of
+both keys and values.
+In any case, if either the key or the value is collected,
+the whole pair is removed from the table.
+The weakness of a table is controlled by the value of the
+@verb{__mode} field of its metatable.
+If the @verb{__mode} field is a string containing the character @Char{k},
+the keys in the table are weak.
+If @verb{__mode} contains @Char{v},
+the values in the table are weak.
 
 
 
@@ -1498,7 +1510,7 @@ Lua supports coroutines,
 also called @emph{semi-coroutines}
 or @emph{collaborative multithreading}.
 A coroutine in Lua represents an independent thread of execution.
-Unlike @Q{real} threads, however,
+Unlike threads in multithread systems, however,
 a coroutine only suspends its execution by explicitly calling
 an yield function.
 
@@ -1547,12 +1559,12 @@ it returns a function that, when called, resumes the coroutine.
 Any arguments passed to that function
 go as extra arguments to resume.
 The function returns all the values returned by resume,
-but the first one (the boolean error code).
+except the first one (the boolean error code).
 Unlike @verb{coroutine.resume},
 this function does not catch errors;
 any error is propagated to the caller.
 
-As a complete example,
+As an example,
 consider the next code:
 @verbatim{
 function foo1 (a)
@@ -1602,7 +1614,6 @@ with Lua.
 All API functions and related types and constants
 are declared in the header file @verb{lua.h}.
 
-@NOTE{}
 Even when we use the term @Q{function},
 any facility in the API may be provided as a @emph{macro} instead.
 All such macros use each of its arguments exactly once
@@ -1619,7 +1630,7 @@ The whole state of the Lua interpreter
 (global variables, stack, etc.)
 is stored in a dynamically allocated structure of type @verb{lua_State};
 @DefAPI{lua_State}
-this state must be passed as the first argument to
+a pointer to this state must be passed as the first argument to
 every function in the library (except @verb{lua_open} below).
 
 Before calling any API function,
@@ -1634,7 +1645,7 @@ To release a state created with @verb{lua_open}, call
        void lua_close (lua_State *L);
 }
 @DefAPI{lua_close}
-This function destroys all objects in the given Lua environment
+This function destroys all objects in the given Lua state
 (calling the corresponding garbage-collection metamethods, if any)
 and frees all dynamic memory used by that state.
 On several platforms, you may not need to call this function,
@@ -1652,18 +1663,20 @@ Lua offers partial support for multiple threads of execution.
 If you have a C@Nb{}library that offers multi-threading, 
 then Lua can cooperate with it to implement the equivalent facility in Lua.
 Also, Lua implements its own coroutine system on top of threads.
-The following function creates a new @Q{thread} in Lua:
+The following function creates a new thread in Lua:
 @verbatim{
        lua_State *lua_newthread (lua_State *L);
 }
 @DefAPI{lua_newthread}
+It pushes the thread on the stack and returns a pointer to
+a @verb{lua_State} that represents this new thread.
 The new state returned by this function shares with the original state
-all global environment (such as tables),
+all global objects (such as tables),
 but has an independent run-time stack.
-(The use of these multiple stacks must be @Q{synchronized} with C.
-How to explain that? TO BE WRITTEN.)
+@C{(The use of these multiple stacks must be @Q{synchronized} with C.
+How to explain that? TO BE WRITTEN.)}
 
-Each thread has an independent table for global variables.
+Each thread has an independent global environment table.
 When you create a thread, this table is the same as that of the given state,
 but you can change each one independently.
 
@@ -1739,21 +1752,21 @@ unless your code has loops pushing elements onto the stack.
 
 Most query functions accept as indices any value inside the
 available stack space, that is, indices up to the maximum stack size
-you (or Lua) have set through @verb{lua_checkstack}.
+you have set through @verb{lua_checkstack}.
 Such indices are called @emph{acceptable indices}.
 More formally, we define an @IndexEmph{acceptable index}
 as follows:
 @verbatim{
-     (index < 0 && abs(index) <= top) || (index > 0 && index <= top + stackspace)
+     (index < 0 && abs(index) <= top) || (index > 0 && index <= stackspace)
 }
 Note that 0 is never an acceptable index.
 
 Unless otherwise noted,
 any function that accepts valid indices can also be called with
-@Index{pseudo-indices},
+@IndexEmph{pseudo-indices},
 which represent some Lua values that are accessible to the C@Nb{}code
 but are not in the stack.
-Pseudo-indices are used to access the table of globals @see{globals},
+Pseudo-indices are used to access the global environment,
 the registry, and the upvalues of a C function @see{c-closure}.
 
 @subsection{Stack Manipulation}
@@ -1776,7 +1789,7 @@ then the new elements are filled with @nil{}.
 If @verb{index} is 0, then all stack elements are removed.
 A useful macro defined in the @verb{lua.h} is
 @verbatim{
-       #define lua_pop(L,n) lua_settop(L, -(n)-1)
+       #define lua_pop(L,n)   lua_settop(L, -(n)-1)
 }
 @DefAPI{lua_pop}
 which pops @verb{n} elements from the stack.
@@ -1795,7 +1808,7 @@ These functions accept only valid indices.
 pseudo-indices, as they do not represent a stack position.)
 
 As an example, if the stack starts as @verb{10 20 30 40 50*}
-(from bottom to top; the @verb{*} marks the top),
+(from bottom to top; the @Char{*} marks the top),
 then
 @verbatim{
        lua_pushvalue(L, 3)    --> 10 20 30 40 50 30*
@@ -1866,7 +1879,7 @@ They always return 0 for a non-valid index.
 @verb{lua_isfunction} accepts both Lua functions and C@Nb{}functions,
 and @verb{lua_isuserdata} accepts both full and light userdata.
 To distinguish between Lua functions and C@Nb{}functions,
-you should use @verb{lua_iscfunction}.
+you can use @verb{lua_iscfunction}.
 To distinguish between full and light userdata,
 you can use @verb{lua_islightuserdata}.
 To distinguish between numbers and numerical strings,
@@ -1896,9 +1909,11 @@ you can use the following conversion functions:
        size_t         lua_strlen      (lua_State *L, int index);
        lua_CFunction  lua_tocfunction (lua_State *L, int index);
        void          *lua_touserdata  (lua_State *L, int index);
+       lua_State     *lua_totrhead    (lua_State *L, int index);
 }
 @DefAPI{lua_tonumber}@DefAPI{lua_tostring}@DefAPI{lua_strlen}
 @DefAPI{lua_tocfunction}@DefAPI{lua_touserdata}@DefAPI{lua_toboolean}
+@DefAPI{lua_tothread}
 These functions can be called with any acceptable index.
 When called with a non-valid index,
 they act as if the given value had an incorrect type.
@@ -1928,7 +1943,7 @@ then @verb{lua_tostring} also
 (This change confuses @verb{lua_next}
 when @verb{lua_tostring} is applied to keys.)
 @verb{lua_tostring} returns a fully aligned pointer
-to a string inside the Lua environment.
+to a string inside the Lua state.
 This string always has a zero (@verb{'\0'})
 after its last character (as in@Nb{}C),
 but may contain other zeros in its body.
@@ -1989,16 +2004,29 @@ but with some important differences:
 @itemize{
 @item{} You do not have to allocate the space for the result;
 the result is a Lua string, and Lua takes care of memory allocation
-(and deallocation, later).
+(and deallocation, through garbage collection).
 @item{} The conversion specifiers are quite restricted.
 There are no flags, widths, or precisions.
 The conversion specifiers can be simply
-@verb{%%} (inserts a @verb{%} in the string),
+@verb{%%} (inserts a @Char{%} in the string),
 @verb{%s} (inserts a zero-terminated string, with no size restrictions),
 @verb{%f} (inserts a @verb{lua_Number}),
-@verb{%d} (inserts an @verb{int}),
+@verb{%d} (inserts an @verb{int}), and
 @verb{%c} (inserts an @verb{int} as a character).
 }
+
+The function
+@verbatim{
+       void lua_concat (lua_State *L, int n);
+}
+@DefAPI{lua_concat}
+concatenates the @verb{n} values at the top of the stack,
+pops them, and leaves the result at the top.
+If @verb{n} is 1, the result is that single string
+(that is, the function does nothing);
+if @verb{n} is 0, the result is the empty string.
+Concatenation is done following the usual semantics of Lua
+@see{concat}.
 
 
 @subsection{Controlling Garbage Collection}@label{GC-API}
@@ -2047,44 +2075,44 @@ Userdata represents C values in Lua.
 Lua supports two types of userdata:
 @Def{full userdata} and @Def{light userdata}.
 
-A full userdata represents a block of memory.
+A full userdatum represents a block of memory.
 It is an object (like a table):
 You must create it, it can have its own metatable,
 and you can detect when it is being collected.
-A full userdata is only equal to itself (under raw equality).
+A full userdatum is only equal to itself (under raw equality).
 
-A light userdata represents a pointer.
+A light userdatum represents a pointer.
 It is a value (like a number):
 You do not create it, it has no metatables,
 it is not collected (as it was never created).
-A light userdata is equal to @Q{any}
-light userdata with the same address.
+A light userdatum is equal to @Q{any}
+light userdatum with the same address.
 
-In Lua code, there is no way to test whether a userdata is full or light;
+In Lua code, there is no way to test whether a userdatum is full or light;
 both have type @verb{userdata}.
 In C code, @verb{lua_type} returns @verb{LUA_TUSERDATA} for full userdata,
 and @verb{LUA_TLIGHTUSERDATA} for light userdata.
 
-You can create new full userdata with the following function:
+You can create a new full userdatum with the following function:
 @verbatim{
        void *lua_newuserdata (lua_State *L, size_t size);
 }
 @DefAPI{lua_newuserdata}
 It allocates a new block of memory with the given size,
-pushes on the stack a new userdata with the block address,
+pushes on the stack a new userdatum with the block address,
 and returns this address.
 
-To push a light userdata into the stack you use
+To push a light userdatum into the stack you use
 @verb{lua_pushlightuserdata} @see{pushing}.
 
-@verb{lua_touserdata} @see{lua-to} retrieves the value of a userdata.
-When applied on a full userdata, it returns the address of its block;
-when applied on a light userdata, it returns its pointer;
+@verb{lua_touserdata} @see{lua-to} retrieves the value of a userdatum.
+When applied on a full userdatum, it returns the address of its block;
+when applied on a light userdatum, it returns its pointer;
 when applied on a non-userdata value, it returns @verb{NULL}.
 
-When Lua collects a full userdata,
-it calls its @verb{gc} metamethod, if any,
-and then it frees its corresponding memory.
+When Lua collects a full userdatum,
+it calls the userdatum's @verb{gc} metamethod, if any,
+and then it frees the userdatum's corresponding memory.
 
 
 @subsection{Metatables}
@@ -2105,7 +2133,7 @@ If the object does not have a metatable,
 @verb{lua_getmetatable} returns 0, and pushes nothing on the stack.
 @verb{lua_setmetatable} returns 0 when it cannot
 set the metatable of the given object
-(that is, when the object is not a userdata nor a table);
+(that is, when the object is not a userdatum nor a table);
 even then it pops the table from the stack.
 
 @subsection{Loading Lua Chunks}
@@ -2152,7 +2180,7 @@ to ensure that, it always receives @verb{NULL} as the Lua state.
 The @emph{chunkname} is used for error messages
 and debug information @see{debugI}.
 
-See the auxiliary library (@verb{lauxlib})
+See the auxiliary library (@verb{lauxlib.c})
 for examples of how to use @verb{lua_load},
 and for some ready-to-use functions to load chunks
 from files and from strings.
@@ -2176,9 +2204,7 @@ call
 where @verb{index} points to the table.
 @verb{lua_gettable} pops a key from the stack
 and returns (on the stack) the contents of the table at that key.
-The table is left where it was in the stack;
-this is convenient for getting multiple values from a table.
-
+The table is left where it was in the stack.
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
 To get the real value of any table key,
@@ -2190,18 +2216,15 @@ use the @emph{raw} version:
 @DefAPI{lua_rawget}
 
 To store a value into a table that resides somewhere in the stack,
-you push the key and the value onto the stack
-(in this order),
-and then call
+you push the key and then the value onto the stack,
+and call
 @verbatim{
        void lua_settable (lua_State *L, int index);
 }
 @DefAPI{lua_settable}
 where @verb{index} points to the table.
 @verb{lua_settable} pops from the stack both the key and the value.
-The table is left where it was in the stack;
-this is convenient for setting multiple values in a table.
-
+The table is left where it was in the stack.
 As in Lua, this operation may trigger a metamethod
 for the @Q{settable} or @Q{newindex} events.
 To set the real value of any table index,
@@ -2237,10 +2260,9 @@ A typical traversal looks like this:
        }
 }
 
-NOTE:
 While traversing a table,
-do not call @verb{lua_tostring} on a key,
-unless you know the key is actually a string.
+do not call @verb{lua_tostring} directly on a key,
+unless you know that the key is actually a string.
 Recall that @verb{lua_tostring} @emph{changes} the value at the given index;
 this confuses the next call to @verb{lua_next}.
 
@@ -2329,8 +2351,8 @@ This is considered good programming practice.
 
 (We did this example using only the raw functions provided by Lua's API,
 to show all the details.
-Usually programmers use several macros and auxiliary functions that
-provide higher level access to Lua.)
+Usually programmers define and use several macros and auxiliary functions
+that provide higher level access to Lua.)
 
 
 @subsection{Protected Calls}@label{pcall}
@@ -2381,41 +2403,6 @@ error while running the error handler function.
 }
 
 
-@medskip{}
-
->>>>
-@C{ TODO: mover essas 2 para algum lugar melhor.}
-Some special Lua functions have their own C@Nb{}interfaces.
-The host program can generate a Lua error calling the function
-@verbatim{
-       void lua_error (lua_State *L);
-}
-@DefAPI{lua_error}
-The error message (which actually can be any type of object)
-is popped from the stack.
-This function never returns.
-If @verb{lua_error} is called from a C@Nb{}function that
-has been called from Lua,
-then the corresponding Lua execution terminates,
-as if an error had occurred inside Lua code.
-Otherwise, the whole host program terminates with a call to
-@verb{exit(EXIT_FAILURE)}.
-@C{ TODO: at_panic}
-
-The function
-@verbatim{
-       void lua_concat (lua_State *L, int n);
-}
-@DefAPI{lua_concat}
-concatenates the @verb{n} values at the top of the stack,
-pops them, and leaves the result at the top.
-If @verb{n} is 1, the result is that single string
-(that is, the function does nothing);
-if @verb{n} is 0, the result is the empty string.
-Concatenation is done following the usual semantics of Lua
-@see{concat}.
-
-
 @subsection{Defining C Functions} @label{LuacallC}
 
 Lua can be extended with functions written in@Nb{}C.
@@ -2425,8 +2412,8 @@ which is defined as
        typedef int (*lua_CFunction) (lua_State *L);
 }
 @DefAPI{lua_CFunction}
-A C@Nb{}function receives a Lua environment and returns an integer,
-the number of values it has returned to Lua.
+A C@Nb{}function receives a Lua state and returns an integer,
+the number of values it wants to return to Lua.
 
 In order to communicate properly with Lua,
 a C@Nb{}function must follow the following protocol,
@@ -2510,9 +2497,9 @@ Those pseudo-indices are produced by a macro @IndexAPI{lua_upvalueindex}.
 The first value associated with a function is at position
 @verb{lua_upvalueindex(1)}, and so on.
 
-For examples of C@Nb{}functions and closures, see files
-@verb{lbaselib.c}, @verb{liolib.c}, @verb{lmathlib.c}, and @verb{lstrlib.c}
-in the official Lua distribution.
+For examples of C@Nb{}functions and closures,
+see the standard libraries in the official Lua distribution
+(@verb{src/lib/*.c}).
 
 
 @subsubsectionX{Registry} @label{registry}
@@ -2526,11 +2513,31 @@ This table is always located at pseudo-index
 Any C@Nb{}library can store data into this table,
 as long as it chooses keys different from other libraries.
 Typically, you should use as key a string containing your library name,
-or a light userdata with the address of a C object in your code.
+or a light userdatum with the address of a C object in your code.
 
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
 and therefore should not be used by other purposes.
+
+
+@subsection{Error Handling}
+
+The host program can generate a Lua error calling the function
+@verbatim{
+       void lua_error (lua_State *L);
+}
+@DefAPI{lua_error}
+The error message (which actually can be any type of object)
+must be on the stack top.
+This function never returns.
+If @verb{lua_error} is called from a C@Nb{}function that
+has been called from Lua,
+then the corresponding Lua execution terminates,
+as if an error had occurred inside Lua code.
+Otherwise, the whole host program terminates with a call to
+@verb{exit(EXIT_FAILURE)}.
+@C{ TODO: at_panic, lua_cpcall, erros em geral}
+
 
 
 @C{-------------------------------------------------------------------------}
@@ -2579,7 +2586,7 @@ information about an active function:
 }
 @DefAPI{lua_Debug}
 @verb{lua_getstack} fills only the private part
-of this structure, for future use.
+of this structure, for later use.
 To fill the other fields of @verb{lua_Debug} with useful information,
 call
 @verbatim{
@@ -2589,19 +2596,19 @@ call
 This function returns 0 on error
 (for instance, an invalid option in @verb{what}).
 Each character in the string @verb{what}
-selects some fields of @verb{ar} to be filled,
+selects some fields of the structure @verb{ar} to be filled,
 as indicated by the letter in parentheses in the definition of @verb{lua_Debug}
 above:
-@Sq{@verb{S}} fills in the fields @verb{source}, @verb{linedefined},
+@Sq{@Char{S}} fills in the fields @verb{source}, @verb{linedefined},
 and @verb{what};
-@Sq{@verb{l}} fills in the field @verb{currentline}, etc.
-Moreover, @Sq{@verb{f}} pushes onto the stack the function that is
+@Sq{@Char{l}} fills in the field @verb{currentline}, etc.
+Moreover, @Sq{@Char{f}} pushes onto the stack the function that is
 running at the given level.
 
 To get information about a function that is not active (that is,
 it is not in the stack),
 you push the function onto the stack,
-and start the @verb{what} string with the character @Sq{@verb{>}}.
+and start the @verb{what} string with the character @Sq{@Char{>}}.
 For instance, to know in which line a function @verb{f} was defined,
 you can write
 @verbatim{
@@ -2614,32 +2621,32 @@ you can write
 The fields of @verb{lua_Debug} have the following meaning:
 @description{
 
-@item{source}
+@item{@verb{source}}
 If the function was defined in a string,
 then @verb{source} is that string;
 if the function was defined in a file,
 then @verb{source} starts with a @At{} followed by the file name.
 
-@item{short_src}
+@item{@verb{short_src}}
 A @Q{printable} version of @verb{source}, to be used in error messages.
 
-@item{linedefined}
+@item{@verb{linedefined}}
 the line number where the definition of the function starts.
 
-@item{what} the string @verb{"Lua"} if this is a Lua function,
+@item{@verb{what}} the string @verb{"Lua"} if this is a Lua function,
 @verb{"C"} if this is a C@Nb{}function,
 or @verb{"main"} if this is the main part of a chunk.
 
-@item{currentline}
+@item{@verb{currentline}}
 the current line where the given function is executing.
 When no line information is available,
 @verb{currentline} is set to @Math{-1}.
 
-@item{name}
+@item{@verb{name}}
 a reasonable name for the given function.
 Because functions in Lua are first class values,
 they do not have a fixed name:
-Some functions may be the value of many global variables,
+Some functions may be the value of multiple global variables,
 while others may be stored only in a table field.
 The @verb{lua_getinfo} function checks how the function was
 called or whether it is the value of a global variable to
@@ -2647,25 +2654,27 @@ find a suitable name.
 If it cannot find a name,
 then @verb{name} is set to @verb{NULL}.
 
-@item{namewhat}
+@item{@verb{namewhat}}
 Explains the previous field.
 It can be @verb{"global"}, @verb{"local"}, @verb{"method"},
 @verb{"field"}, or @verb{""} (the empty string),
 according to how the function was called.
 (Lua uses the empty string when no other option seems to apply.)
 
-@item{nups}
+@item{@verb{nups}}
 Number of upvalues of the function.
 
 }
 
 
-@subsection{Manipulating Local Variables}
+@subsection{Manipulating Local Variables and Upvalues}
 
-For the manipulation of local variables,
+For the manipulation of local variables and upvalues,
 @verb{luadebug.h} uses indices:
 The first parameter or local variable has index@Nb{}1, and so on,
 until the last active local variable.
+Upvalues have no particular order,
+as they are active through the whole function.
 
 The following functions allow the manipulation of the
 local variables of a given activation record:
@@ -2686,18 +2695,49 @@ Both functions return @verb{NULL}
 when the index is greater than
 the number of active local variables.
 
+The following functions allow the manipulation of the
+upvalues of a given function
+(unlike local variables, a function does not need to be active
+to have upvalues):
+@verbatim{
+       const char *lua_getupvalue (lua_State *L, int funcindex, int n);
+       const char *lua_setupvalue (lua_State *L, int funcindex, int n);
+}
+@DefAPI{lua_getupvalue}@DefAPI{lua_setupvalue}
+These functions operate both on Lua functions and on C@En{}functions.
+(For Lua functions,
+upvalues are the external local variables that the function uses,
+and that consequently are included in its closure.)
+@verb{funcindex} points to a function in the stack.
+@verb{lua_getpuvalue} gets the index @verb{n} of an upvalue,
+pushes the upvalue's value onto the stack,
+and returns its name.
+@verb{lua_setupvalue} assigns the value at the top of the stack
+to the upvalue and returns its name.
+Both functions return @verb{NULL}
+when the index is greater than the number of upvalues.
+For C@En{}functions, these functions use the empty string as
+a name for all upvalues.
+
 As an example, the following function lists the names of all
-local variables for a function at a given level of the stack:
+local variables and upvalues for a function at a given level of the stack:
 @verbatim{
        int listvars (lua_State *L, int level) {
          lua_Debug ar;
-         int i = 1;
+         int i;
          const char *name;
          if (lua_getstack(L, level, &ar) == 0)
            return 0;  /* failure: no such level in the stack */
+         i = 1;
          while ((name = lua_getlocal(L, &ar, i++)) != NULL) {
            printf("%s\n", name);
            lua_pop(L, 1);  /* remove variable value */
+         }
+         lua_getinfo(L, "f", &ar);  /* retrieves function */
+         i = 1;
+         while ((name = lua_getpuvalue(L, -1, i++)) != NULL) {
+           printf("%s\n", name);
+           lua_pop(L, 1);  /* remove upvalue value */
          }
          return 1;
        }
@@ -2726,7 +2766,7 @@ A hook has type @verb{lua_Hook}, defined as follows:
 @DefAPI{lua_Hook}
 You can set the hook with the following function:
 @verbatim{
-       int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask);
+       int lua_sethook (lua_State *L, lua_Hook func, int mask, int count);
 }
 @DefAPI{lua_sethook}
 @verb{func} is the hook,
@@ -2735,13 +2775,15 @@ It is formed by a disjunction of the constants
 @verb{LUA_MASKCALL},
 @verb{LUA_MASKRET},
 @verb{LUA_MASKLINE},
-plus the macro @verb{LUA_MASKCOUNT(count)}.
+and @verb{LUA_MASKCOUNT}.
+The @verb{count} argument is only meaningful when the mask
+includes @verb{LUA_MASKCOUNT}.
 For each event, the hook is called as explained below:
 @description{
 @item{The call hook} is called when the interpreter calls a function.
-The hook is called just after Lua @Q{enters} the new function.
+The hook is called just after Lua enters the new function.
 @item{The return hook} is called when the interpreter returns from a function.
-The hook is called just before Lua @Q{leaves} the function.
+The hook is called just before Lua leaves the function.
 @item{The line hook} is called when the interpreter is about to
 start the execution of a new line of code,
 or when it jumps back (even for the same line).
@@ -2755,13 +2797,14 @@ a C function.)
 
 A hook is disabled with the mask zero.
 
-You can get the current hook and the current mask with the next functions:
+You can get the current hook, the current mask,
+and the current count with the next functions:
 @verbatim{
        lua_Hook lua_gethook (lua_State *L);
-       unsigned long lua_gethookmask (lua_State *L);
+       int lua_gethookmask (lua_State *L);
+       int lua_gethookcount (lua_State *L);
 }
-@DefAPI{lua_gethook}@DefAPI{lua_gethookmask}
-You can get the count inside a mask with the macro @verb{lua_getmaskcount}.
+@DefAPI{lua_gethook}@DefAPI{lua_gethookmask}@DefAPI{lua_gethookcount}
 
 Whenever a hook is called, its @verb{ar} argument has its field
 @verb{event} set to the specific event that triggered the hook.
@@ -2769,7 +2812,7 @@ Moreover, for line events, the field @verb{currentline} is also set.
 For the value of any other field, the hook must call @verb{lua_getinfo}.
 
 While Lua is running a hook, it disables other calls to hooks.
-Therefore, if a hook calls Lua to execute a function or a chunk,
+Therefore, if a hook calls back Lua to execute a function or a chunk,
 that execution occurs without any calls to hooks.
 
 
@@ -2777,7 +2820,7 @@ that execution occurs without any calls to hooks.
 @section{Standard Libraries}@label{libraries}
 
 The standard libraries provide useful functions
-that are implemented directly through the standard C@Nb{}API.
+that are implemented directly through the  Lua-C API.
 Some of these functions provide essential services to the language
 (e.g. @verb{type} and @verb{getmetatable});
 others provide access to @Q{outside} services (e.g. I/O);
@@ -2823,25 +2866,17 @@ which are declared in @verb{lualib.h}.
 The basic library provides some core functions to Lua.
 If you do not include this library in your application,
 you should check carefully whether you need to provide some alternative
-implementation for some facilities.
+implementation for some of its facilities.
 
 The basic library also defines a global variable @IndexLIB{_VERSION}
 with a string containing the current interpreter version.
 The current content of this string is @T{"Lua @Version{}"}.
 
 @Sectiondef{@T{assert (v [, message])}}@DefLIB{assert}
-Issues an @emph{@Q{assertion failed!}} error
-when its argument @verb{v} is @nil{} or @False{};
+Issues an  error when its argument @verb{v} is @nil{} or @False{};
 otherwise, returns this argument.
-This function is equivalent to the following Lua function:
-@verbatim{
-       function assert (v, m)
-         if not v then
-           error(m or "assertion failed!")
-         end
-         return v
-       end
-}
+@verb{message} is the error message;
+when absent, it defaults to @emph{@Q{assertion failed!}}
 
 @Sectiondef{@T{collectgarbage ([limit])}}@DefLIB{collectgarbage}
 
@@ -2872,29 +2907,32 @@ With level 1 (the default), the error position is where the
 Level 2 points the error to where the function
 that called @verb{error} was called; and so on.
 
-@Sectiondef{@T{getglobals (function)}}@DefLIB{getglobals}
-Returns the current table of globals in use by the function.
+@Sectiondef{@T{getenvtable (function)}}@DefLIB{getenvtable}
+Returns the current environment in use by the function.
 @verb{function} can be a Lua function or a number,
 which specifies the function at that stack level:
-Level 1 is the function calling @verb{getglobals}.
+Level 1 is the function calling @verb{getenvtable}.
 If the given function is not a Lua function,
-returns the @Q{global} table of globals.
+returns the global environment.
 The default for @verb{function} is 1.
 
 @Sectiondef{@T{getmetatable (object)}}
 @DefLIB{getmetatable}@label{pdf-getmetatable}
 
-Returns the metatable of the given object.
 If the object does not have a metatable, returns @nil{}.
+Otherwise,
+if the object's metatable has a @verb{"__metatable"} field,
+returns the associated value.
+Otherwise, returns the metatable of the given object.
 
 @Sectiondef{@T{gcinfo ()}}@DefLIB{gcinfo}
-Returns the number of Kbytes of dynamic memory Lua is using,
+Returns the number of Kbytes of dynamic memory that Lua is using,
 and (as a second result) the
 current garbage collector threshold (also in Kbytes).
 
 @Sectiondef{@T{ipairs (t)}}@DefLIB{ipairs}
 
-Returns an iterator function and the table @verb{t},
+Returns an iterator function, the table @verb{t}, and 0,
 so that the construction
 @verbatim{
        for i,v in ipairs(t) do ... end
@@ -2906,17 +2944,18 @@ up to the first nil value of the table.
 Loads a file as a Lua chunk.
 If there are no errors, 
 returns the compiled chunk as a function;
-otherwise, returns @nil{} plus an error message.
+otherwise, returns @nil{} plus the error message.
+The returned function shares the environment of the calling function.
 
 @Sectiondef{@T{loadstring (string [, chunkname])}}@DefLIB{loadstring}
 Loads a string as a Lua chunk.
 If there are no errors, 
 returns the compiled chunk as a function;
-otherwise, returns @nil{} plus an error message.
+otherwise, returns @nil{} plus the error message.
+The returned function shares the environment of the calling function.
 
 The optional parameter @verb{chunkname}
-is the @Q{name of the chunk},
-which is used in error messages and debug information.
+is the name to be used in error messages and debug information.
 
 To load and run a given string, use the idiom
 @verbatim{
@@ -2946,8 +2985,9 @@ The order in which the indices are enumerated is not specified,
 (To traverse a table in numeric order,
 use a numerical @rwd{for} or the function @verb{ipairs}.)
 
-The behavior of @verb{next} is @emph{undefined} if you modify
-the table during the traversal.
+The behavior of @verb{next} is @emph{undefined} if,
+during the traversal,
+you assign any value to a non-existent field in the table.
 
 @Sectiondef{@T{pairs (t)}}@DefLIB{pairs}
 
@@ -3009,7 +3049,7 @@ Otherwise, it searches a path looking for a file to load.
 If the global variable @IndexVerb{LUA_PATH} is a string, 
 this string is the path.
 Otherwise, @verb{require} tries the environment variable @verb{LUA_PATH}.
-As a last resort, it uses a predefined path.
+As a last resort, it uses the predefined path @verb{"?;?.lua"}.
 
 The path is a sequence of @emph{templates} separated by semicolons.
 For each template, @verb{require} will change an eventual interrogation
@@ -3033,21 +3073,25 @@ then @verb{require} signals an error.
 Otherwise, it marks in table @verb{_LOADED}
 that the package is loaded, and returns.
 
-While running a packaged file,
+While running a file,
 @verb{require} defines the global variable @IndexVerb{_REQUIREDNAME}
 with the package name.
+The file runs within the global environment.
 
-@Sectiondef{@T{setglobals (function, table)}}@DefLIB{setglobals}
-Sets the current table of globals to be used by the given function.
+@Sectiondef{@T{setenvtable (function, table)}}@DefLIB{setenvtable}
+@label{setenvtable}
+Sets the current environment to be used by the given function.
 @verb{function} can be a Lua function or a number,
 which specifies the function at that stack level:
-Level 1 is the function calling @verb{setglobals}.
+Level 1 is the function calling @verb{setenvtable}.
 
 @Sectiondef{@T{setmetatable (table, metatable)}}@DefLIB{setmetatable}
 
 Sets the metatable for the given table.
-(You cannot change the metatable of a userdata from Lua.)
+(You cannot change the metatable of a userdatum from Lua.)
 If @verb{metatable} is @nil{}, removes the metatable of the given table.
+If the original metatalbe has a field @verb{"__metatable"},
+raises an error.
 
 @Sectiondef{@T{tonumber (e [, base])}}@DefLIB{tonumber}
 Tries to convert its argument to a number.
@@ -3070,14 +3114,19 @@ converts it to a string in a reasonable format.
 For complete control of how numbers are converted,
 use @verb{format} @see{format}.
 
+If the metatable of @verb{e} has a field @verb{"__tostring"},
+the associtated value is called >>>
+
 @Sectiondef{@T{type (v)}}@DefLIB{type}@label{pdf-type}
 Returns the type of its only argument, coded as a string.
 The possible results of this function are
 @verb{"nil"} (a string, not the value @nil{}),
 @verb{"number"},
 @verb{"string"},
+@verb{"boolean},
 @verb{"table"},
 @verb{"function"},
+@verb{"thread"},
 and @verb{"userdata"}.
 
 @Sectiondef{@T{unpack (list)}}@DefLIB{unpack}
@@ -3108,8 +3157,7 @@ or @nil{} if the index is out of range.
 If @verb{i} is absent, then it is assumed to be@Nb{}1.
 @verb{i} may be negative.
 
-@NOTE{}
-Numerical codes are not necessarily portable across platforms.
+Note that numerical codes are not necessarily portable across platforms.
 
 @Sectiondef{@T{string.char (i1, i2, @ldots{})}}@DefLIB{string.char}
 Receives 0 or more integers.
@@ -3117,8 +3165,7 @@ Returns a string with length equal to the number of arguments,
 in which each character has the internal numerical code equal
 to its correspondent argument.
 
-@NOTE{}
-Numerical codes are not necessarily portable across platforms.
+Note that numerical codes are not necessarily portable across platforms.
 
 @Sectiondef{@T{string.find (s, pattern [, init [, plain]])}}
 @DefLIB{string.find}
@@ -3206,7 +3253,6 @@ the appropriate format string.
 For example, @verb{"%*g"} can be simulated with
 @verb{"%"..width.."g"}.
 
-@NOTE{}
 String values to be formatted with
 @verb{%s} cannot contain embedded zeros.
 
@@ -3315,15 +3361,15 @@ The following combinations are allowed in describing a character class:
 @item{@T{%@M{x}}} (where @M{x} is any non-alphanumeric character)  @Em{}
 represents the character @M{x}.
 This is the standard way to escape the magic characters.
-We recommend that any punctuation character (even the non magic)
-should be preceded by a @verb{%}
+Any punctuation character (even the non magic)
+can be preceded by a @Char{%}
 when used to represent itself in a pattern.
 
 @item{@T{[@M{set}]}} @Em{}
 represents the class which is the union of all
 characters in @M{set}.
 A range of characters may be specified by
-separating the end characters of the range with a @verb{-}.
+separating the end characters of the range with a @Char{-}.
 All classes @verb{%}@emph{x} described above may also be used as
 components in @M{set}.
 All other characters in @M{set} represent themselves.
@@ -3331,7 +3377,7 @@ For example, @verb{[%w_]} (or @verb{[_%w]})
 represents all alphanumeric characters plus the underscore,
 @verb{[0-7]} represents the octal digits,
 and @verb{[0-7%l%-]} represents the octal digits plus
-the lowercase letters plus the @verb{-} character.
+the lowercase letters plus the @Char{-} character.
 
 The interaction between ranges and classes is not defined.
 Therefore, patterns like @verb{[%a-z]} or @verb{[a-%%]}
@@ -3357,20 +3403,20 @@ a @Def{pattern item} may be
 a single character class,
 which matches any single character in the class;
 @item{} 
-a single character class followed by @verb{*},
+a single character class followed by @Char{*},
 which matches 0 or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 @item{} 
-a single character class followed by @verb{+},
+a single character class followed by @Char{+},
 which matches 1 or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 @item{} 
-a single character class followed by @verb{-},
+a single character class followed by @Char{-},
 which also matches 0 or more repetitions of characters in the class.
-Unlike @verb{*},
+Unlike @Char{*},
 these repetition items will always match the @emph{shortest} possible sequence;
 @item{} 
-a single character class followed by @verb{?},
+a single character class followed by @Char{?},
 which matches 0 or 1 occurrence of a character in the class;
 @item{} 
 @T{%@M{n}}, for @M{n} between 1 and 9;
@@ -3389,12 +3435,12 @@ balanced parentheses.
 
 @paragraph{Pattern:}
 a @Def{pattern} is a sequence of pattern items.
-A @verb{^} at the beginning of a pattern anchors the match at the
+A @Char{^} at the beginning of a pattern anchors the match at the
 beginning of the subject string.
-A @verb{$} at the end of a pattern anchors the match at the
+A @Char{$} at the end of a pattern anchors the match at the
 end of the subject string.
 At other positions,
-@verb{^} and @verb{$} have no special meaning and represent themselves.
+@Char{^} and @Char{$} have no special meaning and represent themselves.
 
 @paragraph{Captures:}
 A pattern may contain sub-patterns enclosed in parentheses;
@@ -3413,7 +3459,6 @@ the current string position (a number).
 For instance, if we apply the pattern @verb{"()aa()"} on the
 string @verb{"flaaap"}, there will be two captures: 3 and 5.
 
-@NOTE{}
 A pattern cannot contain embedded zeros.  Use @verb{%z} instead.
 
 
@@ -3455,8 +3500,7 @@ If @verb{func} returns a non-@nil{} value,
 then the loop is broken, and this value is returned
 as the final value of @verb{foreach}.
 
-The behavior of @verb{foreach} is @emph{undefined} if you change
-the table @verb{t} during the traversal.
+See function @verb{next} for extra information about table traversals.
 
 
 @Sectiondef{@T{table.foreachi (table, func)}}@DefLIB{table.foreachi}
@@ -3469,14 +3513,14 @@ from@Nb{}1 to @verb{n},
 where @verb{n} is the size of the table @see{getn}.
 If @verb{func} returns a non-@nil{} value,
 then the loop is broken, and this value is returned
-as the final value of @verb{foreachi}.
+as the result of @verb{foreachi}.
 
 @Sectiondef{@T{table.getn (table)}}@DefLIB{table.getn}@label{getn}
 Returns the @Q{size} of a table, when seen as a list.
 If the table has an @verb{n} field with a numeric value,
 this value is the @Q{size} of the table.
-Otherwise, if there was a previous call to
-@verb{table.getn} or to @verb{table.setn} over this table,
+Otherwise, if there was a previous call
+to @verb{table.setn} over this table,
 the respective value is returned.
 Otherwise, the @Q{size} is one less the first integer index with
 a @nil{} value.
@@ -3500,7 +3544,7 @@ may have their relative positions changed by the sort).
 @Sectiondef{@T{table.insert (table, [pos,] value)}}@DefLIB{table.insert}
 
 Inserts element @verb{value} at position @verb{pos} in @verb{table},
-shifting other elements up to open space, if necessary.
+shifting up other elements to open space, if necessary.
 The default value for @verb{pos} is @verb{n+1},
 where @verb{n} is the size of the table @see{getn},
 so that a call @verb{table.insert(t,x)} inserts @verb{x} at the end
@@ -3511,7 +3555,7 @@ calling @verb{table.setn(table, n+1)}.
 @Sectiondef{@T{table.remove (table [, pos])}}@DefLIB{table.remove}
 
 Removes from @verb{table} the element at position @verb{pos},
-shifting other elements down to close the space, if necessary.
+shifting down other elements to close the space, if necessary.
 Returns the value of the removed element.
 The default value for @verb{pos} is @verb{n},
 where @verb{n} is the size of the table @see{getn},
@@ -3525,7 +3569,7 @@ calling @verb{table.setn(table, n-1)}.
 Updates the @Q{size} of a table.
 If the table has a field @verb{"n"} with a numerical value,
 that value is changed to the given @verb{n}.
-Otherwise, it updates an internal state of the @verb{table} library
+Otherwise, it updates an internal state
 so that subsequent calls to @verb{table.getn(table)} return @verb{n}.
 
 
@@ -3603,7 +3647,7 @@ The table @verb{io} also provides
 three predefined file descriptors with their usual meanings from C:
 @IndexLIB{io.stdin}, @IndexLIB{io.stdout}, and @IndexLIB{io.stderr}.
 
-A file handle is a userdata containing the file stream (@verb{FILE*}),
+A file handle is a userdatum containing the file stream (@verb{FILE*}),
 with a distinctive metatable created by the I/O library.
 
 Unless otherwise stated,
@@ -3689,7 +3733,7 @@ and it is automatically removed when the program ends.
 @Sectiondef{@T{io.type (obj)}}@DefLIB{io.type}
 
 Checks whether @verb{obj} is a valid file handle.
-Returns the @verb{"file"} (a string) if @verb{obj} is an open file handle,
+Returns the string @verb{"file"} if @verb{obj} is an open file handle,
 @verb{"closed file"} if @verb{obj} is a closed file handle,
 and @nil{} if @verb{obj} is not a file handle.
 
@@ -3778,9 +3822,7 @@ Writes the value of each of its arguments to
 the filehandle @verb{file}.
 The arguments must be strings or numbers.
 To write other values,
-use @verb{tostring} or @verb{format} before @verb{write}.
-If this function fails, it returns @nil{},
-plus a string describing the error.
+use @verb{tostring} or @verb{string.format} before @verb{write}.
 
 
 @subsection{Operating System Facilities} @label{libiosys}
@@ -3802,7 +3844,7 @@ this is the time to be formatted
 (see the @verb{time} function for a description of this value).
 Otherwise, @verb{date} formats the current time.
 
-If @verb{format} starts with @verb{!},
+If @verb{format} starts with @Char{!},
 then the date is formatted in Coordinated Universal Time.
 
 After that optional character,
@@ -3922,7 +3964,7 @@ inside a @IndexVerb{debug} table.
 This function returns a table with information about a function.
 You can give the function directly,
 or you can give a number as the value of @verb{function},
-which means the function running at level @verb{function} of the stack:
+which means the function running at level @verb{function} of the call stack:
 Level 0 is the current function (@verb{getinfo} itself);
 level 1 is the function that called @verb{getinfo};
 and so on.
@@ -3933,7 +3975,7 @@ The returned table contains all the fields returned by @verb{lua_getinfo},
 with the string @verb{what} describing which fields to fill in.
 The default for @verb{what} is to get all information available.
 If present,
-the option @verb{f}
+the option @Char{f}
 adds a field named @verb{func} with the function itself.
 
 For instance, the expression @verb{debug.getinfo(1,"n").name} returns
@@ -4077,8 +4119,8 @@ Therefore, the prompt can be changed directly on the command line:
 @verbatim{
        $ lua -e"_PROMPT='myprompt> '" -i
 }
-(the first pair of quotes is for the shell,
-the second is for Lua),
+(the outer pair of quotes is for the shell,
+the inner is for Lua),
 or in any Lua programs by assigning to @verb{_PROMPT}.
 Note the use of @verb{-i} to enter interactive mode; otherwise,
 the program would end just after the assignment to @verb{_PROMPT}.
@@ -4147,10 +4189,15 @@ Thank you!
 @sectionX{Incompatibilities with Previous Versions}
 @Addcontentsline{Incompatibilities with Previous Versions}
 
+@emph{TODO: rever isso}
+
 @subsectionX{Incompatibilities with @Index{version 4.0}}
 
 @subsubsectionX{Changes in the Language}
 @itemize{
+
+@item{}
+The whole tag-method scheme was replaced by metatables.
 
 @item{} 
 Function calls written between parentheses result in exactly one value.
@@ -4175,6 +4222,9 @@ When a literal string of the form @verb{[[...]]} starts with a newline,
 this newline is ignored.
 
 @item{} Old pre-compiled code is obsolete, and must be re-compiled.
+
+@item{} Upvalues in the form @verb{%var} are obsolete;
+use normal external local variables instead.
 
 }
 
