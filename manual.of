@@ -4566,7 +4566,7 @@ The @verb{format} option @verb{%n$} is obsolete.
 @subsubsectionX{Changes in the API}
 @itemize{
 
-@item
+@item{}
 @verb{lua_open} does not have a stack size as its argument
 (stacks are dynamic).
 
