@@ -2140,7 +2140,7 @@ or if the object does not have a metatable,
 sets it as the new metatable for the given object.
 @verb{lua_setmetatable} returns 0 when it cannot
 set the metatable of the given object
-(that is, when the object is not a userdata nor a table);
+(that is, when the object is neither a userdata nor a table);
 even then it pops the table from the stack.
 
 @subsection{Loading Lua Chunks}
