@@ -416,7 +416,7 @@ Examples of valid numerical constants are
 
 @IndexEmph{Comments} start anywhere outside a string with a
 double hyphen (@verb{--});
-If the text after @verb{--} is different from @verb{[[},
+If the text immediately after @verb{--} is different from @verb{[[},
 the comment is a short comment,
 that runs until the end of the line.
 Otherwise, it is a long comment,
@@ -658,8 +658,8 @@ then assign it to another variable before breaking or exiting the loop.
 }
 
 The generic @rwd{for} statement works over functions,
-called @Index{generators}.
-It calls its generator to produce a new value for each iteration,
+called @Index{iterators}.
+It calls its iterator function to produce a new value for each iteration,
 stopping when the new value is @nil{}.
 It has the following syntax:
 @Produc{
@@ -684,7 +684,7 @@ is equivalent to the code:
 Note the following:
 @itemize{
 @item{} @verb{explist} is evaluated only once.
-Its results are a @Q{generator} function,
+Its results are an @Q{iterator} function,
 a @Q{state}, and an initial value for the first @Q{iterator variable}.
 @item{} @verb{_f} and @verb{_s} are invisible variables.
 The names are here for explanatory purposes only.
@@ -782,14 +782,14 @@ Equality (@verb{==}) first compares the type of its operands.
 If the types are different, then the result is @False{}.
 Otherwise, the values of the operands are compared.
 Numbers and strings are compared in the usual way.
-Tables, userdata, and functions are compared @emph{by reference},
+Objects (tables, userdata, and functions) are compared by @emph{reference},
 that is,
-two tables are considered equal only if they are the @emph{same} table.
+two objects are considered equal only if they are the @emph{same} object.
+Every time you create a new object (a table, userdata, or function),
+this new object is different from any previously existing object.
 
-@C{TODO eq metamethod}
-
-Every time you create a new table (or userdata, or function),
-this new value is different from any previously existing value.
+You can change the way that Lua compares tables and userdata 
+using the @Q{eq} metamethod @see{metatable}.
 
 @NOTE{}
 The conversion rules of @See{coercion}
@@ -1208,10 +1208,10 @@ for instance, the key for operation @Q{add} is the
 string @verb{"__add"}.
 The semantics of these operations is better explained by a Lua function
 describing how the interpreter executes that operation.
-@C{Each function shows how a handler is called,}
-@C{its arguments (that is, its signature),}
-@C{its results,}
-@C{and the default behavior in the absence of a handler.}
+@C{Each function shows how a handler is called,
+its arguments (that is, its signature),
+its results,
+and the default behavior in the absence of a handler.}
 The code shown here in Lua is only illustrative;
 the real behavior is hard coded in the interpreter,
 and it is much more efficient than this simulation.
@@ -1230,27 +1230,27 @@ First, Lua tries the first operand.
 If its type does not define a handler for the operation,
 then Lua tries the second operand.
 @verbatim{
-       function getbinhandler (op1, op2, event)
-         return metatable(op1)[event] or metatable(op2)[event]
-       end
+ function getbinhandler (op1, op2, event)
+   return metatable(op1)[event] or metatable(op2)[event]
+ end
 }
 Using that function,
 the behavior of the @Q{add} operation is
 @verbatim{
-       function add_event (op1, op2)
-         local o1, o2 = tonumber(op1), tonumber(op2)
-         if o1 and o2 then  -- both operands are numeric
-           return o1+o2  -- '+' here is the primitive 'add'
-         else  -- at least one of the operands is not numeric
-           local h = getbinhandler(op1, op2, "__add")
-           if h then
-             -- call the handler with both operands
-             return h(op1, op2)
-           else  -- no handler available: default behavior
-             error("unexpected type at arithmetic operation")
-           end
-         end
-       end
+ function add_event (op1, op2)
+   local o1, o2 = tonumber(op1), tonumber(op2)
+   if o1 and o2 then  -- both operands are numeric
+     return o1+o2  -- '+' here is the primitive 'add'
+   else  -- at least one of the operands is not numeric
+     local h = getbinhandler(op1, op2, "__add")
+     if h then
+       -- call the handler with both operands
+       return h(op1, op2)
+     else  -- no handler available: default behavior
+       error("unexpected type at arithmetic operation")
+     end
+   end
+ end
 }
 
 @item{@Q{sub}:}@IndexTM{sub}
@@ -1268,79 +1268,135 @@ Behavior similar to the @Q{add} operation.
 @item{@Q{pow}:}@IndexTM{pow}
 the @verb{^} operation (exponentiation) operation.
 @verbatim{ ??
-       function pow_event (op1, op2)
-         local h = getbinhandler(op1, op2, "__pow") ???
-         if h then
-           -- call the handler with both operands
-           return h(op1, op2)
-         else  -- no handler available: default behavior
-           error("unexpected type at arithmetic operation")
-         end
-       end
+ function pow_event (op1, op2)
+   local h = getbinhandler(op1, op2, "__pow") ???
+   if h then
+     -- call the handler with both operands
+     return h(op1, op2)
+   else  -- no handler available: default behavior
+     error("unexpected type at arithmetic operation")
+   end
+ end
 }
 
 @item{@Q{unm}:}@IndexTM{unm}
 the unary @verb{-} operation.
 @verbatim{
-       function unm_event (op)
-         local o = tonumber(op)
-         if o then  -- operand is numeric
-           return -o  -- '-' here is the primitive 'unm'
-         else  -- the operand is not numeric.
-           -- Try to get a handler from the operand;
-           local h = metatable(op).__unm
-           if h then
-             -- call the handler with the operand and nil
-             return h(op, nil)
-           else  -- no handler available: default behavior
-             error("unexpected type at arithmetic operation")
-           end
-         end
-       end
+ function unm_event (op)
+   local o = tonumber(op)
+   if o then  -- operand is numeric
+     return -o  -- '-' here is the primitive 'unm'
+   else  -- the operand is not numeric.
+     -- Try to get a handler from the operand;
+     local h = metatable(op).__unm
+     if h then
+       -- call the handler with the operand and nil
+       return h(op, nil)
+     else  -- no handler available: default behavior
+       error("unexpected type at arithmetic operation")
+     end
+   end
+ end
 }
+
+
+@item{@Q{concat}:}@IndexTM{concatenation}
+the @verb{..} (concatenation) operation.
+@verbatim{
+ function concat_event (op1, op2)
+   if (type(op1) == "string" or type(op1) == "number") and
+      (type(op2) == "string" or type(op2) == "number") then
+     return op1..op2  -- primitive string concatenation
+   else
+     local h = getbinhandler(op1, op2, "__concat")
+     if h then
+       return h(op1, op2)
+     else
+       error("unexpected type for concatenation")
+     end
+   end
+ end
+}
+
+
+@item{@Q{eq}:}@IndexTM{eq}
+the @verb{==} operation.
+The function @verb{getcomphandler} defines how Lua chooses a metamethod
+for comparison operators.
+A metamethod only is selected when both objects
+being compared have the same type,
+and the same metamethod for the selected operation.
+@verbatim{
+ function getcomphandler (op1, op2, event)
+   if type(op1) ~= type(op2) then return nil end
+   local mm1 = metatable(op1)[event]
+   local mm2 = metatable(op2)[event]
+   if mm1 == mm2 then return mm1 else return nil end
+ end
+}
+The @Q{eq} event is defined as follows:
+@verbatim{
+ function eq_event (op1, op2)
+   if type(op1) ~= type(op2) then  -- diferent types?
+     return false   -- different objects
+   end
+   if op1 == op2 then   -- primitive equal?
+     return true end    -- objects are equal
+   end
+   -- try metamethod
+   local h = getcomphandler(op1, op2, "__eq")
+   if h then
+     return h(op1, op2)
+   else
+     return false
+   end
+ end
+}
+@verb{a~=b} is equivalent to @verb{not (a==b)}.
 
 @item{@Q{lt}:}@IndexTM{lt}
 the @verb{<} operation.
 @verbatim{
-       function lt_event (op1, op2)
-         if type(op1) == "number" and type(op2) == "number" then
-           return op1 < op2   -- numeric comparison
-         elseif type(op1) == "string" and type(op2) == "string" then
-           return op1 < op2   -- lexicographic comparison
-         else
-           local h = getbinhandler(op1, op2, "__lt")
-           if h then
-             return h(op1, op2)
-           else
-             error("unexpected type at comparison");
-           end
-         end
-       end
+ function lt_event (op1, op2)
+   if type(op1) == "number" and type(op2) == "number" then
+     return op1 < op2   -- numeric comparison
+   elseif type(op1) == "string" and type(op2) == "string" then
+     return op1 < op2   -- lexicographic comparison
+   else
+     local h = getcomphandler(op1, op2, "__lt")
+     if h then
+       return h(op1, op2)
+     else
+       error("unexpected type at comparison");
+     end
+   end
+ end
 }
 @verb{a>b} is equivalent to @verb{b<a}.
+
 
 @item{@Q{le}:}@IndexTM{lt}
 the @verb{<=} operation.
 @verbatim{
-       function le_event (op1, op2)
-         if type(op1) == "number" and type(op2) == "number" then
-           return op1 <= op2   -- numeric comparison
-         elseif type(op1) == "string" and type(op2) == "string" then
-           return op1 <= op2   -- lexicographic comparison
-         else
-           local h = getbinhandler(op1, op2, "__le")
-           if h then
-             return h(op1, op2)
-           else
-             h = getbinhandler(op1, op2, "__lt")
-             if h then
-               return not h(op2, op1)
-             else
-               error("unexpected type at comparison");
-             end
-           end
-         end
+ function le_event (op1, op2)
+   if type(op1) == "number" and type(op2) == "number" then
+     return op1 <= op2   -- numeric comparison
+   elseif type(op1) == "string" and type(op2) == "string" then
+     return op1 <= op2   -- lexicographic comparison
+   else
+     local h = getcomphandler(op1, op2, "__le")
+     if h then
+       return h(op1, op2)
+     else
+       h = getcomphandler(op1, op2, "__lt")
+       if h then
+         return not h(op2, op1)
+       else
+         error("unexpected type at comparison");
        end
+     end
+   end
+ end
 }
 @verb{a>=b} is equivalent to @verb{b<=a}.
 Notice that, in the absence of a @Q{le} metamethod,
@@ -1348,85 +1404,67 @@ Lua tries the @Q{lt}, assuming that @verb{a<=b} is
 equivalent to @verb{not (b<a)}.
 
 
-@item{@Q{concat}:}@IndexTM{concatenation}
-the @verb{..} (concatenation) operation.
-@verbatim{
-       function concat_event (op1, op2)
-         if (type(op1) == "string" or type(op1) == "number") and
-            (type(op2) == "string" or type(op2) == "number") then
-           return op1..op2  -- primitive string concatenation
-         else
-           local h = getbinhandler(op1, op2, "__concat")
-           if h then
-             return h(op1, op2)
-           else
-             error("unexpected type for concatenation")
-           end
-         end
-       end
-}
-
 @item{@Q{index}:}@IndexTM{index}
 The @Q{gettable} operation @verb{table[key]}.
 @verbatim{
-       function gettable_event (table, key)
-         local h
-         if type(table) == "table" then
-           local v = rawget(table, key)
-           if v ~= nil then return v end
-           h = metatable(table).__index
-           if h == nil then return nil end
-         else
-           h = metatable(table).__index
-           if h == nil then
-             error("indexed expression not a table");
-           end
-         end
-         if type(h) == "function" then
-           return h(table, key)      -- call the handler
-         else return h[key]          -- or repeat operation with it
-       end
+ function gettable_event (table, key)
+   local h
+   if type(table) == "table" then
+     local v = rawget(table, key)
+     if v ~= nil then return v end
+     h = metatable(table).__index
+     if h == nil then return nil end
+   else
+     h = metatable(table).__index
+     if h == nil then
+       error("indexed expression not a table");
+     end
+   end
+   if type(h) == "function" then
+     return h(table, key)      -- call the handler
+   else return h[key]          -- or repeat operation with it
+ end
 }
 
 @item{@Q{newindex}:}@IndexTM{index}
 The @Q{settable} operation @verb{table[key] = value}.
 @verbatim{
-       function settable_event (table, key, value)
-         local h
-         if type(table) == "table" then
-           local v = rawget(table, key)
-           if v ~= nil then rawset(table, key, value); return end
-           h = metatable(table).__newindex
-           if h == nil then rawset(table, key, value); return end
-         else
-           h = metatable(table).__newindex
-           if h == nil then
-             error("indexed expression not a table");
-           end
-         end
-         if type(h) == "function" then
-           return h(table, key,value)    -- call the handler
-         else h[key] = value             -- or repeat operation with it
-       end
+ function settable_event (table, key, value)
+   local h
+   if type(table) == "table" then
+     local v = rawget(table, key)
+     if v ~= nil then rawset(table, key, value); return end
+     h = metatable(table).__newindex
+     if h == nil then rawset(table, key, value); return end
+   else
+     h = metatable(table).__newindex
+     if h == nil then
+       error("indexed expression not a table");
+     end
+   end
+   if type(h) == "function" then
+     return h(table, key,value)    -- call the handler
+   else h[key] = value             -- or repeat operation with it
+ end
 }
 
 
 @item{@Q{call}:}@IndexTM{call}
 called when Lua calls a value.
 @verbatim{
-       function function_event (func, ...)
-         if type(func) == "function" then
-           return func(unpack(arg))   -- regular call
-         else
-           local h = metatable(func).__call
-           if h then
-             table.insert(arg, 1, func)
-             return h(unpack(arg))
-           else
-             error("call expression not a function")
-           end
-         end
-       end
+ function function_event (func, ...)
+   if type(func) == "function" then
+     return func(unpack(arg))   -- regular call
+   else
+     local h = metatable(func).__call
+     if h then
+       table.insert(arg, 1, func)
+       return h(unpack(arg))
+     else
+       error("call expression not a function")
+     end
+   end
+ end
 }
 
 }
@@ -1438,12 +1476,12 @@ for userdata values.
 For each userdata to be collected,
 Lua does the equivalent of the following function:
 @verbatim{
-       function gc_event (obj)
-         local h = metatable(obj).__gc
-         if h then
-           h(obj)
-         end
-       end
+ function gc_event (obj)
+   local h = metatable(obj).__gc
+   if h then
+     h(obj)
+   end
+ end
 }
 In a garbage-collection cycle,
 the finalizers for userdata are called in @emph{reverse}
@@ -1837,11 +1875,15 @@ you can use @verb{lua_type}.
 The API also has functions to compare two values in the stack:
 @verbatim{
        int lua_equal    (lua_State *L, int index1, int index2);
+       int lua_rawequal (lua_State *L, int index1, int index2);
        int lua_lessthan (lua_State *L, int index1, int index2);
 }
-@DefAPI{lua_equal} @DefAPI{lua_lessthan}
-These functions are equivalent to their counterparts in Lua @see{rel-ops}.
-Both functions return 0 if any of the indices are non-valid.
+@DefAPI{lua_equal}@DefAPI{lua_rawequal}@DefAPI{lua_lessthan}
+@verb{lua_equal} and @verb{lua_lessthan}
+are equivalent to their counterparts in Lua @see{rel-ops}.
+@verb{lua_rawequal} compares the values for primitive equality,
+without metamethods.
+These functions return 0 (false) if any of the indices are non-valid.
 
 @subsection{Getting Values from the Stack}@label{lua-to}
 
@@ -2852,7 +2894,7 @@ current garbage collector threshold (also in Kbytes).
 
 @Sectiondef{@T{ipairs (t)}}@DefLIB{ipairs}
 
-Returns a generator function and the table @verb{t},
+Returns an iterator function and the table @verb{t},
 so that the construction
 @verbatim{
        for i,v in ipairs(t) do ... end
@@ -2937,6 +2979,11 @@ This function is not intended for formatted output,
 but only as a quick way to show a value,
 typically for debugging.
 For formatted output, see @verb{format} @see{format}.
+
+@Sectiondef{@T{rawequal (v1, v2)}}@DefLIB{rawequal}
+Checks whether @verb{v1} is equal to @verb{v2},
+without invoking any metamethod.
+Returns a boolean.
 
 @Sectiondef{@T{rawget (table, index)}}@DefLIB{rawget}
 Gets the real value of @verb{table[index]},
@@ -3040,9 +3087,8 @@ This function is equivalent to
   return list[1], list[2], ..., list[n]
 }
 except that the above code can be valid only for a fixed @M{n}.
-The number @M{n} of returned values
-is either the value of @verb{list.n}, if it is a number,
-or one less the index of the first absent (@nil{}) value.
+The number @M{n} is the @emph{size} of the list,
+as defined for the @T{table.getn} function.
 
 @subsection{String Manipulation}
 This library provides generic functions for string manipulation,
@@ -3057,7 +3103,8 @@ The string library provides all its functions inside the table
 @IndexLIB{string}.
 
 @Sectiondef{@T{string.byte (s [, i])}}@DefLIB{string.byte}
-Returns the internal numerical code of the @M{i}-th character of @verb{s}.
+Returns the internal numerical code of the @M{i}-th character of @verb{s},
+or @nil{} if the index is out of range.
 If @verb{i} is absent, then it is assumed to be@Nb{}1.
 @verb{i} may be negative.
 
@@ -3165,7 +3212,7 @@ String values to be formatted with
 
 @Sectiondef{@T{string.gfind (s, pat)}}
 
-Returns a generator function that,
+Returns an iterator function that,
 each time it is called,
 returns the next captures from pattern @verb{pat} over string @verb{s}.
 
@@ -3434,13 +3481,6 @@ the respective value is returned.
 Otherwise, the @Q{size} is one less the first integer index with
 a @nil{} value.
 
-Notice that the last option happens only once for a table.
-If you call @verb{table.getn} again over the same table,
-it will return the same previous result,
-even if the table has been modified.
-The only way to change the value of @verb{table.getn} is by calling
-@verb{table.setn} or assigning to field @verb{"n"} in the table.
-
 @Sectiondef{@T{table.sort (table [, comp])}}@DefLIB{table.sort}
 Sorts table elements in a given order, @emph{in-place},
 from @verb{table[1]} to @verb{table[n]},
@@ -3596,7 +3636,7 @@ instead of returning an error code.
 @Sectiondef{@T{io.lines ([filename])}}@DefLIB{io.lines}
 
 Opens the given file name in read mode,
-and returns a generator function that,
+and returns an iterator function that,
 each time it is called,
 returns a new line from the file.
 Therefore, the construction
@@ -3604,7 +3644,7 @@ Therefore, the construction
        for line in io.lines(filename) do ... end
 }
 will iterate over all lines of the file.
-When the generator function detects the end of file,
+When the iterator function detects the end of file,
 it returns nil (to finish the loop) and automatically closes the file.
 
 The call @verb{io.lines()} (without a file name) is equivalent
@@ -3646,6 +3686,13 @@ Returns a handle for a temporary file.
 This file is open in read/write mode,
 and it is automatically removed when the program ends.
 
+@Sectiondef{@T{io.type (obj)}}@DefLIB{io.type}
+
+Checks whether @verb{obj} is a valid file handle.
+Returns the @verb{"file"} (a string) if @verb{obj} is an open file handle,
+@verb{"closed file"} if @verb{obj} is a closed file handle,
+and @nil{} if @verb{obj} is not a file handle.
+
 @Sectiondef{@T{io.write (value1, ...)}}@DefLIB{io.write}
 
 Equivalent to @verb{file:write} over the default output file.
@@ -3662,7 +3709,7 @@ Saves any written data to the file @verb{file}.
 
 @Sectiondef{@T{file:lines ()}}@DefLIB{file:lines}
 
-Returns a generator function that,
+Returns an iterator function that,
 each time it is called,
 returns a new line from the file.
 Therefore, the construction
