@@ -3257,7 +3257,7 @@ If the original environment has a @verb{"__fenv"} field,
 Sets the metatable for the given table.
 (You cannot change the metatable of a userdata from Lua.)
 If @verb{metatable} is @nil{}, removes the metatable of the given table.
-If the original metatalbe has a @verb{"__metatable"} field,
+If the original metatable has a @verb{"__metatable"} field,
 raises an error.
 
 @Sectiondef{@T{tonumber (e [, base])}}@DefLIB{tonumber}
