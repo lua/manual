@@ -180,11 +180,6 @@ which runs until the corresponding @verb{]]}.
 Long comments may run for several lines
 and may contain nested @verb{[[} @Mathdots{} @verb{]]} pairs.
 
-For convenience,
-the first line of a chunk is skipped if it starts with @verb{#}.
-This facility allows the use of Lua as a script interpreter
-in Unix systems @see{lua-sa}.
-
 
 @label{TypesSec: @subsection{@Index{Values and Types}}}
 
@@ -336,7 +331,7 @@ so that all global variables in that function
 will refer to that environment table.
 When a function is created,
 it inherits the environment from the function that created it.
-To change or get the environment table of a Lua function,
+To replace or get the environment table of a Lua function,
 you call @verb{setfenv} or @verb{getfenv} @see{setfenv}.
 
 An access to a global variable @verb{x}
@@ -542,11 +537,12 @@ More precisely, a @rwd{for} statement like
 is equivalent to the code:
 @verbatim{
        do
-         local var, _limit, _step = tonumber(e1), tonumber(e2), tonumber(e3)
-         if not (var and _limit and _step) then error() end
-         while (_step>0 and var<=_limit) or (_step<=0 and var>=_limit) do
+         local _var, _limit, _step = tonumber(e1), tonumber(e2), tonumber(e3)
+         if not (_var and _limit and _step) then error() end
+         while (_step>0 and _var<=_limit) or (_step<=0 and _var>=_limit) do
+           local var = _var
            block
-           var = var + _step
+           _var = _var + _step
          end
        end
 }
@@ -555,13 +551,11 @@ Note the following:
 @item{} All three control expressions are evaluated only once,
 before the loop starts.
 They must all result in numbers.
-@item{} @verb{_limit} and @verb{_step} are invisible variables.
+@item{} @verb{_var}, @verb{_limit}, and @verb{_step} are invisible variables.
 The names are here for explanatory purposes only.
-@item{} The behavior is @emph{undefined} if you assign to @verb{var} inside
-the block.
 @item{} If the third expression (the step) is absent, then a step of@Nb{}1 is used.
 @item{} You can use @rwd{break} to exit a @rwd{for} loop.
-@item{} The loop variable @verb{var} is local to the statement;
+@item{} The loop variable @verb{var} is local to the loop;
 you cannot use its value after the @rwd{for} ends or is broken.
 If you need the value of the loop variable @verb{var},
 then assign it to another variable before breaking or exiting the loop.
@@ -583,11 +577,11 @@ A @rwd{for} statement like
 is equivalent to the code:
 @verbatim{
        do
-         local _f, _s, var_1 = explist
-         local var_2, ... , var_n
+         local _f, _s, _var = explist
          while true do
-           var_1, ..., var_n = _f(_s, var_1)
-           if var_1 == nil then break end
+           local var_1, ... , var_n = _f(_s, _var)
+           _var = var_1
+           if _var == nil then break end
            block
          end
        end
@@ -597,12 +591,10 @@ Note the following:
 @item{} @verb{explist} is evaluated only once.
 Its results are an @emph{iterator} function,
 a @emph{state}, and an initial value for the first @emph{iterator variable}.
-@item{} @verb{_f} and @verb{_s} are invisible variables.
+@item{} @verb{_f}, @verb{_s}, and @verb{_var} are invisible variables.
 The names are here for explanatory purposes only.
-@item{} The behavior is @emph{undefined} if you assign to
-@verb{var_1} inside the block.
 @item{} You can use @rwd{break} to exit a @rwd{for} loop.
-@item{} The loop variables @verb{var_i} are local to the statement;
+@item{} The loop variables @verb{var_i} are local to the loop;
 you cannot use their values after the @rwd{for} ends.
 If you need these values,
 then assign them to other variables before breaking or exiting the loop.
@@ -993,8 +985,8 @@ and may have different environment tables.
 Parameters act as local variables that are
 initialized with the argument values:
 @Produc{
-@producname{parlist1}@producbody{namelist @opt{@ter{,} @ter{@ldots{}}}}
-@producname{parlist1}@producbody{@ter{@ldots{}}}
+@producname{parlist1}@producbody{namelist @opt{@ter{,} vararg} @Or{} vararg}
+@producname{vararg}@producbody{@opt{@Nter{Name} @ter{=}} @ter{@ldots{}}}
 }
 When a function is called,
 the list of @Index{arguments} is adjusted to
@@ -1003,9 +995,11 @@ unless the function is a variadic or @Def{vararg function},
 which is
 indicated by three dots (@Char{...}) at the end of its parameter list.
 A vararg function does not adjust its argument list;
-instead, it collects all extra arguments into an implicit parameter,
-called @IndexLIB{arg}.
-The value of @label{vararg: @verb{arg}} is a table,
+instead, it collects all extra arguments into an implicit parameter.
+The program may supply the name of this implicit parameter
+by preceding the three dots with the name and an equal signal (@Char{=});
+otherwise this implicit parameter is called @IndexLIB{arg}.
+The value of of this parameter is a table,
 with a field@Nb{}@verb{n} that holds the number of extra arguments
 and with the extra arguments at positions 1,@Nb{}2,@Nb{}@ldots{},@Nb{}@verb{n}.
 
@@ -1140,7 +1134,7 @@ and the values @IndexEmph{metamethods}.
 In the previous example, the event is @verb{"add"} 
 and the metamethod is the function that performs the addition.
 
-You can query and change the metatable of an object
+You can query and replace the metatable of an object
 through the @verb{set/getmetatable}
 functions @see{pdf-getmetatable}.
 
@@ -1536,8 +1530,7 @@ metatable is undefined.
 @label{coroutine: @subsection{Coroutines}}
 
 Lua supports coroutines,
-also called @emph{semi-coroutines}
-or @emph{collaborative multithreading}.
+also called @emph{collaborative multithreading}.
 A coroutine in Lua represents an independent thread of execution.
 Unlike threads in multithread systems, however,
 a coroutine only suspends its execution by explicitly calling
@@ -1837,12 +1830,14 @@ the following functions are available:
        int lua_iscfunction     (lua_State *L, int index);
        int lua_isuserdata      (lua_State *L, int index);
        int lua_islightuserdata (lua_State *L, int index);
+       int lua_isthread        (lua_State *L, int index);
 }
 @DefAPI{lua_type}
 @DefAPI{lua_isnil}@DefAPI{lua_isnumber}@DefAPI{lua_isstring}
 @DefAPI{lua_istable}@DefAPI{lua_isboolean}
 @DefAPI{lua_isfunction}@DefAPI{lua_iscfunction}
 @DefAPI{lua_isuserdata}@DefAPI{lua_islightuserdata}
+@DefAPI{lua_isthread}
 These functions can be called with any acceptable index.
 
 @verb{lua_type} returns the type of a value in the stack,
@@ -2287,7 +2282,7 @@ For instance, to access the value of a global variable, do
        lua_gettable(L, LUA_GLOBALSINDEX);
 }
 
-You can change the global environment of a Lua thread using @verb{lua_replace}.
+You can replace the global environment of a Lua thread using @verb{lua_replace}.
 
 The following functions get and set the environment of Lua functions:
 @verbatim{
@@ -2563,7 +2558,7 @@ any error jumps to the most recent active recover point.
 If an error happens outside any protected environment,
 Lua calls a @IndexEmph{panic function}
 and then calls @verb{exit(EXIT_FAILURE)}.
-You can change the panic function with
+You can replace the panic function with
 @verbatim{
        lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
 }
@@ -2597,7 +2592,7 @@ Any value returned by @verb{func} is discarded.
 
 C code can generate a Lua error calling the function
 @verbatim{
-       void lua_error (lua_State *L);
+       int lua_error (lua_State *L);
 }
 @DefAPI{lua_error}
 The error message (which actually can be any type of object)
@@ -2625,14 +2620,11 @@ but has an independent run-time stack.
 
 Each thread has an independent global environment table.
 When you create a thread, this table is the same as that of the given state,
-but you can change each one independently.
+but you can replace each one independently.
 
-You destroy threads with @IndexAPI{lua_closethread}:
-@verbatim{
-       void lua_closethread (lua_State *L, lua_State *thread);
-}
-You cannot close the sole (or last) thread of a state.
-Instead, you must close the state itself.
+There is no explicit function to close or to destroy a thread.
+Threads are subject to garbage collection,
+like any Lua object.
 
 To manipulate threads as coroutines,
 Lua offers the following functions:
@@ -2673,7 +2665,7 @@ you may use @IndexAPI{lua_xmove}:
        void lua_xmove (lua_State *from, lua_State *to, int n);
 }
 It pops @verb{n} values from the stack @verb{from},
-and puhses them into the stack @verb{to}.
+and pushes them into the stack @verb{to}.
 
 
 @C{-------------------------------------------------------------------------}
@@ -3281,6 +3273,8 @@ If @verb{metatable} is @nil{}, removes the metatable of the given table.
 If the original metatable has a @verb{"__metatable"} field,
 raises an error.
 
+This function returns @verb{table}.
+
 @Sectiondef{@T{tonumber (e [, base])}}@DefLIB{tonumber}
 Tries to convert its argument to a number.
 If the argument is already a number or a string convertible
@@ -3332,7 +3326,7 @@ as defined for the @T{table.getn} function.
 @Sectiondef{@T{_VERSION}}@DefLIB{_VERSION}
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current content of this string is @T{"Lua @Version{}"}.
+The current contents of this variable is @T{"Lua @Version{}"}.
 
 @Sectiondef{@T{xpcall (f, err)}}@DefLIB{xpcall}
 
@@ -3447,7 +3441,7 @@ Note that numerical codes are not necessarily portable across platforms.
 Returns a binary representation of the given function,
 so that a later @verb{loadstring} on that string returns
 a copy of the function.
-@verb{function} must be a Lua function without upvalues.
+@verb{function} must be a Lua function.
 
 @Sectiondef{@T{string.find (s, pattern [, init [, plain]])}}@DefLIB{string.find}
 Looks for the first @emph{match} of
@@ -3481,6 +3475,9 @@ The definition of what is an uppercase letter depends on the current locale.
 @Sectiondef{@T{string.rep (s, n)}}@DefLIB{string.rep}
 Returns a string that is the concatenation of @verb{n} copies of
 the string @verb{s}.
+
+@Sectiondef{@T{string.reverse (s)}}@DefLIB{string.reverse}
+Returns a string that is the string @verb{s} reversed.
 
 @Sectiondef{@T{string.sub (s, i [, j])}}@DefLIB{string.sub}
 Returns the substring of @verb{s} that
@@ -3752,12 +3749,12 @@ represents an array or a list.
 For those functions, an important concept is the @emph{size} of the array.
 There are three ways to specify that size:
 @itemize{
-@item{} the field @verb{"n"} @Em{}
-When the table has a field @verb{"n"} with a numerical value,
-that value is assumed as its size.
 @item{} @verb{setn} @Em{}
 You can call the @verb{table.setn} function to explicitly set
 the size of a table.
+@item{} the field @verb{"n"} @Em{}
+Otherwise, when the table has a field @verb{"n"} with a numerical value,
+that value is assumed as its size.
 @item{} implicit size @Em{}
 Otherwise, the size of the object is one less the first integer index
 with a @nil{} value.
@@ -3773,36 +3770,13 @@ the default for @verb{i} is 1,
 and the default for @verb{j} is the size of the table.
 If @verb{i} is greater than @verb{j}, returns the empty string.
 
-@Sectiondef{@T{table.foreach (table, f)}}@DefLIB{table.foreach}
-Executes the given @verb{f} over all elements of @verb{table}.
-For each element, @verb{f} is called with the index and
-respective value as arguments.
-If @verb{f} returns a non-@nil{} value,
-then the loop is broken, and this value is returned
-as the final value of @verb{foreach}.
-
-See the @verb{next} function for extra information about table traversals.
-
-
-@Sectiondef{@T{table.foreachi (table, f)}}@DefLIB{table.foreachi}
-Executes the given @verb{f} over the
-numerical indices of @verb{table}.
-For each index, @verb{f} is called with the index and
-respective value as arguments.
-Indices are visited in sequential order,
-from@Nb{}1 to @verb{n},
-where @verb{n} is the size of the table @see{getn}.
-If @verb{f} returns a non-@nil{} value,
-then the loop is broken and this value is returned
-as the result of @verb{foreachi}.
-
 @label{getn: @Sectiondef{@T{table.getn (table)}}}@DefLIB{table.getn}
 Returns the size of a table, when seen as a list.
-If the table has an @verb{n} field with a numeric value,
-this value is the size of the table.
-Otherwise, if there was a previous call
-to @verb{table.setn} over this table,
+If there was a previous call to @verb{table.setn} over this table,
 the respective value is returned.
+Otherwise, 
+if the table has an @verb{n} field with a numeric value,
+this value is the size of the table.
 Otherwise, the size is one less the first integer index with
 a @nil{} value.
 
@@ -3847,10 +3821,7 @@ calling @verb{table.setn(table, n-1)}.
 
 @Sectiondef{@T{table.setn (table, n)}}@DefLIB{table.setn}
 
-Updates the size of a table.
-If the table has a field @verb{"n"} with a numerical value,
-that value is changed to the given @verb{n}.
-Otherwise, it updates an internal state
+Updates the size of a table,
 so that subsequent calls to @verb{table.getn(table)} return @verb{n}.
 
 
@@ -4028,7 +3999,8 @@ Equivalent to @verb{io.output():write}.
 
 Closes @verb{file}.
 
-@Sectiondef{@T{file:flush ()}}@DefLIB{file:flush}
+@label{flush: @Sectiondef{@T{file:flush ()}}}
+@DefLIB{file:flush}
 
 Saves any written data to @verb{file}.
 
@@ -4096,6 +4068,19 @@ the call @verb{file:seek("set")} sets the position to the
 beginning of the file (and returns 0);
 and the call @verb{file:seek("end")} sets the position to the
 end of the file, and returns its size.
+
+@Sectiondef{@T{file:setvbuf (mode)}}@DefLIB{file:setvbuf}
+
+Sets the buffering mode for an output file.
+There are three available modes:
+@description{
+@item{@Q{no}} no buffering; any output operation appear immediately.
+@item{@Q{full}} full buffering; output operation is performed only
+when the buffer is full (or when you @verb{flush} the file @see{flush}).
+@item{@Q{line}} line buffering; output is buffered until a newline is
+output or there is any input from some special files
+(such as a terminal device).
+}
 
 @Sectiondef{@T{file:write (value1, @ldots{})}}@DefLIB{file:write}
 
@@ -4411,7 +4396,6 @@ in a global table called @verb{arg}.
 The script name is stored in index 0,
 the first argument after the script name goes to index 1,
 and so on.
-The field @verb{n} gets the number of arguments after the script name.
 Any arguments before the script name
 (that is, the interpreter name plus the options)
 go to negative indices.
@@ -4423,7 +4407,7 @@ the interpreter first runs the file @T{a.lua},
 then creates a table
 @verbatim{
        arg = { [-2] = "lua", [-1] = "-la.lua", [0] = "b.lua",
-               [1] = "t1", [2] = "t2"; n = 2 }
+               [1] = "t1", [2] = "t2" }
 }
 and finally runs the file @T{b.lua}.
 
@@ -4443,7 +4427,11 @@ or in any Lua programs by assigning to @verb{_PROMPT}.
 Note the use of @verb{-i} to enter interactive mode; otherwise,
 the program would end just after the assignment to @verb{_PROMPT}.
 
-In Unix systems, Lua scripts can be made into executable programs
+To allow the use of Lua as a
+script interpreter in Unix systems,
+the stand-alone interpreter skips
+the first line of a chunk if it starts with @verb{#}.
+Therefore, Lua scripts can be made into executable programs
 by using @verb{chmod +x} and the@Nb{}@verb{#!} form,
 as in
 @verbatim{
@@ -4626,8 +4614,7 @@ Use @verb{lua_newuserdata} or @verb{lua_pushlightuserdata} instead.
 @OrNL{}	@rwd{break}
 @OrNL{}	@rwd{for} @Nter{Name} @ter{=} exp @ter{,} exp @opt{@ter{,} exp}
 	@rwd{do} block @rwd{end}
-@OrNL{}   @rwd{for} @Nter{Name} @rep{@ter{,} @Nter{Name}} @rwd{in} explist1
-                    @rwd{do} block @rwd{end}
+@OrNL{}   @rwd{for} namelist @rwd{in} explist1 @rwd{do} block @rwd{end}
 @OrNL{}	@rwd{function} funcname funcbody
 @OrNL{}	@rwd{local} @rwd{function} @Nter{Name} funcbody
 @OrNL{}	@rwd{local} namelist @opt{init}
@@ -4680,10 +4667,9 @@ Use @verb{lua_newuserdata} or @verb{lua_pushlightuserdata} instead.
 
 @producname{funcbody}@producbody{@ter{(} @opt{parlist1} @ter{)} block @rwd{end}}
 
-@producname{parlist1}@producbody{
-	@Nter{Name} @rep{@ter{,} @Nter{Name}} @opt{@ter{,} @ter{@ldots{}}}
-@Or{}	@ter{@ldots{}}
-}
+@producname{parlist1}@producbody{namelist @opt{@ter{,} vararg} @Or{} vararg}
+
+@producname{vararg}@producbody{@opt{@Nter{Name} @ter{=}} @ter{@ldots{}}}
 
 @producname{tableconstructor}@producbody{@ter{@Open{}} @opt{fieldlist} @ter{@Close{}}}
 @producname{fieldlist}@producbody{field @rep{fieldsep field} @opt{fieldsep}}
