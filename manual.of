@@ -358,26 +358,29 @@ The following strings denote other @Index{tokens}:
 
 @IndexEmph{Literal strings}
 can be delimited by matching single or double quotes,
-and can contain the C-like escape sequences
-`@verb{\a}' (bell),
-`@verb{\b}' (backspace),
-`@verb{\f}' (form feed),
-`@verb{\n}' (newline),
-`@verb{\r}' (carriage return),
-`@verb{\t}' (horizontal tab),
-`@verb{\v}' (vertical tab),
-`@verb{\\}' (backslash),
-`@verb{\"}' (quotation mark),
-`@verb{\'}' (apostrophe),
-`@verb{\[}' (left square bracket),
-`@verb{\]}' (right square bracket),
-and `@verb{\}@emph{newline}' (that is, a backslash followed by a real newline,
-which  results in a newline in the string).
+and can contain the following C-like escape sequences:
+@description{
+@item{@T{\a}} @Em{} bell
+@item{@T{\b}} @Em{} backspace
+@item{@T{\f}} @Em{} form feed
+@item{@T{\n}} @Em{} newline
+@item{@T{\r}} @Em{} carriage return
+@item{@T{\t}} @Em{} horizontal tab
+@item{@T{\v}} @Em{} vertical tab
+@item{@T{\\}} @Em{} backslash
+@item{@T{\"}} @Em{} quotation mark
+@item{@T{\'}} @Em{} apostrophe
+@item{@T{\[}} @Em{} left square bracket
+@item{@T{\]}} @Em{} right square bracket
+}
+Moreover, a @Sq{@verb{\}@emph{newline}}
+(that is, a backslash followed by a real newline)
+results in a newline in the string.
 A character in a string may also be specified by its numerical value
-using the escape sequence `@verb{\}@emph{ddd}',
+using the escape sequence @Sq{@verb{\}@emph{ddd}},
 where @emph{ddd} is a sequence of up to three @emph{decimal} digits.
 Strings in Lua may contain any 8-bit value, including embedded zeros,
-which can be specified as `@verb{\0}'.
+which can be specified as @Sq{@verb{\0}}.
 
 Literal strings can also be delimited by matching
 @verb{[[} @Mathdots{} @verb{]]}.
@@ -391,8 +394,8 @@ That form is specially convenient for
 writing strings that contain program pieces or
 other quoted strings.
 As an example, in a system using ASCII
-(in which `@verb{a}' is coded as@Nb{}97,
-newline is coded as@Nb{}10, and `@verb{1}' is coded as@Nb{}49),
+(in which @Sq{@verb{a}} is coded as@Nb{}97,
+newline is coded as@Nb{}10, and @Sq{@verb{1}} is coded as@Nb{}49),
 the four literals below denote the same string:
 @verbatim{
       (1)   "alo\n123\""
@@ -598,13 +601,13 @@ If it is really necessary to @rwd{return} or @rwd{break} in the
 middle of a block,
 then an explicit inner block can be used,
 as in the idioms
-`@verb{do return end}' and
-`@verb{do break end}',
+@Sq{@verb{do return end}} and
+@Sq{@verb{do break end}},
 because now @rwd{return} and @rwd{break} are the last statements in
 their (inner) blocks.
 In practice,
 those idioms are only used during debugging.
-(For instance, a line `@verb{do return end}' can be added at the
+(For instance, a line @Sq{@verb{do return end}} can be added at the
 beginning of a chunk for syntax checking only.)
 
 @subsubsection{For Statement} @label{for}@index{for statement}
@@ -840,7 +843,7 @@ For example,
 
 @subsubsection{Concatenation} @label{concat}
 The string @Index{concatenation} operator in Lua is
-denoted by two dots (`@verb{..}').
+denoted by two dots (@Sq{@verb{..}}).
 If both operands are strings or numbers, then they are converted to
 strings according to the rules mentioned in @See{coercion}.
 Otherwise, the @Q{concat} metamethod is called @see{metatable}.
@@ -1064,7 +1067,7 @@ the list of @Index{arguments} is adjusted to
 the length of the list of parameters,
 unless the function is a @Def{vararg function},
 which is
-indicated by three dots (`@verb{...}') at the end of its parameter list.
+indicated by three dots (@Sq{@verb{...}}) at the end of its parameter list.
 A vararg function does not adjust its argument list;
 instead, it collects all extra arguments into an implicit parameter,
 called @IndexLIB{arg}.
@@ -2432,8 +2435,8 @@ there is the following convenience macro:
 which receives the name the function will have in Lua,
 and a pointer to the function.
 Thus,
-the C@Nb{}function `@verb{foo}' above may be registered in Lua as `@verb{average}'
-by calling
+the C@Nb{}function @Sq{@verb{foo}} above may be registered in Lua as
+@Sq{@verb{average}} by calling
 @verbatim{
        lua_register(L, "average", foo);
 }
@@ -2547,16 +2550,16 @@ Each character in the string @verb{what}
 selects some fields of @verb{ar} to be filled,
 as indicated by the letter in parentheses in the definition of @verb{lua_Debug}
 above:
-`@verb{S}' fills in the fields @verb{source}, @verb{linedefined},
+@Sq{@verb{S}} fills in the fields @verb{source}, @verb{linedefined},
 and @verb{what};
-`@verb{l}' fills in the field @verb{currentline}, etc.
-Moreover, `@verb{f}' pushes onto the stack the function that is
+@Sq{@verb{l}} fills in the field @verb{currentline}, etc.
+Moreover, @Sq{@verb{f}} pushes onto the stack the function that is
 running at the given level.
 
 To get information about a function that is not active (that is,
 it is not in the stack),
 you push the function onto the stack,
-and start the @verb{what} string with the character `@verb{>}'.
+and start the @verb{what} string with the character @Sq{@verb{>}}.
 For instance, to know in which line a function @verb{f} was defined,
 you can write
 @verbatim{
@@ -3007,8 +3010,9 @@ otherwise, it returns @nil{}.
 
 An optional argument specifies the base to interpret the numeral.
 The base may be any integer between 2 and 36, inclusive.
-In bases above@Nb{}10, the letter `A' (in either upper or lower case)
-represents@Nb{}10, `B' represents@Nb{}11, and so forth, with `Z' representing 35.
+In bases above@Nb{}10, the letter @Sq{A} (in either upper or lower case)
+represents@Nb{}10, @Sq{B} represents@Nb{}11, and so forth,
+with @Sq{Z} representing 35.
 In base 10 (the default), the number may have a decimal part,
 as well as an optional exponent part @see{coercion}.
 In other bases, only unsigned integers are accepted.
