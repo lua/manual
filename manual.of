@@ -3047,7 +3047,7 @@ of if @verb{f} is 0,
 @verb{getfenv} returns the global environment.
 The default for @verb{f} is 1.
 
-if the environment has a @verb{"__globals"} field,
+if the environment has a @verb{"__fenv"} field,
 returns the associated value, instead of the environment.
 
 @label{pdf-getmetatable: @Sectiondef{@T{getmetatable (object)}}}
@@ -3249,7 +3249,7 @@ Level 1 is the function calling @verb{setfenv}.
 As a special case, when @verb{f} is 0 @verb{setfenv} changes
 the global environment of the running thread.
 
-If the original environment has a @verb{"__globals"} field,
+If the original environment has a @verb{"__fenv"} field,
 @verb{setfenv} raises an error.
 
 @Sectiondef{@T{setmetatable (table, metatable)}}@DefLIB{setmetatable}
