@@ -38,20 +38,20 @@ For a discussion of the decisions behind the design of Lua,
 see the papers below,
 which are available at Lua's web site.
 @itemize{
-@item{}
+@item
 @Nb{R. Ierusalimschy}, @Nb{L. H. de} Figueiredo, and @Nb{W. Celes}.
 Lua@Em{}an extensible extension language.
 @emph{Software: Practice & Experience} @bf{26} #6 (1996) 635@En{}652.
-@item{}
+@item
 @Nb{L. H. de} Figueiredo, @Nb{R. Ierusalimschy}, and @Nb{W. Celes}.
 The design and implementation of a language for extending applications.
 @emph{Proceedings of XXI Brazilian Seminar on Software and Hardware}
 (1994) 273@En{}283.
-@item{}
+@item
 @Nb{L. H. de} Figueiredo, @Nb{R. Ierusalimschy}, and @Nb{W. Celes}.
 Lua: an extensible embedded language.
 @emph{Dr. Dobb's Journal} @bf{21} #12 (Dec 1996) 26@En{}33.
-@item{}
+@item
 @Nb{R. Ierusalimschy}, @Nb{L. H. de} Figueiredo, and @Nb{W. Celes}.
 The evolution of an extension language: a history of Lua,
 @emph{Proceedings of V Brazilian Symposium on Programming Languages} (2001) B-14@En{}B-28.
@@ -663,7 +663,7 @@ The basic expressions in Lua are the following:
 @producname{exp}@producbody{@ter{@ldots}}
 @producname{exp}@producbody{exp binop exp}
 @producname{exp}@producbody{unop exp}
-@producname{prefixexp}@producbody{var @Or functioncall @Or{}
+@producname{prefixexp}@producbody{var @Or functioncall @Or
                                   @ter{(} exp @ter{)}}
 }
 
@@ -769,7 +769,7 @@ The conversion rules of @See{coercion}
 Thus, @T{"0"==0} evaluates to @False,
 and @T{t[0]} and @T{t["0"]} denote different
 entries in a table.
-@medskip{}
+@medskip
 
 The operator @T{~=} is exactly the negation of equality (@T{==}).
 
@@ -866,7 +866,7 @@ The general syntax for constructors is
 @Produc{
 @producname{tableconstructor}@producbody{@ter{@Open} @opt{fieldlist} @ter{@Close}}
 @producname{fieldlist}@producbody{field @rep{fieldsep field} @opt{fieldsep}}
-@producname{field}@producbody{@ter{[} exp @ter{]} @ter{=} exp @Or{}
+@producname{field}@producbody{@ter{[} exp @ter{]} @ter{=} exp @Or
                @Nter{Name} @ter{=} exp @Or exp}
 @producname{fieldsep}@producbody{@ter{,} @Or @ter{;}}
 }
@@ -1039,7 +1039,7 @@ and may have different environment tables.
 Parameters act as local variables that are
 initialized with the argument values:
 @Produc{
-@producname{parlist1}@producbody{namelist @opt{@ter{,} @ter{@ldots}} @Or{}
+@producname{parlist1}@producbody{namelist @opt{@ter{,} @ter{@ldots}} @Or
   @ter{@ldots}}
 }
 When a function is called,
@@ -1669,7 +1669,7 @@ Normally, when its main function returns
 and abnormally, if there is an unprotected error.
 In the first case, @T{coroutine.resume} returns @True,
 plus any values returned by the coroutine main function.
-In case of errors, @T{coroutine.resume} returns @False{}
+In case of errors, @T{coroutine.resume} returns @False
 plus an error message.
 
 A coroutine yields by calling @IndexVerb{coroutine.yield}.
@@ -2337,9 +2337,9 @@ You can load a Lua chunk with @IndexAPI{lua_load}:
 The return values of @T{lua_load} are:
 @itemize{
 @item 0 @Em no errors;
-@item @IndexAPI{LUA_ERRSYNTAX} @Em{}
+@item @IndexAPI{LUA_ERRSYNTAX} @Em
 syntax error during pre-compilation.
-@item @IndexAPI{LUA_ERRMEM} @Em{}
+@item @IndexAPI{LUA_ERRMEM} @Em
 memory allocation error.
 }
 If there are no errors,
@@ -2614,7 +2614,7 @@ or one of the following error codes
 @item @IndexAPI{LUA_ERRRUN} @Em a runtime error.
 @item @IndexAPI{LUA_ERRMEM} @Em memory allocation error.
 For such errors, Lua does not call the error handler function.
-@item @IndexAPI{LUA_ERRERR} @Em{}
+@item @IndexAPI{LUA_ERRERR} @Em
 error while running the error handler function.
 }
 
@@ -3484,6 +3484,9 @@ the search for a Lua loader will try to load the files
 @T{/usr/local/mod/mod.lua},
 and @T{/lasttry}, in that order.
 
+>>> luaopen_
+>>> all-in-one loader
+
 At start-up, Lua initializes @IndexVerb{package.path} with
 the value of the environment variable @IndexVerb{LUA_PATH} or
 with a compiled-defined default path,
@@ -3801,6 +3804,7 @@ The character @T{%} works as an escape character:
 Any sequence in @T{repl} of the form @T{%}@M{n},
 with @M{n} between 1 and 9,
 stands for the value of the @M{n}-th captured substring (see below).
+The sequence @T{%0} stands for the whole match.
 The sequence @T{%%} stands for a single @T{%}.
 
 If @T{repl} is a function, then this function is called every time a
@@ -3822,7 +3826,7 @@ Here are some examples:
    x = string.gsub("hello world", "(%w+)", "%1 %1")
    --> x="hello hello world world"
 
-   x = string.gsub("hello world", "(%w+)", "%1 %1", 1)
+   x = string.gsub("hello world", "%w+", "%0 %0", 1)
    --> x="hello hello world"
 
    x = string.gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1")
@@ -3912,14 +3916,14 @@ The following combinations are allowed in describing a character class:
 @item{@Tp{%w}} @Em represents all alphanumeric characters.
 @item{@Tp{%x}} @Em represents all hexadecimal digits.
 @item{@Tp{%z}} @Em represents the character with representation 0.
-@item{@Tp{%@M{x}}} (where @M{x} is any non-alphanumeric character)  @Em{}
+@item{@Tp{%@M{x}}} (where @M{x} is any non-alphanumeric character)  @Em
 represents the character @M{x}.
 This is the standard way to escape the magic characters.
 Any punctuation character (even the non magic)
 can be preceded by a @Char{%}
 when used to represent itself in a pattern.
 
-@item{@Tp{[@M{set}]}} @Em{}
+@item{@Tp{[@M{set}]}} @Em
 represents the class which is the union of all
 characters in @M{set}.
 A range of characters may be specified by
@@ -3937,7 +3941,7 @@ The interaction between ranges and classes is not defined.
 Therefore, patterns like @T{[%a-z]} or @T{[a-%%]}
 have no meaning.
 
-@item{@Tp{[^@M{set}]}} @Em{}
+@item{@Tp{[^@M{set}]}} @Em
 represents the complement of @M{set},
 where @M{set} is interpreted as above.
 }
@@ -4690,7 +4694,7 @@ then creates a table
                [1] = "t1", [2] = "t2" }
 }
 and finally runs the file @T{b.lua}.
-The script is called with @T{arg[1]}, @T{arg[2]}, @ldots{}
+The script is called with @T{arg[1]}, @T{arg[2]}, @ldots
 as aguments;
 it can acess those arguments with the vararg expression @T{...}.
 
@@ -4729,96 +4733,38 @@ then
 }
 is a more portable solution.) 
 
-@C{-------------------------------------------------------------------------}
-@sectionX{Acknowledgments}
-
-The Lua team is grateful to @tecgraf for its continued support to Lua.
-We thank everyone at @tecgraf,
-specially the head of the group, Marcelo Gattass.
-At the risk of omitting several names,
-we also thank the following individuals for supporting,
-contributing to, and spreading the word about Lua:
-Alan Watson.
-André Clinio,
-André Costa,
-Antonio Scuri,
-Asko Kauppi,
-Bret Mogilefsky,
-Cameron Laird,
-Carlos Cassino,
-Carlos Henrique Levy,
-Claudio Terra,
-David Burgess??,
-David Jeske,
-Ed Ferguson,
-Edgar Toernig,
-Erik Hougaard,
-Jim Mathies,
-John Belmonte,
-John Passaniti,
-John Roll,
-Jon Erickson,
-Jon Kleiser,
-Mark Ian Barlow,
-Mike Pall,
-Nick Trout,
-Noemi Rodriguez,
-Norman Ramsey,
-Philippe Lhoste,
-Renata Ratton,
-Renato Borges,
-Renato Cerqueira,
-Reuben Thomas,
-Stephan Herrmann,
-Steve Dekorte,
-Thatcher Ulrich,
-Tomás Gorham,
-Vincent Penquerc'h.
-Thank you!
 
 
-@appendix{}
+@appendix
 
-@sectionX{Incompatibilities with Previous Versions}
-@Addcontentsline{Incompatibilities with Previous Versions}
+@sectionX{Incompatibilities with Previous Version}
+@Addcontentsline{Incompatibilities with Previous Version}
 
-Lua 5.0 is a major release.
-There are several incompatibilities with its previous version, Lua 4.0.
+Here we list the incompatibilities when moving a program
+from Lua 5.0 to Lua 5.1.
+You can avoid most of the incompatibilities compiling Lua with
+appropriate options.
+However,
+all those compatibility options will be removed in the next version.
 
-@subsectionX{Incompatibilities with @Index{version 4.0}}
+@subsectionX{Incompatibilities with @Index{version 5.0}}
 
 @subsubsectionX{Changes in the Language}
 @itemize{
 
-@item{}
-The whole tag-method scheme was replaced by metatables.
+@item
+The vararg system changed from the pseudo-argument @T{arg} with a
+table with the extra arguments to the vararg expression.
+(Option @IndexVerb{LUA_COMPAT_VARARG})
 
-@item 
-Function calls written between parentheses result in exactly one value.
+@item
+There was a subtle change in the scope of the implicit
+variables of the @rwd{for} constructor.
 
-@item 
-A function call as the last expression in a list constructor
-(like @T{{a,b,f()}}) has all its return values inserted in the list.
-
-@item 
-The precedence of @rwd{or} is smaller than the precedence of @rwd{and}.
-
-@item 
-@rwd{in}, @rwd{false}, and @rwd{true} are reserved words.
-
-@item 
-The old construction @T{for k,v in t}, where @T{t} is a table,
-is deprecated (although it is still supported).
-Use @T{for k,v in pairs(t)} instead.
-
-@item 
-When a literal string of the form @T{[[...]]} starts with a newline,
-this newline is ignored.
-
-@C{@item Old pre-compiled code is obsolete, and must be re-compiled.}
-
-@item Upvalues in the form @T{%var} are obsolete;
-use external local variables instead.
+@item
+The long string/long comment syntax (@T{[[...]]}) does not allow nesting.
+You can use the new syntax (@T{[=[...]=]}) in those cases.
+(Option @IndexVerb{LUA_COMPAT_LSTR})
 
 }
 
@@ -4827,32 +4773,40 @@ use external local variables instead.
 @itemize{
 
 @item 
-Most library functions now are defined inside tables.
-There is a compatibility script (@T{compat.lua}) that
-redefines most of them as global names.
+Function @IndexVerb{string.find} does not return its captures.
+Use @IndexVerb{string.match} for that.
+(Option @IndexVerb{LUA_COMPAT_FIND})
 
 @item 
-In the math library, angles are expressed in radians.
-With the compatibility script (@T{compat.lua}),
-functions still work in degrees.
+Function @IndexVerb{string.gfind} was renamed @IndexVerb{string.gmatch}.
+(Option @IndexVerb{LUA_COMPAT_GFIND})
+
+@item
+Function @IndexVerb{table.setn} was deprecated.
+Function @IndexVerb{table.getn} corresponds
+to the new length operator (@T{#});
+use the operator instead of the function.
+(Option @IndexVerb{LUA_COMPAT_GETN})
 
 @item 
-The @T{call} function is deprecated.
-Use @T{f(unpack(tab))} instead of @T{call(f, tab)}
-for unprotected calls,
-or the new @T{pcall} function for protected calls.
+Function @IndexVerb{loadlib} was renamed @IndexVerb{package.loadlib}.
+(Option @IndexVerb{LUA_COMPAT_LOADLIB})
 
 @item 
-@T{dofile} does not handle errors, but simply propagates them.
+Function @IndexVerb{math.mod} was renamed @IndexVerb{math.fmod}.
+(Option @IndexVerb{LUA_COMPAT_MOD})
 
-@item{}
-@T{dostring} is deprecated. Use @T{loadstring} instead.
+@item
+There was substantial changes in function @IndexVerb{require} due to
+the new module system.
+However, the new behavior is mostly compatible with the old,
+but it gets the path from @IndexVerb{package.path} instead
+of from @IndexVerb{LUA_PATH}.
 
-@item 
-The @T{read} option @T{*w} is obsolete.
-
-@item 
-The @T{format} option @T{%n$} is obsolete.
+@item
+Function @IndexVerb{collectgarbage} has different arguments.
+Function @IndexVerb{gcinfo} is deprecated;
+use @T{collectgarbage("count")} instead.
 
 }
 
@@ -4860,20 +4814,14 @@ The @T{format} option @T{%n$} is obsolete.
 @subsubsectionX{Changes in the API}
 @itemize{
 
-@item{}
-@T{lua_open} does not have a stack size as its argument
-(stacks are dynamic).
-
-@item 
-@T{lua_pushuserdata} is deprecated.
-Use @T{lua_newuserdata} or @T{lua_pushlightuserdata} instead.
+@item
 
 }
 
 
 
 @C{[===============================================================}
-@newpage{}
+@newpage
 @label{BNF: @sectionX{The Complete Syntax of Lua}}
 @Addcontentsline{The Complete Syntax of Lua}
 
@@ -4962,7 +4910,7 @@ Use @T{lua_newuserdata} or @T{lua_pushlightuserdata} instead.
 @producname{fieldsep}@producbody{@ter{,} @Or @ter{;}}
 
 @producname{binop}@producbody{@ter{+} @Or @ter{-} @Or @ter{*} @Or @ter{/}
-  @Or @ter{^} @Or @ter{%} @Or{}
+  @Or @ter{^} @Or @ter{%} @Or
   @ter{..} @OrNL @ter{<} @Or @ter{<=} @Or @ter{>} @Or @ter{>=}
   @Or @ter{==} @Or @ter{~=} @OrNL @rwd{and} @Or @rwd{or}}
 
