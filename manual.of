@@ -736,8 +736,8 @@ and unary @T{-} (negation).
 If the operands are numbers, or strings that can be converted to
 numbers @see{coercion},
 then all operations have the usual meaning.
-Exponentiation works for any expoent.
-For instance, @T{x^-0.5} computes the inverse of the sqare root of @id{x}.
+Exponentiation works for any exponent.
+For instance, @T{x^-0.5} computes the inverse of the square root of @id{x}.
 Modulus is defined as
 @verbatim{
   a % b == a - math.floor(a/b)*b
@@ -1257,7 +1257,6 @@ and the access to objects with no metatables does not fail
 
 
 @description{
-
 @item{@Q{add}:}@IndexTM{add}
 the @T{+} operation.
 
@@ -1311,7 +1310,7 @@ with the operation
 @item{@Q{pow}:}@IndexTM{pow}
 the @T{^} (exponentiation) operation.
 Behavior similar to the @Q{add} operation,
-with the fuction @T{pow} (from the C math library)
+with the function @T{pow} (from the C math library)
 as the primitive operation.
 
 @item{@Q{unm}:}@IndexTM{unm}
@@ -1325,8 +1324,8 @@ the unary @T{-} operation.
      -- Try to get a handler from the operand
      local h = metatable(op).__unm
      if h then
-       -- call the handler with the operand and nil
-       return h(op, nil)
+       -- call the handler with the operand
+       return h(op)
      else  -- no handler available: default behavior
        error("...")
      end
@@ -1352,6 +1351,28 @@ the @T{..} (concatenation) operation.
    end
  end
 }
+
+
+@item{@Q{len}:}@IndexTM{length}
+the @T{#} operation.
+@verbatim{
+ function len_event (op)
+   if type(op) == "string" then
+     return strlen(op)         -- primitive string length
+   elseif type(op) == "table" then
+     return #op                -- primitive table length
+   else
+     local h = metatable(op).__len
+     if h then
+       -- call the handler with the operand
+       return h(op)
+     else  -- no handler available: default behavior
+       error("...")
+     end
+   end
+ end
+}
+See @See{len-op} for a description of the length of a table.
 
 
 @item{@Q{eq}:}@IndexTM{eq}
@@ -1531,7 +1552,7 @@ accessed by C code @see{pseudo-index}.
 They are used as the default environment for other C functions
 created by that function.
 
-Enviornments associated with Lua functions are used to resolve
+Environments associated with Lua functions are used to resolve
 all accesses to global variables within that function @see{variables}.
 They are used as the default environment for other Lua functions
 created by that function.
@@ -1563,7 +1584,7 @@ Lua 5.1 implements an incremental mark-and-sweep collector.
 It uses two numbers to control its garbage-collection cycles.
 One number, the @Def{garbage-collector pause},
 controls how long the collector waits before starting a new cycle.
-Larger values make the collector less agressive.
+Larger values make the collector less aggressive.
 Values smaller than 1 mean the collector will not wait to
 start a new cycle.
 A value of 2 means that the collector waits more or less to double
@@ -1572,7 +1593,7 @@ the total memory in use before starting a new cycle.
 The other number, the @Def{garbage-collector multiplier},
 controls the relative speed of the collector relative to
 memory allocation.
-Larger values make the collector more agressive but also increases
+Larger values make the collector more aggressive but also increases
 the size of each incremental step.
 Values smaller than 1 make the collector too slow and
 may result in  the collector never finishing a cycle.
@@ -2122,9 +2143,9 @@ Otherwise you can use the function @Lid{lua_newtable}.
 
 @APIEntry{int lua_dump (lua_State *L, lua_Writer writer, void *data);}
 
-Dumps a function as a bynary chunk.
+Dumps a function as a binary chunk.
 This function receives a Lua function on the top of the stack
-and produces a bynary chunk that,
+and produces a binary chunk that,
 if loaded again,
 results in a function equivalent to the one dumped.
 As it produces parts of the chunk,
@@ -2883,7 +2904,7 @@ Every time it produces another piece of chunk,
 @Lid{lua_dump} calls the writer,
 passing along the buffer to be written (@id{p}),
 its size (@id{sz}),
-and the @id{data} parameter suplied to @Lid{lua_dump}.
+and the @id{data} parameter supplied to @Lid{lua_dump}.
 
 The writer returns an error code:
 0 means no errors;
@@ -2958,7 +2979,6 @@ call @Lid{lua_getinfo}.
 
 The fields of @Lid{lua_Debug} have the following meaning:
 @description{
-
 @item{@Tp{source}}
 If the function was defined in a string,
 then @T{source} is that string.
@@ -3269,14 +3289,14 @@ which is the value to be added to the buffer.
 Checks whether @id{cond} is true.
 If not, raise an error with message
 @St{bad argument #<numarg> to <func> (<extramsg>)},
-where @id{func} is retrived from the call stack.
+where @id{func} is retrieved from the call stack.
 
 
 @APIEntry{int luaL_argerror (lua_State *L, int numarg, const char *extramsg);}
 
 Raises an error with message
 @St{bad argument #<numarg> to <func> (<extramsg>)},
-where @id{func} is retrived from the call stack.
+where @id{func} is retrieved from the call stack.
 
 This function never returns.
 
@@ -3584,7 +3604,7 @@ for the object at the top of the stack (and pops the object).
 A reference is a unique integer key.
 As long as you do not add integer keys into table @id{t},
 @Lid{luaL_ref} ensures the uniqueness of the key it returns.
-You can retrieve an object refered by reference @id{r}
+You can retrieve an object referred by reference @id{r}
 calling @T{lua_rawgeti(L, t, r)}.
 Function @Lid{luaL_unref} frees a reference and its associated object.
 
@@ -3651,7 +3671,7 @@ and @T{<realt>} is the type name of the actual argument.
 Releases reference @id{ref} from the table at index @id{t}
 @seeC{luaL_ref}.
 The entry is removed from the table,
-so that the refered object can be collected.
+so that the referred object can be collected.
 The reference @id{ref} is also freed to be used again.
 
 If @id{ref} is @IndexAPI{LUA_NOREF} or @IndexAPI{LUA_REFNIL},
@@ -3733,7 +3753,7 @@ when absent, it defaults to @Q{assertion failed!}
 @LibEntry{collectgarbage (opt [, arg])}
 
 This function is a generic interface to the garbage collector.
-It performs different functions according to its first agument, @id{opt}:
+It performs different functions according to its first argument, @id{opt}:
 @description{
 @item{@Q{stop}} stops the garbage collector.
 @item{@Q{restart}} restarts the garbage collector.
@@ -3820,7 +3840,7 @@ up to the first integer key with a nil value in the table.
 @LibEntry{load (func [, chunkname])}
 
 Loads a chunk using function @id{func} to get its pieces.
-Each call to @id{func} must return a string that concatentates
+Each call to @id{func} must return a string that concatenates
 with previous results.
 A return of @nil (or no value) signals the end of the chunk.
 
@@ -4016,7 +4036,7 @@ This function is equivalent to
 }
 except that the above code can be written only for a fixed number
 of elements.
-By default, @id{i} is 1 and @id{j} is the length of the list,
+By default, @id{i} @Nb{is 1} and @id{j} is the length of the list,
 as defined by the length operator.
 
 
@@ -4318,8 +4338,8 @@ can be written as @T{s:byte(i)}.
 @LibEntry{string.byte (s [, i [, j]])}
 Returns the internal numerical codes of the characters @T{s[i]},
 @T{s[i+1]}, @ldots, @T{s[j]}.
-The default value for @id{i} is Nb{}1;
-the default value for @id{j} is @id{i}.
+The default value for @id{i} @Nb{is 1};
+the default value for @id{j} @Nb{is @id{i}}.
 
 Note that numerical codes are not necessarily portable across platforms.
 
@@ -4746,7 +4766,7 @@ The function @IndexLIB{math.modf} corresponds to the @id{modf} C function.
 It returns two values:
 The integral part and the fractional part of its argument.
 The function @IndexLIB{math.frexp} also returns 2 values:
-The normalized fraction and the expoent of its argument.
+The normalized fraction and the exponent of its argument.
 
 The functions @IndexLIB{math.random} and @IndexLIB{math.randomseed}
 are interfaces to the simple random generator functions
@@ -5363,8 +5383,8 @@ then creates a table
 }
 and finally runs the file @id{b.lua}.
 The script is called with @T{arg[1]}, @T{arg[2]}, @ldots
-as aguments;
-it can acess those arguments with the vararg expression @id{...}.
+as arguments;
+it can access those arguments with the vararg expression @id{...}.
 
 In interactive mode,
 if you write an incomplete statement,
@@ -5419,7 +5439,6 @@ all those compatibility options will be removed in the next version.
 
 @subsubsectionX{Changes in the Language}
 @itemize{
-
 @item
 The vararg system changed from the pseudo-argument @id{arg} with a
 table with the extra arguments to the vararg expression.
@@ -5439,7 +5458,6 @@ You can use the new syntax (@T{[=[...]=]}) in those cases.
 
 @subsubsectionX{Changes in the Libraries}
 @itemize{
-
 @item 
 Function @Lid{string.find} does not return its captures.
 Use @Lid{string.match} for that.
@@ -5481,7 +5499,6 @@ use @T{collectgarbage("count")} instead.
 
 @subsubsectionX{Changes in the API}
 @itemize{
-
 @item
 Function @id{lua_open} was replaced by @Lid{lua_newstate} to
 allow the user to set an allocation function.
