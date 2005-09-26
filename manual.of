@@ -4206,9 +4206,9 @@ be used as the loader.
 The name of that C function is the string @St{luaopen_}
 concatenated with a copy of the module name wherein each dot
 is replaced by an underscore.
-Moreover, if the module name has a colon,
-its prefix up to (and including) the first colon is removed.
-For instance, if the module name is @id{a.v1:b.c},
+Moreover, if the module name has a hyphen,
+its prefix up to (and including) the first hyphen is removed.
+For instance, if the module name is @id{a.v1-b.c},
 the function name will be @id{luaopen_b_c}.
 
 If @Lid{require} finds neither a Lua library nor a
