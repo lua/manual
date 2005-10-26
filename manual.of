@@ -1,4 +1,3 @@
-@C{@TODO{package.loadlib}}
 
 @C{-------------------------------------------------------------------------}
 @section{Introduction}
@@ -1949,7 +1948,7 @@ alphabetical order.
                                        size_t nsize);
 }
 
-The allocator function used by Lua states.
+The @Index{allocator function} used by Lua states.
 The allocator function must provide a
 functionality similar to @id{realloc},
 but not exactly the same.
@@ -1971,7 +1970,8 @@ the allocator behaves like @id{realloc}.
 Lua assumes that the allocator never fails when
 @T{osize >= nsize}.
 
-A simple implementation for the allocator function could be like this:
+A simple implementation for the @Index{allocator function}
+could be like this:
 @verbatim{
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
   (void)ud;     /* not used */
@@ -2163,7 +2163,7 @@ This function does not pop the function from the stack.
 
 Returns 1 if the two values in acceptable indices @id{index1} and
 @id{index2} are equal,
-following the semantics of the Lua @T{=} operator
+following the semantics of the Lua @T{==} operator
 (that is, may call metamethods).
 Otherwise @Nb{returns 0}.
 Also @Nb{returns 0} if any of the indices are non valid.
@@ -2190,6 +2190,9 @@ according to the value of the parameter @id{what}:
 @item @id{LUA_GCCOLLECT}@Em performs a full garbage-collection cycle.
 @item @id{LUA_GCCOUNT}@Em returns the current
 amount of memory (in Kbytes) in use by Lua.
+@item @id{LUA_GCCOUNTB}@Em returns the remainder of
+dividing the current amount of bytes of memory in use by Lua 
+by 1024.
 @item @id{LUA_GCSTEP}@Em performs an incremental step of
 garbage collection.
 The step @Q{size} is controlled by @id{data}
@@ -2201,15 +2204,17 @@ garbage-collection cycle.
 @item @id{LUA_GCSETPAUSE}@Em
 sets @M{@Tp{data}/100} as the new value
 for the @emph{pause} of the collector @see{GC}.
+The function returns the previous value of the pause.
 @item @id{LUA_GCSETSTEPMUL}@Em
 sets @M{@Tp{arg}/100} as the new value for the @emph{step multiplier} of
 the collector @see{GC}.
+The function returns the previous value of the step multiplier.
 }
 
 
 @APIEntry{lua_Alloc lua_getallocf (lua_State *L, void **ud);}
 
-Returns the allocator function of a given state.
+Returns the @Index{allocator function} of a given state.
 If @id{ud} is not @id{NULL} Lua stores in @T{*ud} the
 opaque pointer passed to @Lid{lua_newstate}.
 
@@ -2380,7 +2385,7 @@ It is used for error messages and debug information @see{debugI}.
 Creates a new, independent state.
 Returns @id{NULL} if cannot create the state
 (not enough memory).
-The argument @id{f} is the allocator function;
+The argument @id{f} is the @Index{allocator function};
 Lua does all memory allocation for that state through that function.
 The second argument, @id{ud}, is an opaque pointer that Lua
 simply passes to the allocator in every call.
@@ -2707,8 +2712,11 @@ with @id{narg} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
 When it returns, the stack contains all values passed to @Lid{lua_yield},
 or all values returned by the body function.
-@Lid{lua_resume} returns 0 if there are no errors running the coroutine,
-or an error code @seeC{lua_pcall}.
+@Lid{lua_resume} returns
+@Lid{LUA_YIELD} if the coroutine yields,
+0 if the coroutine finishes its execution
+without errors,
+or an error code in case of errors @seeC{lua_pcall}.
 In case of errors,
 the stack is not unwound,
 so you can use the debug API over it;
@@ -2716,6 +2724,12 @@ The error message is on the top of the stack.
 To restart a coroutine, you put on its stack only the values to
 be passed as results from @id{yield},
 and then call @Lid{lua_resume}.
+
+
+@APIEntry{void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);}
+
+Changes the @Index{allocator function} of a given state to @id{f}
+with user data @id{ud}.
 
 
 @APIEntry{int lua_setfenv (lua_State *L, int index);}
@@ -2964,7 +2978,7 @@ that need @Q{inside information} from the interpreter.
             int linedefined;       /* (S) */
             int lastlinedefined;   /* (S) */
             char short_src[LUA_IDSIZE]; /* (S) */
-
+  
             /* private part */
             ...
           } lua_Debug;
@@ -3764,6 +3778,7 @@ The step @Q{size} is controlled by @id{arg}
 (larger values mean more steps) in a non-specified way.
 If you want to control the step size
 you must tune experimentally the value of @id{arg}.
+Returns @rwd{true} if that step finished a collection cycle.
 @item{@Q{steppause}}
 sets @M{@Tp{arg}/100} as the new value for the @emph{pause} of
 the collector @see{GC}.
@@ -4376,6 +4391,11 @@ so the function does a plain @Q{find substring} operation,
 with no characters in @id{pattern} being considered @Q{magic}.
 Note that if @id{plain} is given, then @id{init} must be given too.
 
+If the pattern has captures,
+then in a successful match
+the captured values are also returned,
+after the two indices.
+
 
 @label{format: @LibEntry{string.format (formatstring, e1, e2, @ldots)}}
 Returns a formatted version of its variable number of arguments
@@ -4458,9 +4478,16 @@ match occurs, with all captured substrings passed as arguments,
 in order;
 if the pattern specifies no captures,
 then the whole match is passed as a sole argument.
-If the value returned by this function is a string,
+If @id{repl} is a table, then this table is queried with the
+value of the first capture or of the whole match,
+if the pattern specifies no captures.
+In both cases,
+if the value returned by the function or resulted by the query
+is a string,
 then it is used as the replacement string;
-otherwise, the replacement string is the empty string.
+otherwise, if it is @rwd{false} or @nil,
+then there is no replacement
+(that is, the original match is kept in the string).
 
 The optional last parameter @id{n} limits
 the maximum number of substitutions to occur.
@@ -4487,9 +4514,7 @@ Here are some examples:
    --> x="4+5 = 9"
 
    local t = {name="lua", version="5.0"}
-   x = string.gsub("$name_$version.tar.gz", "%$(%w+)", function (v)
-         return t[v]
-       end)
+   x = string.gsub("$name_$version.tar.gz", "%$(%w+)", t)
    --> x="lua_5.0.tar.gz"
 }
 
@@ -4690,6 +4715,33 @@ and the default for @id{j} is the length of the table.
 If @id{i} is greater than @id{j}, returns the empty string.
 
 
+@LibEntry{table.insert (table, [pos,] value)}
+
+Inserts element @id{value} at position @id{pos} in @id{table},
+shifting up other elements to open space, if necessary.
+The default value for @id{pos} is @T{n+1},
+where @id{n} is the length of the table @see{len-op},
+so that a call @T{table.insert(t,x)} inserts @id{x} at the end
+of table @id{t}.
+
+
+@LibEntry{table.maxn(table)}
+
+Returns the largest positive numerical index of the given table,
+or zero if the table has no positive numerical indices.
+
+
+@LibEntry{table.remove (table [, pos])}
+
+Removes from @id{table} the element at position @id{pos},
+shifting down other elements to close the space, if necessary.
+Returns the value of the removed element.
+The default value for @id{pos} is @id{n},
+where @id{n} is the length of the table,
+so that a call @T{table.remove(t)} removes the last element
+of table @id{t}.
+
+
 @LibEntry{table.sort (table [, comp])}
 Sorts table elements in a given order, @emph{in-place},
 from @T{table[1]} to @T{table[n]},
@@ -4705,27 +4757,6 @@ then the standard Lua operator @T{<} is used instead.
 The sort algorithm is not stable,
 that is, elements considered equal by the given order
 may have their relative positions changed by the sort.
-
-
-@LibEntry{table.insert (table, [pos,] value)}
-
-Inserts element @id{value} at position @id{pos} in @id{table},
-shifting up other elements to open space, if necessary.
-The default value for @id{pos} is @T{n+1},
-where @id{n} is the length of the table @see{len-op},
-so that a call @T{table.insert(t,x)} inserts @id{x} at the end
-of table @id{t}.
-
-
-@LibEntry{table.remove (table [, pos])}
-
-Removes from @id{table} the element at position @id{pos},
-shifting down other elements to close the space, if necessary.
-Returns the value of the removed element.
-The default value for @id{pos} is @id{n},
-where @id{n} is the length of the table,
-so that a call @T{table.remove(t)} removes the last element
-of table @id{t}.
 
 
 @label{mathlib: @subsection{Mathematical Functions}}
@@ -5334,12 +5365,12 @@ Its usage is:
 }
 The options are:
 @description{
-@item{@Tp{-} } executes @T{stdin} as a file;
 @item{@Tp{-e} @emph{stat}} executes string @emph{stat};
 @item{@Tp{-l} @emph{mod}} @Q{requires} @emph{mod};
 @item{@Tp{-i}} enters interactive mode after running @emph{script};
 @item{@Tp{-v}} prints version information;
-@item{@Tp{--}} stop handling options.
+@item{@Tp{--}} stops handling options;
+@item{@Tp{-} } executes @T{stdin} as a file and stops handling options.
 }
 After handling its options, @id{lua} runs the given @emph{script},
 passing to it the given @emph{args}.
@@ -5468,6 +5499,13 @@ Function @id{string.gfind} was renamed @Lid{string.gmatch}.
 (Option @IndexVerb{LUA_COMPAT_GFIND})
 
 @item
+When @Lid{string.gsub} is called with a function as its
+third argument,
+whenever that function returns @nil or @rwd{false} the
+replacement string is the whole match,
+instead of the empty string.
+
+@item
 Function @id{table.setn} was deprecated.
 Function @id{table.getn} corresponds
 to the new length operator (@T{#});
@@ -5529,7 +5567,8 @@ Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
 
 @Produc{
 
-@producname{chunk}@producbody{@rep{stat @opt{@ter{;}}}}
+@producname{chunk}@producbody{@rep{stat @opt{@ter{;}}}
+                              @opt{laststat@opt{@ter{;}}}}
 
 @producname{block}@producbody{chunk}
 
@@ -5542,8 +5581,6 @@ Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
 @OrNL	@rwd{if} exp @rwd{then} block
 	@rep{@rwd{elseif} exp @rwd{then} block}
 	@opt{@rwd{else} block} @rwd{end}
-@OrNL	@rwd{return} @opt{explist1}
-@OrNL	@rwd{break}
 @OrNL	@rwd{for} @Nter{Name} @ter{=} exp @ter{,} exp @opt{@ter{,} exp}
 	@rwd{do} block @rwd{end}
 @OrNL   @rwd{for} namelist @rwd{in} explist1 @rwd{do} block @rwd{end}
@@ -5551,6 +5588,8 @@ Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
 @OrNL	@rwd{local} @rwd{function} @Nter{Name} funcbody
 @OrNL	@rwd{local} namelist @opt{init}
 }
+
+@producname{laststat}@producbody{@rwd{return} @opt{explist1} @Or @rwd{break}}
 
 @producname{funcname}@producbody{@Nter{Name} @rep{@ter{.} @Nter{Name}}
                               @opt{@ter{:} @Nter{Name}}}
@@ -5604,8 +5643,11 @@ Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
   @Or @ter{@ldots}}
 
 @producname{tableconstructor}@producbody{@ter{@Open} @opt{fieldlist} @ter{@Close}}
+
 @producname{fieldlist}@producbody{field @rep{fieldsep field} @opt{fieldsep}}
+
 @producname{field}@producbody{@ter{[} exp @ter{]} @ter{=} exp @Or name @ter{=} exp @Or exp}
+
 @producname{fieldsep}@producbody{@ter{,} @Or @ter{;}}
 
 @producname{binop}@producbody{@ter{+} @Or @ter{-} @Or @ter{*} @Or @ter{/}
