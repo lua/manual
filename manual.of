@@ -4566,8 +4566,10 @@ stands for the value of the @M{n}-th captured substring (see below).
 The sequence @T{%0} stands for the whole match.
 The sequence @T{%%} stands for a single @T{%}.
 
-If @id{repl} is a table, then ...
-@TODO!!
+If @id{repl} is a table, then the table is queried for every match,
+using the first capture as the key;
+if the pattern specifies no captures,
+then the whole match is used as the key.
 
 If @id{repl} is a function, then this function is called every time a
 match occurs, with all captured substrings passed as arguments,
@@ -4577,6 +4579,7 @@ then the whole match is passed as a sole argument.
 If @id{repl} is a table, then this table is queried with the
 value of the first capture or of the whole match,
 if the pattern specifies no captures.
+
 In both cases,
 if the value returned by the function or by the table query
 is a string or a number,
