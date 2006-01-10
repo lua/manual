@@ -4376,8 +4376,8 @@ including if necessary a path and extension.
 
 This function is not supported by ANSI C.
 As such, it is only available on some platforms
-(Windows, Linux, Solaris, BSD, plus other Unix systems that
-support the @id{dlfcn} standard).
+(Windows, Linux, Mac OS X, Solaris, BSD,
+plus other Unix systems that support the @id{dlfcn} standard).
 
 
 @LibEntry{package.path}
@@ -4824,7 +4824,7 @@ so that a call @T{table.insert(t,x)} inserts @id{x} at the end
 of table @id{t}.
 
 
-@LibEntry{table.maxn(table)}
+@LibEntry{table.maxn (table)}
 
 Returns the largest positive numerical index of the given table,
 or zero if the table has no positive numerical indices.
