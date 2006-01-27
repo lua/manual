@@ -1173,7 +1173,7 @@ while all of them share the same @id{x}.
 
 Because Lua is an embedded extension language,
 all Lua actions start from @Nb{C code} in the host program
-calling a function from the Lua library @see{lua_pcall}.
+calling a function from the Lua library @seeC{lua_pcall}.
 Whenever an error occurs during Lua compilation or execution,
 control returns to C,
 which can take appropriate measures
@@ -1516,11 +1516,11 @@ called when Lua calls a value.
 @verbatim{
  function function_event (func, ...)
    if type(func) == "function" then
-     return func(unpack(arg))   -- primitive call
+     return func(...)   -- primitive call
    else
      local h = metatable(func).__call
      if h then
-       return h(func, unpack(arg))
+       return h(func, ...)
      else
        error("...")
      end
@@ -1561,7 +1561,7 @@ all accesses to global variables within that function @see{variables}.
 They are used as the default environment for other Lua functions
 created by that function.
 
-You can change the environment of a Lua function of the
+You can change the environment of a Lua function or the
 running thread calling @Lid{setfenv}.
 You can get the environment of a Lua function or the running thread
 calling @Lid{getfenv}.
@@ -1575,8 +1575,8 @@ use the @Nb{C API}.
 
 Lua performs automatic memory management.
 That means that
-you do not have to worry about allocating memory for new objects
-not about freeing it when the objects are no longer needed.
+you have to worry neither about allocating memory for new objects
+nor about freeing it when the objects are no longer needed.
 Lua manages memory automatically by running
 a @IndexEmph{garbage collector} from time to time
 to collect all @emph{dead objects}
@@ -2252,6 +2252,16 @@ As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
 
 
+@APIEntry{void lua_getglobal (lua_State *L, const char *name);}
+
+Pushes onto the stack the value of the global @id{name}.
+It is defined as a macro:
+@verbatim{
+#define lua_getglobal(L,s)  lua_getfield(L, LUA_GLOBALSINDEX, s)
+}
+
+
+
 @APIEntry{int lua_getmetatable (lua_State *L, int index);}
 
 Pushes onto the stack the metatable of the value at the given
@@ -2569,7 +2579,16 @@ associated with the function.
 @APIEntry{void lua_pushcfunction (lua_State *L, lua_CFunction f);}
 
 Pushes a @Nb{C function} onto the stack.
-This function is equivalent to @T{lua_pushcclosure(L, f, 0);}.
+This function receives a pointer to a C function
+and pushes on the stack a Lua value of type @id{function} that,
+when called, invokes the corresponding @Nb{C function}.
+
+Any function to be registered in Lua must
+follow the correct protocol to receive its parameters
+and return its results @seeC{lua_CFunction}.
+
+The call @T{lua_pushcfunction(L, f)} is equivalent to
+@T{lua_pushcclosure(L, f, 0)}.
 
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);}
@@ -2639,7 +2658,7 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
-The string cannot embedded zeros;
+The string cannot contain embedded zeros;
 it is assumed to end at the first zero.
 
 
@@ -2716,6 +2735,15 @@ To signal the end of the chunk, the reader must return @id{NULL}.
 The reader function may return pieces of any size greater than zero.
 
 
+@APIEntry{void lua_register (lua_State *L, const char *name, lua_CFunction f);}
+
+Sets the C function @id{f} as the new value of global @id{name}.
+It is defined as a macro:
+@verbatim{
+#define lua_register(L,n,f)  (lua_pushcfunction(L, f), lua_setglobal(L, n))
+}
+
+
 @APIEntry{void lua_remove (lua_State *L, int index);}
 
 Removes the element at the given valid index,
@@ -2782,6 +2810,16 @@ and @id{v} is the value at the top of the stack,
 This function pops the value from the stack.
 As in Lua, this function may trigger a metamethod
 for the @Q{newindex} event @see{metatable}.
+
+
+@APIEntry{void lua_setglobal (lua_State *L, const char *name);}
+
+Pops a value from the stack and
+sets it as the new value of global @id{name}.
+It is defined as a macro:
+@verbatim{
+#define lua_setglobal(L,s)   lua_setfield(L, LUA_GLOBALSINDEX, s)
+}
 
 
 @APIEntry{int lua_setmetatable (lua_State *L, int index);}
@@ -3250,7 +3288,7 @@ A hook is disabled by setting @id{mask} to zero.
 
 Sets the value of a local variable of a given activation record.
 Parameters @id{ar} and @id{n} are as in @Lid{lua_getlocal}
-@see{lua_getlocal}.
+@seeC{lua_getlocal}.
 @Lid{lua_setlocal} assigns the value at the top of the stack
 to the variable and returns its name.
 It also pops the value from the stack.
@@ -3264,7 +3302,7 @@ the number of active local variables.
 
 Sets the value of a closure's upvalue.
 Parameters @id{funcindex} and @id{n} are as in @Lid{lua_getupvalue}
-@see{lua_getupvalue}.
+@seeC{lua_getupvalue}.
 It assigns the value at the top of the stack
 to the upvalue and returns its name.
 It also pops the value from the stack.
@@ -3535,9 +3573,9 @@ in the registry @seeC{luaL_newmetatable}.
 @APIEntry{const char *luaL_gsub (lua_State *L, const char *s,
                                  const char *p, const char *r);}
 
-Creates a copy of string @id{s} by replacing any occurrence
+Creates a copy of string @id{s} by replacing
 any occurrence of the string @id{p}
-wth the string @id{r}.
+with the string @id{r}.
 Pushes the resulting string on the stack and returns it.
 
 
@@ -4576,12 +4614,8 @@ match occurs, with all captured substrings passed as arguments,
 in order;
 if the pattern specifies no captures,
 then the whole match is passed as a sole argument.
-If @id{repl} is a table, then this table is queried with the
-value of the first capture or of the whole match,
-if the pattern specifies no captures.
 
-In both cases,
-if the value returned by the function or by the table query
+If the value returned by the table query or by the function call
 is a string or a number,
 then it is used as the replacement string;
 otherwise, if it is @rwd{false} or @nil,
@@ -4828,6 +4862,8 @@ of table @id{t}.
 
 Returns the largest positive numerical index of the given table,
 or zero if the table has no positive numerical indices.
+(To do its job this function does a linear traversal of
+the whole table.) 
 
 
 @LibEntry{table.remove (table [, pos])}
@@ -5658,6 +5694,15 @@ use @T{collectgarbage("count")} instead.
 
 @subsubsectionX{Changes in the API}
 @itemize{
+
+@item
+The @id{luaopen_*} functions (to open libraries)
+cannot be called directly,
+like a regular C function.
+They must be called through Lua,
+like a Lua function.
+
+
 @item
 Function @id{lua_open} was replaced by @Lid{lua_newstate} to
 allow the user to set a memory allocation function.
