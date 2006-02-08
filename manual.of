@@ -279,7 +279,7 @@ Any arithmetic operation applied to a string tries to convert
 that string to a number, following the usual conversion rules.
 Conversely, whenever a number is used where a string is expected,
 the number is converted to a string, in a reasonable format.
-For complete control of how numbers are converted to strings,
+For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
 @seeF{string.format}.
 
@@ -1562,9 +1562,9 @@ They are used as the default environment for other Lua functions
 created by that function.
 
 You can change the environment of a Lua function or the
-running thread calling @Lid{setfenv}.
+running thread by calling @Lid{setfenv}.
 You can get the environment of a Lua function or the running thread
-calling @Lid{getfenv}.
+by calling @Lid{getfenv}.
 To manipulate the environment of other objects
 (userdata, @Nb{C functions}, other threads) you must
 use the @Nb{C API}.
@@ -1587,7 +1587,7 @@ tables, userdata, functions, threads, and strings.
 Lua implements an incremental mark-and-sweep collector.
 It uses two numbers to control its garbage-collection cycles:
 the @Def{garbage-collector pause} and
-the @Def{garbage-collector multiplier}.
+the @Def{garbage-collector step multiplier}.
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
@@ -1597,7 +1597,7 @@ start a new cycle.
 A value of 2 means that the collector waits more or less to double
 the total memory in use before starting a new cycle.
 
-The garbage-collector multiplier
+The step multiplier
 controls the relative speed of the collector relative to
 memory allocation.
 Larger values make the collector more aggressive but also increases
@@ -1919,7 +1919,7 @@ or a light userdata with the address of a @Nb{C object} in your code.
 
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
-and therefore should not be used by other purposes.
+and therefore should not be used for other purposes.
 
 
 @subsection{Error Handling in C}
@@ -2106,7 +2106,7 @@ of numerical arguments and returns their average and sum:
 @APIEntry{int lua_checkstack (lua_State *L, int extra);}
 
 Ensures that there are at least @id{extra} free stack slots in the stack.
-it returns false if it cannot grow the stack to that size.
+It returns false if it cannot grow the stack to that size.
 This function never shrinks the stack;
 if the stack is already larger than the new size,
 it is left unchanged.
@@ -2268,7 +2268,7 @@ Pushes onto the stack the metatable of the value at the given
 acceptable index.
 If the index is not valid,
 or if the value does not have a metatable,
-@Nb{returns 0} and pushes nothing on the stack.
+the function @Nb{returns 0} and pushes nothing on the stack.
 
 
 @APIEntry{void lua_gettable (lua_State *L, int index);}
@@ -2492,7 +2492,7 @@ The type of numbers in Lua.
 By default, it is double, but that can be changed in @id{luaconf.h}.
 
 Through the configuration file you can change
-Lua to operate with other type for numbers (e.g., float or long).
+Lua to operate with another type for numbers (e.g., float or long).
 
 
 @APIEntry{size_t lua_objlen (lua_State *L, int index);}
@@ -2866,7 +2866,7 @@ which creates a Lua state from scratch.
 
 Returns the status of the thread @id{L}.
 
-The status can by 0 for a normal thread,
+The status can be 0 for a normal thread,
 an error code if the thread finished its execution with an error,
 or @IndexAPI{LUA_YIELD} if the thread is suspended.
 
@@ -2874,7 +2874,7 @@ or @IndexAPI{LUA_YIELD} if the thread is suspended.
 @APIEntry{int lua_toboolean (lua_State *L, int index);}
 
 Converts the Lua value at the given acceptable index to a @Nb{C boolean}
-value ((@Nb{0 or 1}).
+value (@Nb{0 or 1}).
 Like all tests in Lua,
 @Lid{lua_toboolean} returns 1 for any Lua value
 different from @False and @nil;
@@ -2895,7 +2895,7 @@ otherwise, returns @id{NULL}.
 
 Converts the Lua value at the given acceptable index
 to the signed integral type @Lid{lua_Integer}.
-The Lua value must be a number or a string convertible to number
+The Lua value must be a number or a string convertible to a number
 @see{coercion};
 otherwise, @Lid{lua_tointeger} @Nb{returns 0}.
 
@@ -2931,7 +2931,7 @@ will be valid after the corresponding value is removed from the stack.
 
 Converts the Lua value at the given acceptable index
 to a number @seeC{lua_Number}.
-The Lua value must be a number or a string convertible to number
+The Lua value must be a number or a string convertible to a number
 @see{coercion};
 otherwise, @Lid{lua_tonumber} @Nb{returns 0}.
 
@@ -2972,7 +2972,7 @@ Otherwise, returns @id{NULL}.
 
 @APIEntry{int lua_type (lua_State *L, int index);}
 
-Returns the type of a value in the given acceptable index,
+Returns the type of the value in the given acceptable index,
 or @id{LUA_TNONE} for a non-valid index
 (that is, an index to an @Q{empty} stack position).
 The types returned by @Lid{lua_type} are coded by the following constants
@@ -3017,7 +3017,7 @@ calling the writer again.
 Exchange values between different threads of the @emph{same} global state.
 
 This function pops @id{n} values from the stack @id{from},
-and pushes them into the stack @id{to}.
+and pushes them onto the stack @id{to}.
 
 
 @APIEntry{int lua_yield  (lua_State *L, int nresults);}
@@ -3418,7 +3418,7 @@ Its pattern of use is as follows:
 @item Then you initialize it with a call @T{luaL_buffinit(L, &b)}.
 @item Then you add string pieces to the buffer calling any of
 the @id{luaL_add*} functions.
-@item You finish calling @T{luaL_pushresult(&b)}.
+@item You finish by calling @T{luaL_pushresult(&b)}.
 That call leaves the final string on the top of the stack.
 }
 
@@ -3483,7 +3483,7 @@ Checks whether the function argument @id{narg} is a number
 and returns that number cast to a @id{long}.
 
 
-@APIEntry{const char *luaL_checklstring (lua_State *L, int numArg, size_t *l);}
+@APIEntry{const char *luaL_checklstring (lua_State *L, int narg, size_t *l);}
 
 Checks whether the function argument @id{narg} is a string
 and returns that string;
@@ -3491,7 +3491,7 @@ if @id{l} is not @id{NULL} fills @T{*l}
 with the string's length.
 
 
-@APIEntry{lua_Number luaL_checknumber (lua_State *L, int numArg);}
+@APIEntry{lua_Number luaL_checknumber (lua_State *L, int narg);}
 
 Checks whether the function argument @id{narg} is a number
 and returns that number.
@@ -3512,7 +3512,7 @@ Raises an error if the argument is not a string or
 if the string cannot be found.
 
 This is a useful function for mapping strings to @Nb{C enums}.
-The usual interfaces in Lua libraries is to use strings instead of numbers
+The usual convention in Lua libraries is to use strings instead of numbers
 to select options.
 
 
@@ -3534,7 +3534,7 @@ and returns that string.
 Checks whether the function argument @id{narg} has type @id{t}.
 
 
-@APIEntry{void *luaL_checkudata (lua_State *L, int ud, const char *tname);}
+@APIEntry{void *luaL_checkudata (lua_State *L, int narg, const char *tname);}
 
 Checks whether the function argument @id{narg} is a userdata
 of the type @id{tname} @seeC{luaL_newmetatable}.
@@ -3544,7 +3544,7 @@ of the type @id{tname} @seeC{luaL_newmetatable}.
 
 Raises an error.
 The error message format is given by @id{fmt}
-plus any extra argument,
+plus any extra arguments,
 following the same rules of @Lid{lua_pushfstring}.
 It also adds at the beginning of the message the file name and
 the line number where the error occurred,
@@ -3616,15 +3616,15 @@ This function returns the same results as @Lid{lua_load}.
 
 @APIEntry{int luaL_newmetatable (lua_State *L, const char *tname);}
 
-If the registry already has the key @St{tname},
+If the registry already has the key @id{tname},
 returns 0.
 Otherwise,
 creates a new table to be used as a metatable for userdata,
-adds it to the registry with key @St{tname},
+adds it to the registry with key @id{tname},
 and returns 1.
 
 In both cases pushes on the stack the final value associated
-with @St{tname} in the registry.
+with @id{tname} in the registry.
 
 
 @APIEntry{lua_State *luaL_newstate (void);}
@@ -3639,6 +3639,11 @@ Returns the new state,
 or @id{NULL} if there is a memory allocation error.
 
 
+@APIEntry{void luaL_openlibs (lua_State *L);}
+
+Opens all standard Lua libraries into the given state.
+
+
 @APIEntry{int luaL_optint (lua_State *L, int narg, int d);}
 
 If the function argument @id{narg} is a number,
@@ -3648,7 +3653,7 @@ returns @id{d}.
 Otherwise, raises an error.
 
 
-@APIEntry{lua_Integer luaL_optinteger (lua_State *L, int nArg, lua_Integer d);}
+@APIEntry{lua_Integer luaL_optinteger (lua_State *L, int narg, lua_Integer d);}
 
 If the function argument @id{narg} is a number,
 returns that number cast to a @Lid{lua_Integer}.
@@ -3666,7 +3671,7 @@ returns @id{d}.
 Otherwise, raises an error.
 
 
-@APIEntry{const char *luaL_optlstring (lua_State *L, int numArg,
+@APIEntry{const char *luaL_optlstring (lua_State *L, int narg,
                                        const char *d, size_t *l);}
 
 If the function argument @id{narg} is a string,
@@ -3679,7 +3684,7 @@ If @id{l} is not @id{NULL},
 fills the position @T{*l} with the results's length.
 
 
-@APIEntry{lua_Number luaL_optnumber (lua_State *L, int nArg, lua_Number d);}
+@APIEntry{lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number d);}
 
 If the function argument @id{narg} is a number,
 returns that number.
@@ -3727,7 +3732,7 @@ by calling @T{lua_rawgeti(L, t, r)}.
 Function @Lid{luaL_unref} frees a reference and its associated object.
 
 If the object at the top of the stack is @nil,
-@Lid{luaL_ref} returns the same reference @IndexAPI{LUA_REFNIL}.
+@Lid{luaL_ref} returns the constant @IndexAPI{LUA_REFNIL}.
 The constant @IndexAPI{LUA_NOREF} is guaranteed to be different
 from any reference returned by @Lid{luaL_ref}.
 
@@ -3985,7 +3990,7 @@ and debug information.
 Similar to @Lid{load},
 but gets the chunk from file @id{filename}
 or from the standard input,
-if no file name given.
+if no file name is given.
 
 
 @LibEntry{loadstring (string [, chunkname])}
@@ -4369,7 +4374,7 @@ If the loader returns any value,
 If the loader returns no value and
 has not assigned any value to @T{package.loaded[modname]},
 then @id{require} assigns @rwd{true} to that entry.
-In any case, require returns the
+In any case, @id{require} returns the
 final value of @T{package.loaded[modname]}.
 
 If there is any error loading or running the module,
@@ -4406,7 +4411,8 @@ and returns this function as a @Nb{C function}.
 This is a low-level function.
 It completely bypasses the package and module system.
 Unlike @Lid{require},
-it does not perform any path searching or automatically adds extensions.
+it does not perform any path searching and
+does not automatically adds extensions.
 @id{libname} must be the complete file name of the @Nb{C library},
 including if necessary a path and extension.
 @id{funcname} must be the exact name exported by the @Nb{C library}
@@ -4836,7 +4842,7 @@ It provides all its functions inside the table @IndexLIB{table}.
 
 Most functions in the table library assume that the table
 represents an array or a list.
-For those functions, when we talk about @Q{the length} of a table
+For those functions, when we talk about the @Q{length} of a table
 we mean the result of the length operator.
 
 
@@ -4899,16 +4905,17 @@ may have their relative positions changed by the sort.
 This library is an interface to the standard @Nb{C math} library.
 It provides all its functions inside the table @IndexLIB{math}.
 The library provides the following functions:
-@DefLIB{math.abs}@DefLIB{math.acos}@DefLIB{math.asin}@DefLIB{math.atan}
-@DefLIB{math.atan2}@DefLIB{math.ceil}@DefLIB{math.cos}@DefLIB{math.cosh}
-@DefLIB{math.def}@DefLIB{math.exp}
-@DefLIB{math.floor}@DefLIB{math.log}@DefLIB{math.log10}
-@DefLIB{math.fmod}@DefLIB{math.pow}@DefLIB{math.sin}
-@DefLIB{math.sqrt}@DefLIB{math.tan}@DefLIB{math.ldexp}
-@DefLIB{math.sinh}@DefLIB{math.tanh}
+@DefLIB{math.abs} @DefLIB{math.acos} @DefLIB{math.asin} @DefLIB{math.atan}
+@DefLIB{math.atan2} @DefLIB{math.ceil} @DefLIB{math.cos} @DefLIB{math.cosh}
+@DefLIB{math.deg} @DefLIB{math.exp} @DefLIB{math.floor} @DefLIB{math.fmod}
+@DefLIB{math.frexp} @DefLIB{math.ldexp} @DefLIB{math.log} @DefLIB{math.log10}
+@DefLIB{math.max} @DefLIB{math.min} @DefLIB{math.modf} @DefLIB{math.pow}
+@DefLIB{math.rad} @DefLIB{math.random} @DefLIB{math.randomseed}
+@DefLIB{math.sin} @DefLIB{math.sinh} @DefLIB{math.sqrt} @DefLIB{math.tan}
+@DefLIB{math.tanh}
 @verbatim{
        math.abs     math.acos    math.asin    math.atan    math.atan2
-       math.ceil    math.cosh    math.cos     math.deg     math.exp
+       math.ceil    math.cos     math.cosh    math.deg     math.exp
        math.floor   math.fmod    math.frexp   math.ldexp   math.log
        math.log10   math.max     math.min     math.modf    math.pow
        math.rad     math.random  math.randomseed           math.sin
@@ -5093,7 +5100,7 @@ Equivalent to @T{io.output():write}.
 Closes @id{file}.
 Note that files are automatically closed when
 their handles are garbage collected,
-but that takes an unpredictable time to happen.
+but that takes an unpredictable amount of time to happen.
 
 
 @label{flush: @LibEntry{file:flush ()}}
@@ -5150,9 +5157,9 @@ measured from the beginning of the file,
 to the position given by @id{offset} plus a base
 specified by the string @id{whence}, as follows:
 @description{
-@item{@Q{set}} base is position 0 (beginning of the file);
-@item{@Q{cur}} base is current position;
-@item{@Q{end}} base is end of file;
+@item{@Q{set}} @Em base is position 0 (beginning of the file);
+@item{@Q{cur}} @Em base is current position;
+@item{@Q{end}} @Em base is end of file;
 }
 In case of success, function @id{seek} returns the final file position,
 measured in bytes from the beginning of the file.
@@ -5243,7 +5250,7 @@ the host system and on the current locale
 @LibEntry{os.difftime (t2, t1)}
 
 Returns the number of seconds from time @id{t1} to time @id{t2}.
-In Posix, Windows, and some other systems,
+In POSIX, Windows, and some other systems,
 this value is exactly @id{t2}@Math{-}@id{t1}.
 
 
@@ -5306,7 +5313,7 @@ and may have fields @id{hour}, @id{min}, @id{sec}, and @id{isdst}
 (for a description of these fields, see the @Lid{os.date} function).
 
 The returned value is a number, whose meaning depends on your system.
-In Posix, Windows, and some other systems, this number counts the number
+In POSIX, Windows, and some other systems, this number counts the number
 of seconds since some given start time (the @Q{epoch}).
 In other systems, the meaning is not specified,
 and the number returned by @id{time} can be used only as an argument to
@@ -5479,7 +5486,7 @@ Otherwise, it returns the name of the local variable.
 
 @LibEntry{debug.setmetatable (object, table)}
 
-Sets the metatable for the given @id{object} to the given id@{table}
+Sets the metatable for the given @id{object} to the given @id{table}
 (which can be @nil).
 
 
@@ -5581,7 +5588,7 @@ by issuing a different prompt.
 If the global variable @IndexVerb{_PROMPT} contains a string,
 then its value is used as the prompt.
 Similarly, if the global variable @IndexVerb{_PROMPT2} contains a string,
-it its value is used as the secondary prompt
+its value is used as the secondary prompt
 (issued during incomplete statements).
 Therefore, both prompts can be changed directly on the command line.
 For instance,
@@ -5729,7 +5736,7 @@ Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
 @Addcontentsline{The Complete Syntax of Lua}
 
 Here is the complete syntax of Lua in extended BNF.
-It does not describe operator priorities nor some syntactical restrictions,
+It does not describe operator priorities or some syntactical restrictions,
 such as @rwd{return} and @rwd{break} statements
 can only appear as the @emph{last} statement of a block.
 
