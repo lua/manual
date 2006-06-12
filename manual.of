@@ -315,18 +315,6 @@ Square brackets are used to index a table:
 @Produc{
 @producname{var}@producbody{prefixexp @bnfter{[} exp @bnfter{]}}
 }
-The first expression (@emph{prefixexp}) should result in a table value;
-the second expression (@emph{exp})
-identifies a specific entry in this table.
-The expression denoting the table to be indexed has a restricted syntax;
-see @See{expressions} for details.
-
-The syntax @id{var.Name} is just syntactic sugar for
-@T{var["Name"]} and is used to denote table fields:
-@Produc{
-@producname{var}@producbody{prefixexp @bnfter{.} @bnfNter{Name}}
-}
-
 The meaning of accesses to global variables 
 and table fields can be changed via metatables.
 An access to an indexed variable @T{t[i]} is equivalent to
@@ -335,6 +323,12 @@ a call @T{gettable_event(t,i)}.
 @id{gettable_event} function.
 This function is not defined or callable in Lua.
 We use it here only for explanatory purposes.)
+
+The syntax @id{var.Name} is just syntactic sugar for
+@T{var["Name"]}:
+@Produc{
+@producname{var}@producbody{prefixexp @bnfter{.} @bnfNter{Name}}
+}
 
 All global variables live as fields in ordinary Lua tables,
 called @def{environment tables} or simply
@@ -564,17 +558,17 @@ the first @emph{exp}, until it passes the second @emph{exp} by steps of the
 third @emph{exp}.
 More precisely, a @Rw{for} statement like
 @verbatim{
-for var = e1, e2, e3 do block end
+for v = e1, e2, e3 do @rep{block} end
 }
 is equivalent to the code:
 @verbatim{
 do
-  local _var, _limit, _step = tonumber(e1), tonumber(e2), tonumber(e3)
-  if not (_var and _limit and _step) then error() end
-  while (_step>0 and _var<=_limit) or (_step<=0 and _var>=_limit) do
-    local var = _var
+  local @rep{var}, @rep{limit}, @rep{step} = tonumber(e1), tonumber(e2), tonumber(e3)
+  if not (@rep{var} and @rep{limit} and @rep{step}) then error() end
+  while (@rep{step} > 0 and @rep{var} <= @rep{limit}) or (@rep{step} <= 0 and @rep{var} >= @rep{limit}) do
+    local v = @rep{var}
     @rep{block}
-    _var = _var + _step
+    @rep{var} = @rep{var} + @rep{step}
   end
 end
 }
@@ -588,7 +582,7 @@ They must all result in numbers.
 }
 
 @item{
-@T{_var}, @T{_limit}, and @T{_step} are invisible variables.
+@T{@rep{var}}, @T{@rep{limit}}, and @T{@rep{step}} are invisible variables.
 The names are here for explanatory purposes only.
 }
 
@@ -1333,7 +1327,7 @@ function getbinhandler (op1, op2, event)
   return metatable(op1)[event] or metatable(op2)[event]
 end
 }
-By ysing this function,
+By using this function,
 the behavior of the @T{op1 + op2} is
 @verbatim{
 function add_event (op1, op2)
@@ -1933,8 +1927,8 @@ In particular,
 You can use the function @Lid{lua_checkstack}
 to grow the stack size.
 
-Whenever Lua calls C, @defid{LUA_MINSTACK}
-it ensures that at least @id{LUA_MINSTACK} stack positions are available.
+Whenever Lua calls C,
+it ensures that at least @defid{LUA_MINSTACK} stack positions are available.
 @id{LUA_MINSTACK} is defined as 20,
 so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
@@ -4558,6 +4552,8 @@ without invoking any metamethod.
 @id{index} any value different from @nil,
 and @id{value} any Lua value.
 
+This function returns @id{table}.
+
 }
 
 @LibEntry{select (index, @Cdots)|
@@ -6168,12 +6164,17 @@ and so on.
 If @id{function} is a number larger than the number of active functions,
 then @id{getinfo} returns @nil.
 
-The returned table contains all the fields returned by @Lid{lua_getinfo},
+The returned table may contain all the fields returned by @Lid{lua_getinfo},
 with the string @id{what} describing which fields to fill in.
-The default for @id{what} is to get all information available.
+The default for @id{what} is to get all information available,
+except the table of valid lines.
 If present,
 the option @Char{f}
 adds a field named @id{func} with the function itself.
+If present,
+the option @Char{L}
+adds a field named @id{activelines} with the table of
+valid lines.
 
 For instance, the expression @T{debug.getinfo(1,"n").name} returns
 a name of the current function, if a reasonable name can be found,
@@ -6223,6 +6224,7 @@ The function returns @nil if there is no upvalue with the given index.
 @LibEntry{debug.setfenv (object, table)|
 
 Sets the environment of the given @id{object} to the given @id{table}.
+Returns @id{object}.
 
 }
 
@@ -6558,9 +6560,7 @@ is not a userdata of the expected type.
 @sect1{BNF| @title{The Complete Syntax of Lua}
 
 Here is the complete syntax of Lua in extended BNF.
-It does not describe operator priorities or some syntactical restrictions,
-such as @Rw{return} and @Rw{break} statements
-can only appear as the @emph{last} statement of a block.
+(It does not describe operator precedences.)
 @index{grammar}
 
 @Produc{
