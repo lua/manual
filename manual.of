@@ -1267,8 +1267,7 @@ You cannot change the metatable of other types from Lua
 you must use the @N{C API} for that.
 
 Tables and userdata have individual metatables
-(although multiple tables and userdata can share
-a same table as their metatable);
+(although multiple tables and userdata can share their metatables);
 values of all other types share one single metatable per type.
 So, there is one single metatable for all numbers,
 and for all strings, etc.
@@ -1748,7 +1747,7 @@ A table with both weak keys and weak values allows the collection of
 both keys and values.
 In any case, if either the key or the value is collected,
 the whole pair is removed from the table.
-The weakness of a table is controlled by the value of the
+The weakness of a table is controlled by the
 @id{__mode} field of its metatable.
 If the @id{__mode} field is a string containing the @N{character @Char{k}},
 the keys in the table are weak.
@@ -2354,7 +2353,7 @@ The function returns the previous value of the pause.
 }
 
 @item{@id{LUA_GCSETSTEPMUL}|
-sets @id{arg}/100 as the new value for the @emph{step multiplier} of
+sets @id{data}/100 as the new value for the @emph{step multiplier} of
 the collector @see{GC}.
 The function returns the previous value of the step multiplier.
 }
@@ -2443,7 +2442,7 @@ because a pseudo-index is not an actual stack position.
 The type used by the Lua API to represent integral values.
 
 By default it is a @id{ptrdiff_t},
-which is usually the largest integral type the machine handles
+which is usually the largest signed integral type the machine handles
 @Q{comfortably}.
 
 }
@@ -2479,6 +2478,23 @@ and @N{0 otherwise}.
 @APIEntry{int lua_isnil (lua_State *L, int index);|
 
 Returns 1 if the value at the given acceptable index is @nil,
+and @N{0 otherwise}.
+
+}
+
+@APIEntry{int lua_isnone (lua_State *L, int index);|
+
+Returns 1 if the the given acceptable index is not valid
+(that is, it refers to an element outside the current stack),
+and @N{0 otherwise}.
+
+}
+
+@APIEntry{int lua_isnoneornil (lua_State *L, int index);|
+
+Returns 1 if the the given acceptable index is not valid
+(that is, it refers to an element outside the current stack)
+or if the value at this index is @nil,
 and @N{0 otherwise}.
 
 }
@@ -2676,7 +2692,7 @@ for other values, it @N{is 0}.
 
 }
 
-@APIEntry{lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);|
+@APIEntry{int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);|
 
 Calls a function in protected mode.
 
@@ -4413,7 +4429,7 @@ nor vice-versa.
 
 }
 
-@LibEntry{getfenv (f)|
+@LibEntry{getfenv ([f])|
 Returns the current environment in use by the function.
 @id{f} can be a Lua function or a number
 that specifies the function at that stack level:
@@ -5083,7 +5099,8 @@ expect a number as argument,
 whereas @id{q} and @id{s} expect a string.
 
 This function does not accept string values
-containing embedded zeros.
+containing embedded zeros,
+except as arguments to the @id{q} option.
 
 }
 
@@ -5091,7 +5108,6 @@ containing embedded zeros.
 Returns an iterator function that,
 each time it is called,
 returns the next captures from @id{pattern} over string @id{s}.
-
 If @id{pattern} specifies no captures,
 then the whole match is produced in each call.
 
@@ -5113,6 +5129,9 @@ for k, v in string.gmatch(s, "(%w+)=(%w+)") do
   t[k] = v
 end
 }
+
+For this function, a @Char{^} at the start of a pattern does not
+work as an anchor, as this would prevent the iteration.
 
 }
 
@@ -5175,7 +5194,7 @@ x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
 --> x="4+5 = 9"
 
 local t = {name="lua", version="5.1"}
-x = string.gsub("$name%-$version.tar.gz", "%$(%w+)", t)
+x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
 --> x="lua-5.1.tar.gz"
 }
 
@@ -5423,7 +5442,8 @@ we mean the result of the length operator.
 
 
 @LibEntry{table.concat (table [, sep [, i [, j]]])|
-Returns @T{table[i]..sep..table[i+1] @Cdots sep..table[j]}.
+Given an array where all elements are strings or numbers,
+returns @T{table[i]..sep..table[i+1] @Cdots sep..table[j]}.
 The default value for @id{sep} is the empty string,
 the default for @id{i} is 1,
 and the default for @id{j} is the length of the table.
@@ -5718,7 +5738,8 @@ three predefined file descriptors with their usual meanings from C:
 
 Unless otherwise stated,
 all I/O functions return @nil on failure
-(plus an error message as a second result)
+(plus an error message as a second result and
+a system-dependent error code as a third result)
 and some value different from @nil on success.
 
 
@@ -5965,7 +5986,7 @@ or there is any input from some special files
 }
 
 }
-For the last two cases, @id{sizes}
+For the last two cases, @id{size}
 specifies the size of the buffer, in bytes.
 The default is an appropriate size.
 
@@ -6088,6 +6109,11 @@ Sets the current locale of the program.
 the default category is @T{"all"}.
 The function returns the name of the new locale,
 or @nil if the request cannot be honored.
+
+If @id{locale} is the empty string,
+the current locate is set to an implementation-defined native locale.
+If @id{locate} is the string @St{C},
+the current locate is set to the standard C locale.
 
 When called with @nil as the first argument,
 this function only returns the name of the current locale
