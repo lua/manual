@@ -714,8 +714,8 @@ function definitions are explained in @See{func-def};
 function calls are explained in @See{functioncall};
 table constructors are explained in @See{tableconstructor}.
 Vararg expressions,
-denoted by three dots (@Char{...}), can only be used inside
-vararg functions;
+denoted by three dots (@Char{...}), can only be used when
+directly inside a vararg function;
 they are explained in @See{func-def}.
 
 Binary operators comprise arithmetic operators @see{arith},
@@ -2626,7 +2626,7 @@ This function allocates a new block of memory with the given size,
 pushes onto the stack a new full userdata with the block address,
 and returns this address.
 
-Userdata represents @N{C values} in Lua.
+Userdata represent @N{C values} in Lua.
 A @def{full userdata} represents a block of memory.
 It is an object (like a table):
 you must create it, it can have its own metatable,
@@ -2834,7 +2834,7 @@ Pushes a number with value @id{n} onto the stack.
 
 Pushes a light userdata onto the stack.
 
-Userdata represents @N{C values} in Lua.
+Userdata represent @N{C values} in Lua.
 A @def{light userdata} represents a pointer.
 It is a value (like a number):
 you do not create it, it has no individual metatable,
