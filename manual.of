@@ -426,9 +426,9 @@ defines a list of variables on the left side
 and a list of expressions on the right side.
 The elements in both lists are separated by commas:
 @Produc{
-@producname{stat}@producbody{varlist1 @bnfter{=} explist1}
-@producname{varlist1}@producbody{var @bnfrep{@bnfter{,} var}}
-@producname{explist1}@producbody{exp @bnfrep{@bnfter{,} exp}}
+@producname{stat}@producbody{varlist @bnfter{=} explist}
+@producname{varlist}@producbody{var @bnfrep{@bnfter{,} var}}
+@producname{explist}@producbody{exp @bnfrep{@bnfter{,} exp}}
 }
 Expressions are discussed in @See{expressions}.
 
@@ -516,7 +516,7 @@ from a function or a chunk (which is just a function).
 Functions and chunks may return more than one value,
 so the syntax for the @Rw{return} statement is
 @Produc{
-@producname{stat}@producbody{@Rw{return} @bnfopt{explist1}}
+@producname{stat}@producbody{@Rw{return} @bnfopt{explist}}
 }
 
 The @Rw{break} statement is used to terminate the execution of a
@@ -610,7 +610,7 @@ On each iteration, the iterator function is called to produce a new value,
 stopping when this new value is @nil.
 The generic @Rw{for} loop has the following syntax:
 @Produc{
-@producname{stat}@producbody{@Rw{for} namelist @Rw{in} explist1
+@producname{stat}@producbody{@Rw{for} namelist @Rw{in} explist
                     @Rw{do} block @Rw{end}}
 @producname{namelist}@producbody{@bnfNter{Name} @bnfrep{@bnfter{,} @bnfNter{Name}}}
 }
@@ -675,7 +675,7 @@ Function calls are explained in @See{functioncall}.
 @x{Local variables} may be declared anywhere inside a block.
 The declaration may include an initial assignment:
 @Produc{
-@producname{stat}@producbody{@Rw{local} namelist @bnfopt{@bnfter{=} explist1}}
+@producname{stat}@producbody{@Rw{local} namelist @bnfopt{@bnfter{=} explist}}
 }
 If present, an initial assignment has the same semantics
 of a multiple assignment @see{assignment}.
@@ -991,7 +991,7 @@ except that @id{v} is evaluated only once.
 
 Arguments have the following syntax:
 @Produc{
-@producname{args}@producbody{@bnfter{(} @bnfopt{explist1} @bnfter{)}}
+@producname{args}@producbody{@bnfter{(} @bnfopt{explist} @bnfter{)}}
 @producname{args}@producbody{tableconstructor}
 @producname{args}@producbody{@bnfNter{String}}
 }
@@ -1047,7 +1047,7 @@ return x or f(x)     -- results adjusted to 1
 The syntax for function definition is
 @Produc{
 @producname{function}@producbody{@Rw{function} funcbody}
-@producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist1} @bnfter{)} block @Rw{end}}
+@producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
 }
 
 The following syntactic sugar simplifies function definitions:
@@ -1102,7 +1102,7 @@ and may have different environment tables.
 Parameters act as local variables that are
 initialized with the argument values:
 @Produc{
-@producname{parlist1}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}} @Or
+@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}} @Or
   @bnfter{...}}
 }
 When a function is called,
@@ -1728,6 +1728,7 @@ order of their creation,
 among those collected in that cycle.
 That is, the first finalizer to be called is the one associated
 with the userdata created last in the program.
+The userdata itself is freed only in the next garbage-collection cycle.
 
 }
 
@@ -2380,7 +2381,7 @@ the value at the given index.
 @APIEntry{void lua_getfield (lua_State *L, int index, const char *k);|
 
 Pushes onto the stack the value @T{t[k]},
-where @id{t} is the value at the given valid index @id{index}.
+where @id{t} is the value at the given valid index.
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
 
@@ -2409,7 +2410,7 @@ the function @N{returns 0} and pushes nothing on the stack.
 @APIEntry{void lua_gettable (lua_State *L, int index);|
 
 Pushes onto the stack the value @T{t[k]},
-where @id{t} is the value at the given valid index @id{index}
+where @id{t} is the value at the given valid index
 and @id{k} is the value at the top of the stack.
 
 This function pops the key from the stack
@@ -2924,7 +2925,7 @@ Similar to @Lid{lua_gettable}, but does a raw access
 @APIEntry{void lua_rawgeti (lua_State *L, int index, int n);|
 
 Pushes onto the stack the value @T{t[n]},
-where @id{t} is the value at the given valid index @id{index}.
+where @id{t} is the value at the given valid index.
 The access is raw;
 that is, it does not invoke metamethods.
 
@@ -2940,8 +2941,8 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 @APIEntry{void lua_rawseti (lua_State *L, int index, int n);|
 
 Does the equivalent of @T{t[n] = v},
-where @id{t} is the value at the given valid index @id{index}
-and @id{v} is the value at the top of the stack,
+where @id{t} is the value at the given valid index
+and @id{v} is the value at the top of the stack.
 
 This function pops the value from the stack.
 The assignment is raw;
@@ -3048,8 +3049,8 @@ Otherwise it returns 1.
 @APIEntry{void lua_setfield (lua_State *L, int index, const char *k);|
 
 Does the equivalent to @T{t[k] = v},
-where @id{t} is the value at the given valid index @id{index}
-and @id{v} is the value at the top of the stack,
+where @id{t} is the value at the given valid index
+and @id{v} is the value at the top of the stack.
 
 This function pops the value from the stack.
 As in Lua, this function may trigger a metamethod
@@ -3079,7 +3080,7 @@ acceptable index.
 @APIEntry{void lua_settable (lua_State *L, int index);|
 
 Does the equivalent to @T{t[k] = v},
-where @id{t} is the value at the given valid index @id{index},
+where @id{t} is the value at the given valid index,
 @id{v} is the value at the top of the stack,
 and @id{k} is the value just below the top.
 
@@ -3144,7 +3145,7 @@ otherwise, returns @id{NULL}.
 
 }
 
-@APIEntry{lua_Integer lua_tointeger (lua_State *L, int idx);|
+@APIEntry{lua_Integer lua_tointeger (lua_State *L, int index);|
 
 Converts the Lua value at the given acceptable index
 to the signed integral type @Lid{lua_Integer}.
@@ -3904,6 +3905,7 @@ and returns this string.
 @APIEntry{void luaL_checktype (lua_State *L, int narg, int t);|
 
 Checks whether the function argument @id{narg} has type @id{t}.
+See @Lid{lua_type} for the encoding of types for @id{t}.
 
 }
 
@@ -4223,9 +4225,9 @@ on the top of the stack.
 
 }
 
-@APIEntry{const char *luaL_typename (lua_State *L, int idx);|
+@APIEntry{const char *luaL_typename (lua_State *L, int index);|
 
-Returns the name of the type of the value at index @id{idx}.
+Returns the name of the type of the value at the given index.
 
 }
 
@@ -5532,12 +5534,12 @@ Returns the arc tangent of @id{x} (in radians).
 
 }
 
-@LibEntry{math.atan2 (x, y)|
+@LibEntry{math.atan2 (y, x)|
 
-Returns the arc tangent of @T{x/y} (in radians),
+Returns the arc tangent of @T{y/x} (in radians),
 but uses the signs of both parameters to find the
 quadrant of the result.
-(It also handles correctly the case of @id{y} being zero.)
+(It also handles correctly the case of @id{x} being zero.)
 
 }
 
@@ -6625,7 +6627,7 @@ Here is the complete syntax of Lua in extended BNF.
 @producname{block}@producbody{chunk}
 
 @producname{stat}@producbody{
-	varlist1 @bnfter{=} explist1
+	varlist @bnfter{=} explist
 @OrNL	functioncall
 @OrNL	@Rw{do} block @Rw{end}
 @OrNL	@Rw{while} exp @Rw{do} block @Rw{end}
@@ -6635,18 +6637,18 @@ Here is the complete syntax of Lua in extended BNF.
 	@bnfopt{@Rw{else} block} @Rw{end}
 @OrNL	@Rw{for} @bnfNter{Name} @bnfter{=} exp @bnfter{,} exp @bnfopt{@bnfter{,} exp}
 	@Rw{do} block @Rw{end}
-@OrNL   @Rw{for} namelist @Rw{in} explist1 @Rw{do} block @Rw{end}
+@OrNL   @Rw{for} namelist @Rw{in} explist @Rw{do} block @Rw{end}
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
-@OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist1}
+@OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
 }
 
-@producname{laststat}@producbody{@Rw{return} @bnfopt{explist1} @Or @Rw{break}}
+@producname{laststat}@producbody{@Rw{return} @bnfopt{explist} @Or @Rw{break}}
 
 @producname{funcname}@producbody{@bnfNter{Name} @bnfrep{@bnfter{.} @bnfNter{Name}}
                               @bnfopt{@bnfter{:} @bnfNter{Name}}}
 
-@producname{varlist1}@producbody{var @bnfrep{@bnfter{,} var}}
+@producname{varlist}@producbody{var @bnfrep{@bnfter{,} var}}
 
 @producname{var}@producbody{
 	@bnfNter{Name}
@@ -6657,7 +6659,7 @@ Here is the complete syntax of Lua in extended BNF.
 @producname{namelist}@producbody{@bnfNter{Name} @bnfrep{@bnfter{,} @bnfNter{Name}}}
 
 
-@producname{explist1}@producbody{@bnfrep{exp @bnfter{,}} exp}
+@producname{explist}@producbody{@bnfrep{exp @bnfter{,}} exp}
 
 @producname{exp}@producbody{
 	@Rw{nil}
@@ -6681,16 +6683,16 @@ Here is the complete syntax of Lua in extended BNF.
 }
 
 @producname{args}@producbody{
-	@bnfter{(} @bnfopt{explist1} @bnfter{)}
+	@bnfter{(} @bnfopt{explist} @bnfter{)}
 @Or	tableconstructor
 @Or	@bnfNter{String}
 }
 
 @producname{function}@producbody{@Rw{function} funcbody}
 
-@producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist1} @bnfter{)} block @Rw{end}}
+@producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
 
-@producname{parlist1}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}}
+@producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}}
   @Or @bnfter{...}}
 
 @producname{tableconstructor}@producbody{@bnfter{@Open} @bnfopt{fieldlist} @bnfter{@Close}}
