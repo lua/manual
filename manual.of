@@ -2032,15 +2032,12 @@ A @emph{protected environment} uses @id{setjmp}
 to set a recover point;
 any error jumps to the most recent active recover point.
 
-Almost any function in the API may raise an error,
+Most functions in the API may throw an error,
 for instance due to a memory allocation error.
-The following functions run in protected mode
-(that is, they create a protected environment to run),
-so they never raise an error:
-@Lid{lua_newstate}, @Lid{lua_close}, @Lid{lua_load},
-@Lid{lua_pcall}, and @Lid{lua_cpcall}.
+The documentation for each function indicates whether
+it can throw errors.
 
-Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
+Inside a @N{C function} you can throw an error by calling @Lid{lua_error}.
 
 }
 
@@ -2048,6 +2045,28 @@ Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
 
 Here we list all functions and types from the @N{C API} in
 alphabetical order.
+Each function has an indicator like this:
+@apii{o,p,x}
+
+The first field, @T{o},
+is how many elements the function pops from the stack.
+The second field, @T{p},
+is how many elements the function pushes onto the stack.
+(Any function always pushes its results after popping its arguments.)
+A field in the form @T{x|y} means the function may push (or pop)
+@T{x} or @T{y} elements,
+depending on the situation;
+an interrogation mark @Char{?} means
+that we cannot know how many elements the function pops/pushes
+only by looking at its arguments.
+The third field, @T{x},
+tells whether the function may throw errors:
+@Char{-} means the function never throws any error;
+@Char{m} means the function may throw an error
+only due to not enough memory;
+@Char{e} means the function may throw other kinds of errors;
+@Char{v} means the function may throw an error on purpose.
+
 
 @APIEntry{
 typedef void * (*lua_Alloc) (void *ud,
@@ -2100,6 +2119,7 @@ that @T{free(NULL)} has no effect and that
 }
 
 @APIEntry{lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);|
+@apii{0,0,-}
 
 Sets a new panic function and returns the old one.
 
@@ -2115,6 +2135,8 @@ The panic function can access the error message at the top of the stack.
 }
 
 @APIEntry{void lua_call (lua_State *L, int nargs, int nresults);|
+@apii{nargs + 1,nresults,e}
+
 
 Calls a function.
 
@@ -2207,6 +2229,7 @@ static int foo (lua_State *L) {
 }
 
 @APIEntry{int lua_checkstack (lua_State *L, int extra);|
+@apii{0,0,-}
 
 Ensures that there are at least @id{extra} free stack slots in the stack.
 It returns false if it cannot grow the stack to that size.
@@ -2217,6 +2240,7 @@ it is left unchanged.
 }
 
 @APIEntry{void lua_close (lua_State *L);|
+@apii{0,0,-}
 
 Destroys all objects in the given Lua state
 (calling the corresponding garbage-collection metamethods, if any)
@@ -2231,18 +2255,20 @@ to avoid growing too large.
 }
 
 @APIEntry{void lua_concat (lua_State *L, int n);|
+@apii{n,1,e}
 
 Concatenates the @id{n} values at the top of the stack,
 pops them, and leaves the result at the top.
-If @N{@T{n} is 1}, the result is the single string on the stack
+If @N{@T{n} is 1}, the result is the single value on the stack
 (that is, the function does nothing);
 if @id{n} is 0, the result is the empty string.
-Concatenation is done following the usual semantics of Lua
+Concatenation is performed following the usual semantics of Lua
 @see{concat}.
 
 }
 
 @APIEntry{int lua_cpcall (lua_State *L, lua_CFunction func, void *ud);|
+@apii{0,0|1,-}
 
 Calls the @N{C function} @id{func} in protected mode.
 @id{func} starts with only one element in its stack,
@@ -2256,6 +2282,7 @@ All values returned by @id{func} are discarded.
 }
 
 @APIEntry{void lua_createtable (lua_State *L, int narr, int nrec);|
+@apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
 The new table has space pre-allocated
@@ -2267,6 +2294,7 @@ Otherwise you can use the function @Lid{lua_newtable}.
 }
 
 @APIEntry{int lua_dump (lua_State *L, lua_Writer writer, void *data);|
+@apii{0,0,m}
 
 Dumps a function as a binary chunk.
 Receives a Lua function on the top of the stack
@@ -2287,6 +2315,7 @@ This function does not pop the Lua function from the stack.
 }
 
 @APIEntry{int lua_equal (lua_State *L, int index1, int index2);|
+@apii{0,0,e}
 
 Returns 1 if the two values in acceptable indices @id{index1} and
 @id{index2} are equal,
@@ -2298,6 +2327,7 @@ Also @N{returns 0} if any of the indices is non valid.
 }
 
 @APIEntry{int lua_error (lua_State *L);|
+@apii{1,0,v}
 
 Generates a Lua error.
 The error message (which can actually be a Lua value of any type)
@@ -2309,6 +2339,7 @@ and therefore never returns.
 }
 
 @APIEntry{int lua_gc (lua_State *L, int what, int data);|
+@apii{0,0,e}
 
 Controls the garbage collector.
 
@@ -2364,6 +2395,7 @@ The function returns the previous value of the step multiplier.
 }
 
 @APIEntry{lua_Alloc lua_getallocf (lua_State *L, void **ud);|
+@apii{0,0,-}
 
 Returns the @x{memory-allocation function} of a given state.
 If @id{ud} is not @id{NULL}, Lua stores in @T{*ud} the
@@ -2372,6 +2404,7 @@ opaque pointer passed to @Lid{lua_newstate}.
 }
 
 @APIEntry{void lua_getfenv (lua_State *L, int index);|
+@apii{0,1,-}
 
 Pushes onto the stack the environment table of
 the value at the given index.
@@ -2379,6 +2412,7 @@ the value at the given index.
 }
 
 @APIEntry{void lua_getfield (lua_State *L, int index, const char *k);|
+@apii{0,1,e}
 
 Pushes onto the stack the value @T{t[k]},
 where @id{t} is the value at the given valid index.
@@ -2388,6 +2422,7 @@ for the @Q{index} event @see{metatable}.
 }
 
 @APIEntry{void lua_getglobal (lua_State *L, const char *name);|
+@apii{0,1,e}
 
 Pushes onto the stack the value of the global @id{name}.
 It is defined as a macro:
@@ -2398,6 +2433,7 @@ It is defined as a macro:
 } 
 
 @APIEntry{int lua_getmetatable (lua_State *L, int index);|
+@apii{0,0|1,-}
 
 Pushes onto the stack the metatable of the value at the given
 acceptable index.
@@ -2408,6 +2444,7 @@ the function @N{returns 0} and pushes nothing on the stack.
 }
 
 @APIEntry{void lua_gettable (lua_State *L, int index);|
+@apii{1,1,e}
 
 Pushes onto the stack the value @T{t[k]},
 where @id{t} is the value at the given valid index
@@ -2421,6 +2458,7 @@ for the @Q{index} event @see{metatable}.
 }
 
 @APIEntry{int lua_gettop (lua_State *L);|
+@apii{0,0,-}
 
 Returns the index of the top element in the stack.
 Because indices start @N{at 1},
@@ -2430,6 +2468,7 @@ this result is equal to the number of elements in the stack
 }
 
 @APIEntry{void lua_insert (lua_State *L, int index);|
+@apii{1,1,-}
 
 Moves the top element into the given valid index,
 shifting up the elements above this index to open space.
@@ -2449,6 +2488,7 @@ which is usually the largest signed integral type the machine handles
 }
 
 @APIEntry{int lua_isboolean (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index has type boolean,
 and @N{0 otherwise}.
@@ -2456,6 +2496,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_iscfunction (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a @N{C function},
 and @N{0 otherwise}.
@@ -2463,6 +2504,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isfunction (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a function
 (either C or Lua), and @N{0 otherwise}.
@@ -2470,6 +2512,7 @@ Returns 1 if the value at the given acceptable index is a function
 }
 
 @APIEntry{int lua_islightuserdata (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a light userdata,
 and @N{0 otherwise}.
@@ -2477,6 +2520,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isnil (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is @nil,
 and @N{0 otherwise}.
@@ -2484,6 +2528,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isnone (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the the given acceptable index is not valid
 (that is, it refers to an element outside the current stack),
@@ -2492,6 +2537,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isnoneornil (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the the given acceptable index is not valid
 (that is, it refers to an element outside the current stack)
@@ -2501,6 +2547,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isnumber (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a number
 or a string convertible to a number,
@@ -2509,6 +2556,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isstring (lua_State *L, int index);|
+@apii{0,0,m}
 
 Returns 1 if the value at the given acceptable index is a string
 or a number (which is always convertible to a string),
@@ -2517,6 +2565,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_istable (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a table,
 and @N{0 otherwise}.
@@ -2524,6 +2573,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isthread (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a thread,
 and @N{0 otherwise}.
@@ -2531,6 +2581,7 @@ and @N{0 otherwise}.
 }
 
 @APIEntry{int lua_isuserdata (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns 1 if the value at the given acceptable index is a userdata
 (either full or light), and @N{0 otherwise}.
@@ -2538,6 +2589,7 @@ Returns 1 if the value at the given acceptable index is a userdata
 }
 
 @APIEntry{int lua_lessthan (lua_State *L, int index1, int index2);|
+@apii{0,0,e}
 
 Returns 1 if the value at acceptable index @id{index1} is smaller
 than the value at acceptable index @id{index2},
@@ -2554,6 +2606,7 @@ int lua_load (lua_State *L,
               void *data,
               const char *chunkname);
 |
+@apii{0,1,-}
 
 Loads a Lua chunk.
 If there are no errors,
@@ -2589,6 +2642,7 @@ which is used for error messages and in debug information @see{debugI}.
 }
 
 @APIEntry{lua_State *lua_newstate (lua_Alloc f, void *ud);|
+@apii{0,0,-}
 
 Creates a new, independent state.
 Returns @id{NULL} if cannot create the state
@@ -2601,6 +2655,7 @@ simply passes to the allocator in every call.
 }
 
 @APIEntry{void lua_newtable (lua_State *L);|
+@apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
 It is equivalent to @T{lua_createtable(L, 0, 0)}.
@@ -2608,6 +2663,7 @@ It is equivalent to @T{lua_createtable(L, 0, 0)}.
 }
 
 @APIEntry{lua_State *lua_newthread (lua_State *L);|
+@apii{0,1,m}
 
 Creates a new thread, pushes it on the stack,
 and returns a pointer to a @Lid{lua_State} that represents this new thread.
@@ -2622,6 +2678,7 @@ like any Lua object.
 }
 
 @APIEntry{void *lua_newuserdata (lua_State *L, size_t size);|
+@apii{0,1,m}
 
 This function allocates a new block of memory with the given size,
 pushes onto the stack a new full userdata with the block address,
@@ -2642,6 +2699,7 @@ Lua frees its corresponding memory.
 }
 
 @APIEntry{int lua_next (lua_State *L, int index);|
+@apii{1,2|0,e}
 
 Pops a key from the stack,
 and pushes a key-value pair from the table at the given index
@@ -2683,6 +2741,7 @@ Lua to operate with another type for numbers (e.g., float or long).
 }
 
 @APIEntry{size_t lua_objlen (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns the @Q{length} of the value at the given acceptable index:
 for strings, this is the string length;
@@ -2694,6 +2753,7 @@ for other values, it @N{is 0}.
 }
 
 @APIEntry{int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);|
+@apii{nargs + 1,nresults|1,-}
 
 Calls a function in protected mode.
 
@@ -2747,18 +2807,21 @@ error while running the error handler function.
 }
 
 @APIEntry{void lua_pop (lua_State *L, int n);|
+@apii{n,0,-}
 
 Pops @id{n} elements from the stack.
 
 }
 
 @APIEntry{void lua_pushboolean (lua_State *L, int b);|
+@apii{0,1,-}
 
 Pushes a boolean value with value @id{b} onto the stack.
 
 }
 
 @APIEntry{void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);|
+@apii{n,1,m}
 
 Pushes a new @N{C closure} onto the stack.
 
@@ -2778,6 +2841,7 @@ associated with the function.
 }
 
 @APIEntry{void lua_pushcfunction (lua_State *L, lua_CFunction f);|
+@apii{0,1,m}
 
 Pushes a @N{C function} onto the stack.
 This function receives a pointer to a C function
@@ -2796,6 +2860,7 @@ and return its results @seeC{lua_CFunction}.
 }
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
+@apii{0,1,m}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
@@ -2826,12 +2891,14 @@ The conversion specifiers can only be
 }
 
 @APIEntry{void lua_pushinteger (lua_State *L, lua_Integer n);|
+@apii{0,1,-}
 
 Pushes a number with value @id{n} onto the stack.
 
 }
 
 @APIEntry{void lua_pushlightuserdata (lua_State *L, void *p);|
+@apii{0,1,-}
 
 Pushes a light userdata onto the stack.
 
@@ -2846,6 +2913,7 @@ light userdata with the same @N{C address}.
 }
 
 @APIEntry{void lua_pushlstring (lua_State *L, const char *s, size_t len);|
+@apii{0,1,m}
 
 Pushes the string pointed to by @id{s} with size @id{len}
 onto the stack.
@@ -2857,18 +2925,21 @@ The string can contain embedded zeros.
 }
 
 @APIEntry{void lua_pushnil (lua_State *L);|
+@apii{0,1,-}
 
 Pushes a nil value onto the stack.
 
 }
 
 @APIEntry{void lua_pushnumber (lua_State *L, lua_Number n);|
+@apii{0,1,-}
 
 Pushes a number with value @id{n} onto the stack.
 
 }
 
 @APIEntry{void lua_pushstring (lua_State *L, const char *s);|
+@apii{0,1,m}
 
 Pushes the zero-terminated string pointed to by @id{s}
 onto the stack.
@@ -2881,6 +2952,7 @@ it is assumed to end at the first zero.
 }
 
 @APIEntry{int lua_pushthread (lua_State *L);|
+@apii{0,1,-}
 
 Pushes the thread represented by @id{L} onto the stack.
 Returns 1 if this thread is the main thread of its state.
@@ -2888,6 +2960,7 @@ Returns 1 if this thread is the main thread of its state.
 }
 
 @APIEntry{void lua_pushvalue (lua_State *L, int index);|
+@apii{0,1,-}
 
 Pushes a copy of the element at the given valid index
 onto the stack.
@@ -2899,6 +2972,7 @@ const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);
 |
+@apii{0,1,m}
 
 Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
 instead of a variable number of arguments.
@@ -2906,6 +2980,7 @@ instead of a variable number of arguments.
 }
 
 @APIEntry{int lua_rawequal (lua_State *L, int index1, int index2);|
+@apii{0,1,-}
 
 Returns 1 if the two values in acceptable indices @id{index1} and
 @id{index2} are primitively equal
@@ -2916,6 +2991,7 @@ Also @N{returns 0} if any of the indices are non valid.
 }
 
 @APIEntry{void lua_rawget (lua_State *L, int index);|
+@apii{1,1,-}
 
 Similar to @Lid{lua_gettable}, but does a raw access
 (i.e., without metamethods).
@@ -2923,6 +2999,7 @@ Similar to @Lid{lua_gettable}, but does a raw access
 }
 
 @APIEntry{void lua_rawgeti (lua_State *L, int index, int n);|
+@apii{0,1,-}
 
 Pushes onto the stack the value @T{t[n]},
 where @id{t} is the value at the given valid index.
@@ -2932,6 +3009,7 @@ that is, it does not invoke metamethods.
 }
 
 @APIEntry{void lua_rawset (lua_State *L, int index);|
+@apii{2,0,m}
 
 Similar to @Lid{lua_settable}, but does a raw assignment
 (i.e., without metamethods).
@@ -2939,6 +3017,7 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 }
 
 @APIEntry{void lua_rawseti (lua_State *L, int index, int n);|
+@apii{1,0,m}
 
 Does the equivalent of @T{t[n] = v},
 where @id{t} is the value at the given valid index
@@ -2974,6 +3053,7 @@ void lua_register (lua_State *L,
                    const char *name,
                    lua_CFunction f);
 |
+@apii{0,0,m}
 
 Sets the C function @id{f} as the new value of global @id{name}.
 It is defined as a macro:
@@ -2985,6 +3065,7 @@ It is defined as a macro:
 }
 
 @APIEntry{void lua_remove (lua_State *L, int index);|
+@apii{1,0,-}
 
 Removes the element at the given valid index,
 shifting down the elements above this index to fill the gap.
@@ -2994,6 +3075,7 @@ because a pseudo-index is not an actual stack position.
 }
 
 @APIEntry{void lua_replace (lua_State *L, int index);|
+@apii{1,0,-}
 
 Moves the top element into the given position (and pops it),
 without shifting any element
@@ -3002,6 +3084,7 @@ without shifting any element
 }
 
 @APIEntry{int lua_resume (lua_State *L, int narg);|
+@apii{?,?,-}
 
 Starts and resumes a coroutine in a given thread.
 
@@ -3029,6 +3112,7 @@ and then call @Lid{lua_resume}.
 }
 
 @APIEntry{void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);|
+@apii{0,0,-}
 
 Changes the @x{allocator function} of a given state to @id{f}
 with user data @id{ud}.
@@ -3036,6 +3120,7 @@ with user data @id{ud}.
 }
 
 @APIEntry{int lua_setfenv (lua_State *L, int index);|
+@apii{1,0,-}
 
 Pops a table from the stack and sets it as
 the new environment for the value at the given index.
@@ -3047,6 +3132,7 @@ Otherwise it returns 1.
 }
 
 @APIEntry{void lua_setfield (lua_State *L, int index, const char *k);|
+@apii{1,0,e}
 
 Does the equivalent to @T{t[k] = v},
 where @id{t} is the value at the given valid index
@@ -3059,6 +3145,7 @@ for the @Q{newindex} event @see{metatable}.
 }
 
 @APIEntry{void lua_setglobal (lua_State *L, const char *name);|
+@apii{1,0,e}
 
 Pops a value from the stack and
 sets it as the new value of global @id{name}.
@@ -3070,6 +3157,7 @@ It is defined as a macro:
 }
 
 @APIEntry{int lua_setmetatable (lua_State *L, int index);|
+@apii{1,0,-}
 
 Pops a table from the stack and
 sets it as the new metatable for the value at the given
@@ -3078,6 +3166,7 @@ acceptable index.
 }
 
 @APIEntry{void lua_settable (lua_State *L, int index);|
+@apii{2,0,e}
 
 Does the equivalent to @T{t[k] = v},
 where @id{t} is the value at the given valid index,
@@ -3091,6 +3180,7 @@ for the @Q{newindex} event @see{metatable}.
 }
 
 @APIEntry{void lua_settop (lua_State *L, int index);|
+@apii{?,?,-}
 
 Accepts any acceptable index, @N{or 0},
 and sets the stack top to this index.
@@ -3114,6 +3204,7 @@ which creates a Lua state from scratch.
 }
 
 @APIEntry{int lua_status (lua_State *L);|
+@apii{0,0,-}
 
 Returns the status of the thread @id{L}.
 
@@ -3124,6 +3215,7 @@ or @defid{LUA_YIELD} if the thread is suspended.
 }
 
 @APIEntry{int lua_toboolean (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts the Lua value at the given acceptable index to a @N{C boolean}
 value (@N{0 or 1}).
@@ -3138,6 +3230,7 @@ use @Lid{lua_isboolean} to test the value's type.)
 }
 
 @APIEntry{lua_CFunction lua_tocfunction (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts a value at the given acceptable index to a @N{C function}.
 That value must be a @N{C function};
@@ -3146,6 +3239,7 @@ otherwise, returns @id{NULL}.
 }
 
 @APIEntry{lua_Integer lua_tointeger (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts the Lua value at the given acceptable index
 to the signed integral type @Lid{lua_Integer}.
@@ -3159,6 +3253,7 @@ it is truncated in some non-specified way.
 }
 
 @APIEntry{const char *lua_tolstring (lua_State *L, int index, size_t *len);|
+@apii{0,0,m}
 
 Converts the Lua value at the given acceptable index to a @N{C string}.
 If @id{len} is not @id{NULL},
@@ -3183,6 +3278,7 @@ will be valid after the corresponding value is removed from the stack.
 }
 
 @APIEntry{lua_Number lua_tonumber (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts the Lua value at the given acceptable index
 to the @N{C type} @Lid{lua_Number} @seeC{lua_Number}.
@@ -3193,6 +3289,7 @@ otherwise, @Lid{lua_tonumber} @N{returns 0}.
 }
 
 @APIEntry{const void *lua_topointer (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts the value at the given acceptable index to a generic
 @N{C pointer} (@T{void*}).
@@ -3206,12 +3303,14 @@ Typically this function is used only for debug information.
 }
 
 @APIEntry{const char *lua_tostring (lua_State *L, int index);|
+@apii{0,0,m}
 
 Equivalent to @Lid{lua_tolstring} with @id{len} equal to @id{NULL}.
 
 }
 
 @APIEntry{lua_State *lua_tothread (lua_State *L, int index);|
+@apii{0,0,-}
 
 Converts the value at the given acceptable index to a Lua thread
 (represented as @T{lua_State*}).
@@ -3221,6 +3320,7 @@ otherwise, the function returns @id{NULL}.
 }
 
 @APIEntry{void *lua_touserdata (lua_State *L, int index);|
+@apii{0,0,-}
 
 If the value at the given acceptable index is a full userdata,
 returns its block address.
@@ -3231,6 +3331,7 @@ Otherwise, returns @id{NULL}.
 }
 
 @APIEntry{int lua_type (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns the type of the value in the given acceptable index,
 or @id{LUA_TNONE} for a non-valid index
@@ -3251,6 +3352,7 @@ and
 }
 
 @APIEntry{const char *lua_typename  (lua_State *L, int tp);|
+@apii{0,0,-}
 
 Returns the name of the type encoded by the value @id{tp},
 which must be one the values returned by @Lid{lua_type}.
@@ -3264,7 +3366,7 @@ typedef int (*lua_Writer) (lua_State *L,
                            void* ud);
 |
 
-The writer function used by @Lid{lua_dump}.
+The type of the writer function used by @Lid{lua_dump}.
 Every time it produces another piece of chunk,
 @Lid{lua_dump} calls the writer,
 passing along the buffer to be written (@id{p}),
@@ -3279,6 +3381,7 @@ calling the writer again.
 }
 
 @APIEntry{void lua_xmove (lua_State *from, lua_State *to, int n);|
+@apii{?,?,-}
 
 Exchange values between different threads of the @emph{same} global state.
 
@@ -3288,6 +3391,7 @@ and pushes them onto the stack @id{to}.
 }
 
 @APIEntry{int lua_yield  (lua_State *L, int nresults);|
+@apii{?,?,-}
 
 Yields a coroutine.
 
@@ -3407,24 +3511,28 @@ the number of upvalues of the function.
 }
 
 @APIEntry{lua_Hook lua_gethook (lua_State *L);|
+@apii{0,0,-}
 
 Returns the current hook function.
 
 }
 
 @APIEntry{int lua_gethookcount (lua_State *L);|
+@apii{0,0,-}
 
 Returns the current hook count.
 
 }
 
 @APIEntry{int lua_gethookmask (lua_State *L);|
+@apii{0,0,-}
 
 Returns the current hook mask.
 
 }
 
 @APIEntry{int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);|
+@apii{0|1,0|1|2,-}
 
 Returns information about a specific function or function invocation.
 
@@ -3486,6 +3594,7 @@ This function returns 0 on error
 }
 
 @APIEntry{const char *lua_getlocal (lua_State *L, lua_Debug *ar, int n);|
+@apii{0,0|1,-}
 
 Gets information about a local variable of a given activation record.
 The parameter @id{ar} must be a valid activation record that was
@@ -3508,6 +3617,7 @@ the number of active local variables.
 }
 
 @APIEntry{int lua_getstack (lua_State *L, int level, lua_Debug *ar);|
+@apii{0,0,-}
 
 Get information about the interpreter runtime stack.
 
@@ -3523,6 +3633,7 @@ it returns 0.
 }
 
 @APIEntry{const char *lua_getupvalue (lua_State *L, int funcindex, int n);|
+@apii{0,0|1,-}
 
 Gets information about a closure's upvalue.
 (For Lua functions,
@@ -3569,6 +3680,7 @@ this execution occurs without any calls to hooks.
 }
 
 @APIEntry{int lua_sethook (lua_State *L, lua_Hook f, int mask, int count);|
+@apii{0,0,-}
 
 Sets the debugging hook function.
 
@@ -3612,6 +3724,7 @@ A hook is disabled by setting @id{mask} to zero.
 }
 
 @APIEntry{const char *lua_setlocal (lua_State *L, lua_Debug *ar, int n);|
+@apii{0|1,0,-}
 
 Sets the value of a local variable of a given activation record.
 Parameters @id{ar} and @id{n} are as in @Lid{lua_getlocal}
@@ -3627,6 +3740,7 @@ the number of active local variables.
 }
 
 @APIEntry{const char *lua_setupvalue (lua_State *L, int funcindex, int n);|
+@apii{0|1,0,-}
 
 Sets the value of a closure's upvalue.
 It assigns the value at the top of the stack
@@ -3667,7 +3781,7 @@ and so they provide nothing that cannot be done with this API.
 Several functions in the auxiliary library are used to
 check @N{C function} arguments.
 Their names are always @id{luaL_check*} or @id{luaL_opt*}.
-All of these functions raise an error if the check is not satisfied.
+All of these functions throw an error if the check is not satisfied.
 Because the error message is formatted for arguments
 (e.g., @St{bad argument #1}),
 you should not use these functions for other stack values.
@@ -3680,6 +3794,7 @@ in alphabetical order.
 
 
 @APIEntry{void luaL_addchar (luaL_Buffer *B, char c);|
+@apii{0,0,m}
 
 Adds the character @id{c} to the buffer @id{B}
 @seeC{luaL_Buffer}.
@@ -3687,6 +3802,7 @@ Adds the character @id{c} to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);|
+@apii{0,0,m}
 
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
@@ -3696,6 +3812,7 @@ The string may contain embedded zeros.
 }
 
 @APIEntry{void luaL_addsize (luaL_Buffer *B, size_t n);|
+@apii{0,0,m}
 
 Adds to the buffer @id{B} @seeC{luaL_Buffer}
 a string of length @id{n} previously copied to the
@@ -3704,6 +3821,7 @@ buffer area @seeC{luaL_prepbuffer}.
 }
 
 @APIEntry{void luaL_addstring (luaL_Buffer *B, const char *s);|
+@apii{0,0,m}
 
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
@@ -3713,6 +3831,7 @@ The string may not contain embedded zeros.
 }
 
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
+@apii{1,0,m}
 
 Adds the value at the top of the stack
 to the buffer @id{B}
@@ -3731,6 +3850,7 @@ void luaL_argcheck (lua_State *L,
                     int narg,
                     const char *extramsg);
 |
+@apii{0,0,v}
 
 Checks whether @id{cond} is true.
 If not, raises an error with the following message,
@@ -3742,6 +3862,7 @@ bad argument #<narg> to <func> (<extramsg>)
 }
 
 @APIEntry{int luaL_argerror (lua_State *L, int narg, const char *extramsg);|
+@apii{0,0,v}
 
 Raises an error with the following message,
 where @id{func} is retrieved from the call stack:
@@ -3797,6 +3918,7 @@ plus the final string on its top.
 }
 
 @APIEntry{void luaL_buffinit (lua_State *L, luaL_Buffer *B);|
+@apii{0,0,-}
 
 Initializes a buffer @id{B}.
 This function does not allocate any space;
@@ -3806,6 +3928,7 @@ the buffer must be declared as a variable
 }
 
 @APIEntry{int luaL_callmeta (lua_State *L, int obj, const char *e);|
+@apii{0,0|1,e}
 
 Calls a metamethod.
 
@@ -3820,6 +3943,7 @@ this function returns 0 (without pushing any value on the stack).
 }
 
 @APIEntry{void luaL_checkany (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function has an argument
 of any type (including @nil) at position @id{narg}.
@@ -3827,6 +3951,7 @@ of any type (including @nil) at position @id{narg}.
 }
 
 @APIEntry{int luaL_checkint (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a number
 and returns this number cast to an @id{int}.
@@ -3834,6 +3959,7 @@ and returns this number cast to an @id{int}.
 }
 
 @APIEntry{lua_Integer luaL_checkinteger (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a number
 and returns this number cast to a @Lid{lua_Integer}.
@@ -3841,6 +3967,7 @@ and returns this number cast to a @Lid{lua_Integer}.
 }
 
 @APIEntry{long luaL_checklong (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a number
 and returns this number cast to a @id{long}.
@@ -3848,6 +3975,7 @@ and returns this number cast to a @id{long}.
 }
 
 @APIEntry{const char *luaL_checklstring (lua_State *L, int narg, size_t *l);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a string
 and returns this string;
@@ -3857,6 +3985,7 @@ with the string's length.
 }
 
 @APIEntry{lua_Number luaL_checknumber (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a number
 and returns this number.
@@ -3869,6 +3998,7 @@ int luaL_checkoption (lua_State *L,
                       const char *def,
                       const char *const lst[]);
 |
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a string and
 searches for this string in the array @id{lst}
@@ -3888,6 +4018,7 @@ to use strings instead of numbers to select options.)
 }
 
 @APIEntry{void luaL_checkstack (lua_State *L, int sz, const char *msg);|
+@apii{0,0,v}
 
 Grows the stack size to @T{top + sz} elements,
 raising an error if the stack cannot grow to that size.
@@ -3896,6 +4027,7 @@ raising an error if the stack cannot grow to that size.
 }
 
 @APIEntry{const char *luaL_checkstring (lua_State *L, int narg);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a string
 and returns this string.
@@ -3903,6 +4035,7 @@ and returns this string.
 }
 
 @APIEntry{void luaL_checktype (lua_State *L, int narg, int t);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} has type @id{t}.
 See @Lid{lua_type} for the encoding of types for @id{t}.
@@ -3910,6 +4043,7 @@ See @Lid{lua_type} for the encoding of types for @id{t}.
 }
 
 @APIEntry{void *luaL_checkudata (lua_State *L, int narg, const char *tname);|
+@apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a userdata
 of the type @id{tname} @seeC{luaL_newmetatable}.
@@ -3917,6 +4051,7 @@ of the type @id{tname} @seeC{luaL_newmetatable}.
 }
 
 @APIEntry{int luaL_dofile (lua_State *L, const char *filename);|
+@apii{0,?,e}
 
 Loads and runs the given file.
 It is defined as the following macro:
@@ -3929,6 +4064,7 @@ or 1 in case of errors.
 }
 
 @APIEntry{int luaL_dostring (lua_State *L, const char *str);|
+@apii{0,?,e}
 
 Loads and runs the given string.
 It is defined as the following macro:
@@ -3941,6 +4077,7 @@ or 1 in case of errors.
 }
 
 @APIEntry{int luaL_error (lua_State *L, const char *fmt, ...);|
+@apii{0,0,v}
 
 Raises an error.
 The error message format is given by @id{fmt}
@@ -3957,6 +4094,7 @@ as @T{return luaL_error(@rep{args})}.
 }
 
 @APIEntry{int luaL_getmetafield (lua_State *L, int obj, const char *e);|
+@apii{0,0|1,e}
 
 Pushes onto the stack the field @id{e} from the metatable
 of the object at index @id{obj}.
@@ -3967,6 +4105,7 @@ returns 0 and pushes nothing.
 }
 
 @APIEntry{void luaL_getmetatable (lua_State *L, const char *tname);|
+@apii{0,1,-}
 
 Pushes onto the stack the metatable associated with name @id{tname}
 in the registry @seeC{luaL_newmetatable}.
@@ -3979,6 +4118,7 @@ const char *luaL_gsub (lua_State *L,
                        const char *p,
                        const char *r);
 |
+@apii{0,1,m}
 
 Creates a copy of string @id{s} by replacing
 any occurrence of the string @id{p}
@@ -3993,6 +4133,7 @@ int luaL_loadbuffer (lua_State *L,
                      size_t sz,
                      const char *name);
 |
+@apii{0,1,m}
 
 Loads a buffer as a Lua chunk.
 This function uses @Lid{lua_load} to load the chunk in the
@@ -4005,6 +4146,7 @@ used for debug information and error messages.
 }
 
 @APIEntry{int luaL_loadfile (lua_State *L, const char *filename);|
+@apii{0,1,m}
 
 Loads a file as a Lua chunk.
 This function uses @Lid{lua_load} to load the chunk in the file
@@ -4023,6 +4165,7 @@ it does not run it.
 }
 
 @APIEntry{int luaL_loadstring (lua_State *L, const char *s);|
+@apii{0,1,m}
 
 Loads a string as a Lua chunk.
 This function uses @Lid{lua_load} to load the chunk in
@@ -4036,6 +4179,7 @@ it does not run it.
 }
 
 @APIEntry{int luaL_newmetatable (lua_State *L, const char *tname);|
+@apii{0,1,m}
 
 If the registry already has the key @id{tname},
 returns 0.
@@ -4050,6 +4194,7 @@ with @id{tname} in the registry.
 }
 
 @APIEntry{lua_State *luaL_newstate (void);|
+@apii{0,0,-}
 
 Creates a new Lua state.
 It calls @Lid{lua_newstate} with an
@@ -4064,12 +4209,14 @@ or @id{NULL} if there is a memory allocation error.
 }
 
 @APIEntry{void luaL_openlibs (lua_State *L);|
+@apii{0,0,m}
 
 Opens all standard Lua libraries into the given state.
 
 }
 
 @APIEntry{int luaL_optint (lua_State *L, int narg, int d);|
+@apii{0,0,v}
 
 If the function argument @id{narg} is a number,
 returns this number cast to an @id{int}.
@@ -4084,6 +4231,7 @@ lua_Integer luaL_optinteger (lua_State *L,
                              int narg,
                              lua_Integer d);
 |
+@apii{0,0,v}
 
 If the function argument @id{narg} is a number,
 returns this number cast to a @Lid{lua_Integer}.
@@ -4094,6 +4242,7 @@ Otherwise, raises an error.
 }
 
 @APIEntry{long luaL_optlong (lua_State *L, int narg, long d);|
+@apii{0,0,v}
 
 If the function argument @id{narg} is a number,
 returns this number cast to a @id{long}.
@@ -4109,6 +4258,7 @@ const char *luaL_optlstring (lua_State *L,
                              const char *d,
                              size_t *l);
 |
+@apii{0,0,v}
 
 If the function argument @id{narg} is a string,
 returns this string.
@@ -4122,6 +4272,7 @@ fills the position @T{*l} with the results's length.
 }
 
 @APIEntry{lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number d);|
+@apii{0,0,v}
 
 If the function argument @id{narg} is a number,
 returns this number.
@@ -4136,6 +4287,7 @@ const char *luaL_optstring (lua_State *L,
                             int narg,
                             const char *d);
 |
+@apii{0,0,v}
 
 If the function argument @id{narg} is a string,
 returns this string.
@@ -4146,6 +4298,7 @@ Otherwise, raises an error.
 }
 
 @APIEntry{char *luaL_prepbuffer (luaL_Buffer *B);|
+@apii{0,0,-}
 
 Returns an address to a space of size @defid{LUAL_BUFFERSIZE}
 where you can copy a string to be added to buffer @id{B}
@@ -4157,6 +4310,7 @@ it to the buffer.
 }
 
 @APIEntry{void luaL_pushresult (luaL_Buffer *B);|
+@apii{?,1,m}
 
 Finishes the use of buffer @id{B} leaving the final string on
 the top of the stack.
@@ -4164,6 +4318,7 @@ the top of the stack.
 }
 
 @APIEntry{int luaL_ref (lua_State *L, int t);|
+@apii{1,0,m}
 
 Creates and returns a @def{reference},
 in the table at index @id{t},
@@ -4204,6 +4359,7 @@ void luaL_register (lua_State *L,
                     const char *libname,
                     const luaL_Reg *l);
 |
+@apii{0|1,1,m}
 
 Opens a library.
 
@@ -4226,12 +4382,14 @@ on the top of the stack.
 }
 
 @APIEntry{const char *luaL_typename (lua_State *L, int index);|
+@apii{0,0,-}
 
 Returns the name of the type of the value at the given index.
 
 }
 
 @APIEntry{int luaL_typerror (lua_State *L, int narg, const char *tname);|
+@apii{0,0,v}
 
 Generates an error with a message like the following:
 @verbatim{
@@ -4244,6 +4402,7 @@ and @T{@rep{rt}} is the type name of the actual argument.
 }
 
 @APIEntry{void luaL_unref (lua_State *L, int t, int ref);|
+@apii{0,0,-}
 
 Releases reference @id{ref} from the table at index @id{t}
 @seeC{luaL_ref}.
@@ -4257,6 +4416,7 @@ If @id{ref} is @Lid{LUA_NOREF} or @Lid{LUA_REFNIL},
 }
 
 @APIEntry{void luaL_where (lua_State *L, int lvl);|
+@apii{0,1,m}
 
 Pushes onto the stack a string identifying the current position
 of the control at level @id{lvl} in the call stack.
@@ -5139,11 +5299,12 @@ work as an anchor, as this would prevent the iteration.
 
 @LibEntry{string.gsub (s, pattern, repl [, n])|
 Returns a copy of @id{s}
-in which all occurrences of the @id{pattern} have been
+in which all (or the first @id{n}, if given)
+occurrences of the @id{pattern} have been
 replaced by a replacement string specified by @id{repl},
 which may be a string, a table, or a function.
 @id{gsub} also returns, as its second value,
-the total number of substitutions made.
+the total number of matches that occurred.
 
 If @id{repl} is a string, then its value is used for replacement.
 The @N{character @T{%}} works as an escape character:
@@ -5170,11 +5331,6 @@ then it is used as the replacement string;
 otherwise, if it is @Rw{false} or @nil,
 then there is no replacement
 (that is, the original match is kept in the string).
-
-The optional last parameter @id{n} limits
-the maximum number of substitutions to occur.
-For instance, when @id{n} is 1 only the first occurrence of
-@id{pattern} is replaced.
 
 Here are some examples:
 @verbatim{
