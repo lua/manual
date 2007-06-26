@@ -1266,11 +1266,11 @@ You cannot change the metatable of other types from Lua
 (except using the debug library);
 you must use the @N{C API} for that.
 
-Tables and userdata have individual metatables
+Tables and full userdata have individual metatables
 (although multiple tables and userdata can share their metatables);
 values of all other types share one single metatable per type.
 So, there is one single metatable for all numbers,
-and for all strings, etc.
+one for all strings, etc.
 
 A metatable may control how an object behaves in arithmetic operations,
 order comparisons, concatenation, length operation, and indexing.
@@ -5014,7 +5014,13 @@ at @T{package.loaded[modname]}.
 Otherwise, it tries to find a @emph{loader} for the module.
 
 To find a loader,
-first @id{require} queries @T{package.preload[modname]}.
+@id{require} is guided by the @Lid{package.loaders} array.
+By changing this array,
+we can change how @id{require} looks for a module.
+The following explanation is based on the default configuration
+for @Lid{package.loaders}.
+
+First @id{require} queries @T{package.preload[modname]}.
 If it has a value,
 this value (which should be a function) is the loader.
 Otherwise @id{require} searches for a Lua loader using the
@@ -5022,34 +5028,7 @@ path stored in @Lid{package.path}.
 If that also fails, it searches for a @N{C loader} using the
 path stored in @Lid{package.cpath}.
 If that also fails,
-it tries an @emph{all-in-one} loader (see below).
-
-When loading a @N{C library},
-@id{require} first uses a dynamic link facility to link the
-application with the library.
-Then it tries to find a @N{C function} inside this library to
-be used as the loader.
-The name of this @N{C function} is the string @St{luaopen_}
-concatenated with a copy of the module name where each dot
-is replaced by an underscore.
-Moreover, if the module name has a hyphen,
-its prefix up to (and including) the first hyphen is removed.
-For instance, if the module name is @id{a.v1-b.c},
-the function name will be @id{luaopen_b_c}.
-
-If @id{require} finds neither a Lua library nor a
-@N{C library} for a module,
-it calls the @def{all-in-one loader}.
-This loader searches the @N{C path} for a library for
-the root name of the given module.
-For instance, when requiring @id{a.b.c},
-it will search for a @N{C library} for @id{a}.
-If found, it looks into it for an open function for
-the submodule;
-in our example, that would be @id{luaopen_a_b_c}.
-With this facility, a package can pack several @N{C submodules}
-into one single library,
-with each submodule keeping its original open function.
+it tries an @emph{all-in-one} loader @see{pdf-package.loaders}.
 
 Once a loader is found,
 @id{require} calls the loader with a single argument, @id{modname}.
@@ -5089,6 +5068,78 @@ When you require a module @id{modname} and
 
 }
 
+@LibEntry{package.loaders|
+
+A table used by @Lid{require} to control how to load modules.
+
+Each entry in this table is a @def{searcher function}.
+When looking for a module,
+@Lid{require} calls each of these searchers in ascending order,
+with the module name (the argument given to @Lid{require}) as its
+sole parameter.
+The function may return another function (the module @def{loader})
+or a string explaining why it did not find that module
+(or @nil if it has nothing to say).
+Lua initializes this table with four functions.
+
+The first searcher simply looks for a loader in the
+@Lid{package.preload} table.
+
+The second searcher looks for a loader as a Lua library,
+using the path stored at @Lid{package.path}.
+A path is a sequence of @emph{templates} separated by semicolons.
+For each template,
+the searcher will change each interrogation
+mark in the template by @id{filename},
+which is the module name with each dot replaced by a
+@Q{directory separator} (such as @St{/} in Unix);
+then it will try to open the resulting file name.
+So, for instance, if the Lua path is the string
+@verbatim{
+"./?.lua;./?.lc;/usr/local/?/init.lua"
+}
+the search for a Lua file for module @id{foo}
+will try to open the files
+@T{./foo.lua}, @T{./foo.lc}, and
+@T{/usr/local/foo/init.lua}, in that order.
+
+The third searcher looks for a loader as a @N{C library},
+using the path given by the variable @Lid{package.cpath}.
+For instance,
+if the @N{C path} is the string
+@verbatim{
+"./?.so;./?.dll;/usr/local/?/init.so"
+}
+the searcher for module @id{foo}
+will try to open the files @T{./foo.so}, @T{./foo.dll},
+and @T{/usr/local/foo/init.so}, in that order.
+Once it finds a @N{C library},
+this searcher first uses a dynamic link facility to link the
+application with the library.
+Then it tries to find a @N{C function} inside the library to
+be used as the loader.
+The name of this @N{C function} is the string @St{luaopen_}
+concatenated with a copy of the module name where each dot
+is replaced by an underscore.
+Moreover, if the module name has a hyphen,
+its prefix up to (and including) the first hyphen is removed.
+For instance, if the module name is @id{a.v1-b.c},
+the function name will be @id{luaopen_b_c}.
+
+The fourth searcher tries an @def{all-in-one loader}.
+It searches the @N{C path} for a library for
+the root name of the given module.
+For instance, when requiring @id{a.b.c},
+it will search for a @N{C library} for @id{a}.
+If found, it looks into it for an open function for
+the submodule;
+in our example, that would be @id{luaopen_a_b_c}.
+With this facility, a package can pack several @N{C submodules}
+into one single library,
+with each submodule keeping its original open function.
+
+}
+
 @LibEntry{package.loadlib (libname, funcname)|
 
 Dynamically links the host program with the @N{C library} @id{libname}.
@@ -5123,21 +5174,6 @@ with a default path defined in @id{luaconf.h},
 if the environment variable is not defined.
 Any @St{;;} in the value of the environment variable
 is replaced by the default path.
-
-A path is a sequence of @emph{templates} separated by semicolons.
-For each template, @Lid{require} will change each interrogation
-mark in the template by @id{filename},
-which is @id{modname} with each dot replaced by a
-@Q{directory separator} (such as @St{/} in Unix);
-then it will try to load the resulting file name.
-So, for instance, if the Lua path is
-@verbatim{
-"./?.lua;./?.lc;/usr/local/?/init.lua"
-}
-the search for a Lua loader for module @id{foo}
-will try to load the files
-@T{./foo.lua}, @T{./foo.lc}, and
-@T{/usr/local/foo/init.lua}, in that order.
 
 }
 
