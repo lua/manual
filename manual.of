@@ -1,4 +1,4 @@
-@C{$Id: manual.of,v 1.39 2008/01/03 15:30:05 roberto Exp roberto $}
+@C{$Id: manual.of,v 1.40 2008/01/03 15:45:44 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -5943,6 +5943,7 @@ and then all operations are supplied as methods of the file descriptor.
 The table @id{io} also provides
 three predefined file descriptors with their usual meanings from C:
 @defid{io.stdin}, @defid{io.stdout}, and @defid{io.stderr}.
+The I/O library never closes these files.
 
 Unless otherwise stated,
 all I/O functions return @nil on failure
@@ -6921,7 +6922,7 @@ Here is the complete syntax of Lua in extended BNF.
 
 }
 
-$Date: $
+$Date: 2008/01/03 15:45:44 $
 
 }
 
