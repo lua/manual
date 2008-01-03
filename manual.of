@@ -1,4 +1,4 @@
-@C{$Id: manual.of,v 1.38 2007/09/03 17:20:27 roberto Exp $}
+@C{$Id: manual.of,v 1.38 2007/09/03 19:51:12 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1341,7 +1341,7 @@ function add_event (op1, op2)
     local h = getbinhandler(op1, op2, "__add")
     if h then
       -- call the handler with both operands
-      return h(op1, op2)
+      return (h(op1, op2))
     else  -- no handler available: default behavior
       error(@Cdots)
     end
@@ -1397,7 +1397,7 @@ function unm_event (op)
     local h = metatable(op).__unm
     if h then
       -- call the handler with the operand
-      return h(op)
+      return (h(op))
     else  -- no handler available: default behavior
       error(@Cdots)
     end
@@ -1418,7 +1418,7 @@ function concat_event (op1, op2)
   else
     local h = getbinhandler(op1, op2, "__concat")
     if h then
-      return h(op1, op2)
+      return (h(op1, op2))
     else
       error(@Cdots)
     end
@@ -1441,7 +1441,7 @@ function len_event (op)
     local h = metatable(op).__len
     if h then
       -- call the handler with the operand
-      return h(op)
+      return (h(op))
     else  -- no handler available: default behavior
       error(@Cdots)
     end
@@ -1480,7 +1480,7 @@ function eq_event (op1, op2)
   -- try metamethod
   local h = getcomphandler(op1, op2, "__eq")
   if h then
-    return h(op1, op2)
+    return (h(op1, op2))
   else
     return false
   end
@@ -1501,7 +1501,7 @@ function lt_event (op1, op2)
   else
     local h = getcomphandler(op1, op2, "__lt")
     if h then
-      return h(op1, op2)
+      return (h(op1, op2))
     else
       error(@Cdots);
     end
@@ -1523,7 +1523,7 @@ function le_event (op1, op2)
   else
     local h = getcomphandler(op1, op2, "__le")
     if h then
-      return h(op1, op2)
+      return (h(op1, op2))
     else
       h = getcomphandler(op1, op2, "__lt")
       if h then
@@ -1559,8 +1559,8 @@ function gettable_event (table, key)
     end
   end
   if type(h) == "function" then
-    return h(table, key)      -- call the handler
-  else return h[key]          -- or repeat operation on it
+    return (h(table, key))     -- call the handler
+  else return h[key]           -- or repeat operation on it
   end
 end
 }
@@ -1584,7 +1584,7 @@ function settable_event (table, key, value)
     end
   end
   if type(h) == "function" then
-    return h(table, key,value)    -- call the handler
+    h(table, key,value)           -- call the handler
   else h[key] = value             -- or repeat operation on it
   end
 end
@@ -2532,7 +2532,7 @@ and @N{0 otherwise}.
 @APIEntry{int lua_isnone (lua_State *L, int index);|
 @apii{0,0,-}
 
-Returns 1 if the the given acceptable index is not valid
+Returns 1 if the given acceptable index is not valid
 (that is, it refers to an element outside the current stack),
 and @N{0 otherwise}.
 
@@ -2541,7 +2541,7 @@ and @N{0 otherwise}.
 @APIEntry{int lua_isnoneornil (lua_State *L, int index);|
 @apii{0,0,-}
 
-Returns 1 if the the given acceptable index is not valid
+Returns 1 if the given acceptable index is not valid
 (that is, it refers to an element outside the current stack)
 or if the value at this index is @nil,
 and @N{0 otherwise}.
@@ -3984,6 +3984,9 @@ and returns this string;
 if @id{l} is not @id{NULL} fills @T{*l}
 with the string's length.
 
+This function uses @Lid{lua_tolstring} to get its result,
+so all conversions and caveats of that function applies here.
+
 }
 
 @APIEntry{lua_Number luaL_checknumber (lua_State *L, int narg);|
@@ -4034,6 +4037,9 @@ raising an error if the stack cannot grow to that size.
 Checks whether the function argument @id{narg} is a string
 and returns this string.
 
+This function uses @Lid{lua_tolstring} to get its result,
+so all conversions and caveats of that function applies here.
+
 }
 
 @APIEntry{void luaL_checktype (lua_State *L, int narg, int t);|
@@ -4053,7 +4059,7 @@ of the type @id{tname} @seeC{luaL_newmetatable}.
 }
 
 @APIEntry{int luaL_dofile (lua_State *L, const char *filename);|
-@apii{0,?,e}
+@apii{0,?,m}
 
 Loads and runs the given file.
 It is defined as the following macro:
@@ -4066,7 +4072,7 @@ or 1 in case of errors.
 }
 
 @APIEntry{int luaL_dostring (lua_State *L, const char *str);|
-@apii{0,?,e}
+@apii{0,?,m}
 
 Loads and runs the given string.
 It is defined as the following macro:
@@ -4096,7 +4102,7 @@ as @T{return luaL_error(@rep{args})}.
 }
 
 @APIEntry{int luaL_getmetafield (lua_State *L, int obj, const char *e);|
-@apii{0,0|1,e}
+@apii{0,0|1,m}
 
 Pushes onto the stack the field @id{e} from the metatable
 of the object at index @id{obj}.
@@ -4488,7 +4494,7 @@ it can open them individually by calling
 @defid{luaopen_table} (for the table library),
 @defid{luaopen_math} (for the mathematical library),
 @defid{luaopen_io} (for the I/O library),
-@defid{luaopen_os} (for the the Operating System library),
+@defid{luaopen_os} (for the Operating System library),
 and @defid{luaopen_debug} (for the debug library).
 These functions are declared in @defid{lualib.h}
 and should not be called directly:
@@ -5770,7 +5776,7 @@ Returns the angle @id{x} (given in radians) in degrees.
 
 @LibEntry{math.exp (x)|
 
-Returns the the value @M{e@sp{x}}.
+Returns the value @M{e@sp{x}}.
 
 }
 
@@ -5867,13 +5873,13 @@ pseudo-random generator function @id{rand} provided by @N{ANSI C}.
 (No guarantees can be given for its statistical properties.)
 
 When called without arguments,
-returns a pseudo-random real number
+returns a uniform pseudo-random real number
 in the range @M{[0,1)}.  @C{]}
-When called with a number @id{m},
+When called with an integer number @id{m},
 @id{math.random} returns
-a pseudo-random integer in the range @M{[1, m]}.
-When called with two numbers @id{m} and @id{n},
-@id{math.random} returns a pseudo-random
+a uniform pseudo-random integer in the range @M{[1, m]}.
+When called with two integer numbers @id{m} and @id{n},
+@id{math.random} returns a uniform pseudo-random
 integer in the range @M{[m, n]}.
 
 }
