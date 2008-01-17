@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.41 2008/01/03 16:58:44 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.42 2008/01/17 14:21:49 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -3985,7 +3985,7 @@ if @id{l} is not @id{NULL} fills @T{*l}
 with the string's length.
 
 This function uses @Lid{lua_tolstring} to get its result,
-so all conversions and caveats of that function applies here.
+so all conversions and caveats of that function apply here.
 
 }
 
@@ -4038,7 +4038,7 @@ Checks whether the function argument @id{narg} is a string
 and returns this string.
 
 This function uses @Lid{lua_tolstring} to get its result,
-so all conversions and caveats of that function applies here.
+so all conversions and caveats of that function apply here.
 
 }
 
