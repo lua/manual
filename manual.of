@@ -1,4 +1,4 @@
-@C{$Id: manual.of,v 1.40 2008/01/03 15:45:44 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.41 2008/01/03 16:58:44 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -6921,8 +6921,6 @@ Here is the complete syntax of Lua in extended BNF.
 @producname{unop}@producbody{@bnfter{-} @Or @Rw{not} @Or @bnfter{#}}
 
 }
-
-$Date: 2008/01/03 15:45:44 $
 
 }
 
