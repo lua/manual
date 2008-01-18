@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.42 2008/01/17 14:21:49 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.43 2008/01/17 16:19:44 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -124,6 +124,7 @@ Strings in Lua may contain any 8-bit value, including embedded zeros,
 which can be specified as @Char{\0}.
 
 To put a double (single) quote, a newline, a backslash,
+a carriage return,
 or an embedded zero
 inside a literal string enclosed by double (single) quotes
 you must use an escape sequence.
@@ -2231,7 +2232,7 @@ static int foo (lua_State *L) {
 }
 
 @APIEntry{int lua_checkstack (lua_State *L, int extra);|
-@apii{0,0,-}
+@apii{0,0,m}
 
 Ensures that there are at least @id{extra} free stack slots in the stack.
 It returns false if it cannot grow the stack to that size.
@@ -3055,7 +3056,7 @@ void lua_register (lua_State *L,
                    const char *name,
                    lua_CFunction f);
 |
-@apii{0,0,m}
+@apii{0,0,e}
 
 Sets the C function @id{f} as the new value of global @id{name}.
 It is defined as a macro:
@@ -3534,7 +3535,7 @@ Returns the current hook mask.
 }
 
 @APIEntry{int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);|
-@apii{0|1,0|1|2,-}
+@apii{0|1,0|1|2,m}
 
 Returns information about a specific function or function invocation.
 
