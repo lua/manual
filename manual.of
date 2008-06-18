@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.44 2008/01/18 16:41:50 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.45 2008/01/19 00:17:30 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1504,7 +1504,7 @@ function lt_event (op1, op2)
     if h then
       return (h(op1, op2))
     else
-      error(@Cdots);
+      error(@Cdots)
     end
   end
 end
@@ -1530,7 +1530,7 @@ function le_event (op1, op2)
       if h then
         return not h(op2, op1)
       else
-        error(@Cdots);
+        error(@Cdots)
       end
     end
   end
@@ -1556,7 +1556,7 @@ function gettable_event (table, key)
   else
     h = metatable(table).__index
     if h == nil then
-      error(@Cdots);
+      error(@Cdots)
     end
   end
   if type(h) == "function" then
@@ -1581,7 +1581,7 @@ function settable_event (table, key, value)
   else
     h = metatable(table).__newindex
     if h == nil then
-      error(@Cdots);
+      error(@Cdots)
     end
   end
   if type(h) == "function" then
@@ -1624,25 +1624,33 @@ called their @def{environment}.
 Like metatables, environments are regular tables and
 multiple objects can share the same environment.
 
+Threads are created sharing the environment of the creating thread.
+Userdata and @N{C functions} are created sharing the environment
+of the creating @N{C function}.
+Non-nested Lua functions
+(created by @Lid{loadfile}, @Lid{loadstring} or @Lid{load})
+are created sharing the environment of the creating thread.
+Nested Lua functions are created sharing the environment of
+the creating Lua function.
+
 Environments associated with userdata have no meaning for Lua.
 It is only a convenience feature for programmers to associate a table to
 a userdata.
 
 Environments associated with threads are called
 @def{global environments}.
-They are used as the default environment for their threads and
-non-nested functions created by the thread
-(through @Lid{loadfile}, @Lid{loadstring} or @Lid{load})
+They are used as the default environment for threads and
+non-nested Lua functions created by the thread
 and can be directly accessed by @N{C code} @see{pseudo-index}.
 
 Environments associated with @N{C functions} can be directly
 accessed by @N{C code} @see{pseudo-index}.
 They are used as the default environment for other @N{C functions}
-created by the function.
+and userdata created by the function.
 
 Environments associated with Lua functions are used to resolve
 all accesses to global variables within the function @see{variables}.
-They are used as the default environment for other Lua functions
+They are used as the default environment for nested Lua functions
 created by the function.
 
 You can change the environment of a Lua function or the
@@ -1672,13 +1680,15 @@ Lua implements an incremental mark-and-sweep collector.
 It uses two numbers to control its garbage-collection cycles:
 the @def{garbage-collector pause} and
 the @def{garbage-collector step multiplier}.
+Both use percentage points as units
+(so a value of 100 means an internal value of 1).
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
 Larger values make the collector less aggressive.
-Values smaller than 1 mean the collector will not wait to
+Values smaller than 100 mean the collector will not wait to
 start a new cycle.
-A value of 2 means that the collector waits for the total memory in use
+A value of 200 means that the collector waits for the total memory in use
 to double before starting a new cycle.
 
 The step multiplier
@@ -1686,15 +1696,13 @@ controls the relative speed of the collector relative to
 memory allocation.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
-Values smaller than 1 make the collector too slow and
+Values smaller than 100 make the collector too slow and
 may result in  the collector never finishing a cycle.
-The default, 2, means that the collector runs at @Q{twice}
+The default, 200, means that the collector runs at @Q{twice}
 the speed of memory allocation.
 
 You can change these numbers by calling @Lid{lua_gc} in C
 or @Lid{collectgarbage} in Lua.
-Both get percentage points as arguments
-(so an argument of 100 means a real value of 1).
 With these functions you can also control 
 the collector directly (e.g., stop and restart it).
 
@@ -1996,7 +2004,7 @@ The first value associated with a function is at position
 @T{lua_upvalueindex(1)}, and so on.
 Any access to @T{lua_upvalueindex(@rep{n})},
 where @rep{n} is greater than the number of upvalues of the
-current function,
+current function (but not greater than 256),
 produces an acceptable (but invalid) index.
 
 }
@@ -2382,13 +2390,13 @@ garbage-collection cycle.
 }
 
 @item{@id{LUA_GCSETPAUSE}|
-sets @id{data}/100 as the new value
+sets @id{data} as the new value
 for the @emph{pause} of the collector @see{GC}.
 The function returns the previous value of the pause.
 }
 
 @item{@id{LUA_GCSETSTEPMUL}|
-sets @id{data}/100 as the new value for the @emph{step multiplier} of
+sets @id{data} as the new value for the @emph{step multiplier} of
 the collector @see{GC}.
 The function returns the previous value of the step multiplier.
 }
@@ -2841,6 +2849,8 @@ with the argument @id{n} telling how many values should be
 associated with the function.
 @Lid{lua_pushcclosure} also pops these values from the stack.
 
+The maximum value for @id{n} is 255.
+
 }
 
 @APIEntry{void lua_pushcfunction (lua_State *L, lua_CFunction f);|
@@ -3055,7 +3065,8 @@ The reader must return a pointer to a block of memory
 with a new piece of the chunk
 and set @id{size} to the block size.
 The block must exist until the reader function is called again.
-To signal the end of the chunk, the reader must return @id{NULL}.
+To signal the end of the chunk,
+the reader must return @id{NULL} or set @id{size} to zero.
 The reader function may return pieces of any size greater than zero.
 
 }
@@ -4560,13 +4571,15 @@ Returns @Rw{true} if the step finished a collection cycle.
 }
 
 @item{@Q{setpause}|
-sets @id{arg}/100 as the new value for the @emph{pause} of
+sets @id{arg} as the new value for the @emph{pause} of
 the collector @see{GC}.
+Returns the previous value for @emph{pause}.
 }
 
 @item{@Q{setstepmul}|
-sets @id{arg}/100 as the new value for the @emph{step multiplier} of
+sets @id{arg} as the new value for the @emph{step multiplier} of
 the collector @see{GC}.
+Returns the previous value for @emph{step}.
 }
 
 }
@@ -4649,7 +4662,7 @@ up to the first integer key absent from the table.
 Loads a chunk using function @id{func} to get its pieces.
 Each call to @id{func} must return a string that concatenates
 with previous results.
-A return of @nil (or no value) signals the end of the chunk.
+A return of an empty string, @nil, or no value signals the end of the chunk.
 
 If there are no errors, 
 returns the compiled chunk as a function;
@@ -5238,6 +5251,8 @@ Therefore, you can use the string functions in object-oriented style.
 For instance, @T{string.byte(s, i)}
 can be written as @T{s:byte(i)}.
 
+The string library assumes one-byte character encodings.
+
 
 @LibEntry{string.byte (s [, i [, j]])|
 Returns the internal numerical codes of the characters @T{s[i]},
@@ -5800,7 +5815,8 @@ Returns the largest integer smaller than or equal to @id{x}.
 
 @LibEntry{math.fmod (x, y)|
 
-Returns the remainder of the division of @id{x} by @id{y}.
+Returns the remainder of the division of @id{x} by @id{y}
+that rounds the quotient towards zero.
 
 }
 
@@ -6364,6 +6380,18 @@ be used for a temporary file.
 The file must be explicitly opened before its use
 and explicitly removed when no longer needed.
 
+On some systems (POSIX),
+this function also creates a file with that name,
+to avoid security risks.
+(Someone else might create the file with wrong permissions
+in the time between getting the name and creating the file.)
+You still have to open the file to use it
+and to remove it (even if you do not use it).
+
+When possible,
+you may prefer to use @Lid{os.tmpfile},
+which automatically removes the file when the program ends.
+
 }
 
 }
@@ -6521,7 +6549,8 @@ When called without arguments,
 
 When the hook is called, its first parameter is a string
 describing the event that has triggered its call:
-@T{"call"}, @T{"return"} (or @T{"tail return"}),
+@T{"call"}, @T{"return"} (or @T{"tail return"},
+when simulating a return from a tail call),
 @T{"line"}, and @T{"count"}.
 For line events,
 the hook also gets the new line number as its second parameter.
