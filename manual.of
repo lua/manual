@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.46 2008/06/18 16:13:02 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.47 2008/08/11 17:02:37 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -821,7 +821,7 @@ Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
 Otherwise, Lua tries to call the @Q{lt} or the @Q{le}
 metamethod @see{metatable}.
-A comparsion @T{a > b} is translated to @T{b < a}
+A comparison @T{a > b} is translated to @T{b < a}
 and @T{a >= b} is translated to @T{b <= a}.
 
 }
@@ -1269,7 +1269,7 @@ you must use the @N{C API} for that.
 
 Tables and full userdata have individual metatables
 (although multiple tables and userdata can share their metatables).
-Values of all other types share one single metatable per type,
+Values of all other types share one single metatable per type;
 that is, there is one single metatable for all numbers,
 one for all strings, etc.
 
@@ -1672,7 +1672,7 @@ Lua manages memory automatically by running
 a @def{garbage collector} from time to time
 to collect all @emph{dead objects}
 (that is, objects that are no longer accessible from Lua).
-All memory used by Lua are subject to automatic management:
+All memory used by Lua is subject to automatic management:
 tables, userdata, functions, threads, strings, etc.
 
 Lua implements an incremental mark-and-sweep collector.
@@ -4482,7 +4482,7 @@ and are provided as separate @N{C modules}.
 Currently, Lua has the following standard libraries:
 @itemize{
 
-@item{basic library;}
+@item{basic library,} which includes the coroutine sub-library;
 
 @item{package library;}
 
