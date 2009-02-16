@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.47 2008/08/11 17:02:37 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.48 2008/08/18 15:24:20 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -4482,7 +4482,7 @@ and are provided as separate @N{C modules}.
 Currently, Lua has the following standard libraries:
 @itemize{
 
-@item{basic library,} which includes the coroutine sub-library;
+@item{basic library, which includes the coroutine sub-library;}
 
 @item{package library;}
 
@@ -4538,11 +4538,16 @@ when absent, it defaults to @Q{assertion failed!}
 
 }
 
-@LibEntry{collectgarbage (opt [, arg])|
+@LibEntry{collectgarbage ([opt [, arg]])|
 
 This function is a generic interface to the garbage collector.
 It performs different functions according to its first argument, @id{opt}:
 @description{
+
+@item{@Q{collect}|
+performs a full garbage-collection cycle.
+This is the default option.
+}
 
 @item{@Q{stop}|
 stops the garbage collector.
@@ -4550,10 +4555,6 @@ stops the garbage collector.
 
 @item{@Q{restart}|
 restarts the garbage collector.
-}
-
-@item{@Q{collect}|
-performs a full garbage-collection cycle.
 }
 
 @item{@Q{count}|
@@ -4585,7 +4586,7 @@ Returns the previous value for @emph{step}.
 
 }
 
-@LibEntry{dofile (filename)|
+@LibEntry{dofile ([filename])|
 Opens the named file and executes its contents as a Lua chunk.
 When called without arguments,
 @id{dofile} executes the contents of the standard input (@id{stdin}).
