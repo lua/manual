@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.49 2009/02/16 19:58:58 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.50 2009/09/11 17:33:14 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -138,10 +138,18 @@ A @emph{closing long bracket} is defined similarly;
 for instance, a closing long bracket of @N{level 4} is written as @T{]====]}.
 A long string starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
+It can contain any text except a closing bracket of the proper level.
 Literals in this bracketed form can run for several lines,
 do not interpret any escape sequences,
 and ignore long brackets of any other level.
-They can contain anything except a closing bracket of the proper level.
+Any kind of end-of-line sequence
+(carriage return, newline, carriage return followed by newline,
+or newline followed by carriage return)
+is converted to a simple newline.
+You should not use long strings for non-text data;
+Use instead a regular quoted literal with explicit escape sequences
+for control characters.
+
 
 For convenience,
 when the opening long bracket is immediately followed by a newline,
@@ -329,25 +337,13 @@ The syntax @id{var.Name} is just syntactic sugar for
 All global variables live as fields in ordinary Lua tables,
 called @def{environment tables} or simply
 @emph{environments} @see{environ}.
-Each function has its own reference to an environment,
-so that all global variables in this function
-will refer to this environment table.
-When a function is created,
-it inherits the environment from the function that created it.
-To get the environment table of a Lua function,
-you call @Lid{getfenv}.
-To replace it,
-you call @Lid{setfenv}.
-(You can only manipulate the environment of @N{C functions}
-through the debug library; @see{libdebug}.)
-
 An access to a global variable @id{x}
 is equivalent to @id{_env.x},
 which in turn is equivalent to
 @verbatim{
 gettable_event(_env, "x")
 }
-where @id{_env} is the environment of the running function.
+where @id{_env} is the @x{current environment} @see{environ}.
 (See @See{metatable} for a complete description of the
 @id{gettable_event} function.
 This function is not defined or callable in Lua.
@@ -687,6 +683,35 @@ and so local variables can be declared in a chunk outside any explicit block.
 The scope of such local variables extends until the end of the chunk.
 
 The visibility rules for local variables are explained in @See{visibility}.
+
+}
+
+@sect3{lexenv| @title{Lexical Environments}
+
+A lexical environment defines a new @x{current environment} @see{environ}
+for the code inside its block:
+@Produc{
+@producname{stat}@producbody{@Rw{in} exp @Rw{do} block @Rw{end}}
+}
+That is, a lexical environment changes the
+table used to resolve all accesses
+to global (free) variables inside a block.
+
+Inside a lexical environment,
+the result of @T{@rep{exp}} becomes the current environment.
+Expression @T{@rep{exp}} is evaluated only once in the beginning of
+the statement and it is stored in a hidden local variable named
+@defid{(environment)}.
+Then, any global variable
+(that is, a variable not declared as a local)
+@id{var} inside @T{@rep{block}} is accessed as
+@T{(environment).@rep{var}}.
+Moreover, functions defined inside the block also use the
+current environment as their environments @see{environ}.
+
+A lexical environment does not shadow local declarations.
+That is, any local variable that is visible just before
+a lexical environment is still visible inside the environment.
 
 }
 
@@ -1275,6 +1300,8 @@ Tables and full userdata have individual metatables
 Values of all other types share one single metatable per type;
 that is, there is one single metatable for all numbers,
 one for all strings, etc.
+By default, a value has no metatable,
+but the string library sets a metatable for the string type @see{strlib}.
 
 A metatable controls how an object behaves in arithmetic operations,
 order comparisons, concatenation, length operation, and indexing.
@@ -1619,49 +1646,41 @@ end
 
 @sect2{environ| @title{Environments}
 
-Besides metatables,
-objects of types thread, function, and userdata
-have another table associated with them,
-called their @def{environment}.
+Each function and userdata in Lua
+has a table associated with it,
+called its @def{environment}.
 Like metatables, environments are regular tables and
 multiple objects can share the same environment.
+From Lua,
+you can manipulate the environment of an object
+only through the debug library @see{libdebug}.
 
-Threads are created sharing the environment of the creating thread.
 Userdata and @N{C functions} are created sharing the environment
 of the creating @N{C function}.
 Non-nested Lua functions
 (created by @Lid{loadfile}, @Lid{loadstring} or @Lid{load})
-are created sharing the environment of the creating thread.
-Nested Lua functions are created sharing the environment of
-the creating Lua function.
+are created sharing the global environment.
+Nested Lua functions are created sharing the @x{current environment}
+of where it is defined.
 
 Environments associated with userdata have no meaning for Lua.
 It is only a convenience feature for programmers to associate a table to
 a userdata.
-
-Environments associated with threads are called
-@def{global environments}.
-They are used as the default environment for threads and
-non-nested Lua functions created by the thread
-and can be directly accessed by @N{C code} @see{pseudo-index}.
 
 The environment associated with a @N{C function} can be directly
 accessed by @N{C code} @see{pseudo-index}.
 It is used as the default environment for other @N{C functions}
 and userdata created by the function.
 
-Environments associated with Lua functions are used to resolve
-all accesses to global variables within the function @see{variables}.
-They are used as the default environment for nested Lua functions
-created by the function.
-
-You can change the environment of a Lua function or the
-running thread by calling @Lid{setfenv}.
-You can get the environment of a Lua function or the running thread
-by calling @Lid{getfenv}.
-To manipulate the environment of other objects
-(userdata, @N{C functions}, other threads) you must
-use the @N{C API}.
+The environment associated with a Lua function is used as the
+current environment of all code in the function outside
+a @x{lexical environment} @see{lexenv}.
+A lexical environment changes the 
+current environment inside its scope.
+In any case,
+the @def{current environment} is the table 
+Lua uses to resolve global variables and to initialize
+the environment of nested functions.
 
 }
 
@@ -1999,7 +2018,7 @@ the function environment,
 the registry,
 and the upvalues of a @N{C function} @see{c-closure}.
 
-The thread environment (where global variables live) is
+The main environment (where global variables live) is
 always at pseudo-index @defid{LUA_GLOBALSINDEX}.
 The environment of the running @N{C function} is always
 at pseudo-index @defid{LUA_ENVIRONINDEX}.
@@ -2050,7 +2069,40 @@ or a light userdata with the address of a @N{C object} in your code.
 
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
-and therefore should not be used for other purposes.
+and by some predefined values.
+Therefore, integer keys should not be used for other purposes.
+
+When you create a new Lua state,
+its registry comes with some predefined values.
+These predefined values are indexed with integer keys
+defined as constants in @id{lua.h}.
+The following constants are defined:
+@description{
+@item{LUA_RIDX_MAINTHREAD| At this index the registry has
+the main thread of the state.
+(The main thread is the one created together with the state.)
+}
+@item{LUA_RIDX_CPCALL| At this index the registry has
+the @defid{cpcall} function.
+This function allows you to call any
+@Lid{lua_CFunction} without creating a closure for it,
+therefore preventing an unprotected @x{memory allocation error}.
+
+The address of the function to be called must be stored in a variable,
+whose address is passed as the first argument to @id{cpcall},
+as a light userdata.
+Note that the light userdata in the first argument should not
+point to the function to be called,
+but to a variable containing the pointer to the function.
+@N{ANSI C} does not allow the direct assignment of a function address to
+the @T{void*} in a light userdata.
+
+Other arguments to @id{cpcall} are passed to the called function.
+The @id{cpcall} function itself should be called with @Lid{lua_pcall},
+like any C function.
+}
+}
+
 
 }
 
@@ -2060,7 +2112,7 @@ Internally, Lua uses the C @id{longjmp} facility to handle errors.
 (You can also choose to use exceptions if you use C++;
 see file @id{luaconf.h}.)
 When Lua faces any error
-(such as memory allocation errors, type errors, syntax errors,
+(such as a @x{memory allocation error}, type errors, syntax errors,
 and runtime errors)
 it @emph{raises} an error;
 that is, it does a long jump.
@@ -2076,11 +2128,66 @@ Your panic function can avoid this exit by
 never returning (e.g., doing a long jump).
 
 Most functions in the API can throw an error,
-for instance due to a memory allocation error.
+for instance due to a @x{memory allocation error}.
 The documentation for each function indicates whether
 it can throw errors.
 
 Inside a @N{C function} you can throw an error by calling @Lid{lua_error}.
+
+}
+
+@sect2{continuations|@title{Handling Yields in C}
+
+Internally, Lua uses the C @id{longjmp} facility to yield a coroutine.
+Therefore, if a function @id{foo} calls an API function
+and this API function yields
+(directly or indirectly by calling another function that yields),
+Lua cannot return to @id{foo} any more,
+because the @id{longjmp} removes its frame from the C stack.
+
+To avoid this kind of problem,
+Lua raises an error whenever it tries to yield accross an API call,
+except for three functions:
+@Lid{lua_yieldk}, @Lid{lua_callk}, and @Lid{lua_pcallk}.
+All those functions receive a @def{continuation function}
+(as a parameter called @id{k}) to continue execution after an yield.
+
+To explain continuations,
+let us set some terminology.
+We have a C function called from Lua which we will call
+the @emph{original function}.
+This original function may call one of those three functions in the C API,
+which we will call the @emph{callee function},
+that may yield the current thread.
+(This will happen when the callee function is @Lid{lua_yieldk},
+or when the callee function is either @Lid{lua_callk} or @Lid{lua_pcallk}
+and the function called by them yields.)
+
+Suppose the running thread yields while executing the callee function.
+After the thread resumes,
+it eventually will finish running the callee function.
+However,
+the callee function cannot return to the original function,
+because its frame in the C stack was destroyed by the yield.
+Instead, Lua calls a @def{continuation function},
+which was given as an argument to the callee function.
+As the name implies,
+the continuation function should continue the task 
+of the original function.
+
+Lua treats the continuation function as if it was the original function.
+The continuation function receives the same Lua stack
+from the original function,
+in the same state it would be if the callee function had returned.
+(For instance,
+after a @Lid{lua_callk} the function and its arguments are
+removed from the stack and replaced by the results from the call.)
+It also has the same upvalues.
+Whatever it returns is handled by Lua as if it was the return
+of the original function.
+
+The only difference in the Lua state between the original function
+and its continuation is the result of a call to @Lid{lua_getctx}.
 
 }
 
@@ -2223,6 +2330,15 @@ This is considered good programming practice.
 
 }
 
+@APIEntry{void lua_callk (lua_State *L, int nargs, int nresults,
+                          int ctx, lua_CFunction k);|
+@apii{nargs + 1,nresults,e}
+
+This function behaves exactly like @Lid{lua_call},
+but allows the called function to yield @see{continuations}.
+
+}
+
 @APIEntry{typedef int (*lua_CFunction) (lua_State *L);|
 
 Type for @N{C functions}.
@@ -2331,17 +2447,13 @@ Concatenation is performed following the usual semantics of Lua
 
 }
 
-@APIEntry{int lua_cpcall (lua_State *L, lua_CFunction func, void *ud);|
-@apii{0,0|1,-}
+@APIEntry{void lua_copy (lua_State *L, int fromidx, int toidx);|
+@apii{0,0,-}
 
-Calls the @N{C function} @id{func} in protected mode.
-@id{func} starts with only one element in its stack,
-a light userdata containing @id{ud}.
-In case of errors,
-@Lid{lua_cpcall} returns the same error codes as @Lid{lua_pcall},
-plus the error object on the top of the stack;
-otherwise, it returns zero, and does not change the stack.
-All values returned by @id{func} are discarded.
+Moves the element at the valid index @id{fromidx}
+into the valid index @id{toidx}
+without shifting any element
+(therefore replacing the value at that position).
 
 }
 
@@ -2442,6 +2554,11 @@ the collector @see{GC}.
 The function returns the previous value of the step multiplier.
 }
 
+@item{@id{LUA_GCISRUNNING}|
+returns a boolean that tells whether the collector is running
+(i.e., not stopped).
+}
+
 }
 
 }
@@ -2452,6 +2569,34 @@ The function returns the previous value of the step multiplier.
 Returns the @x{memory-allocation function} of a given state.
 If @id{ud} is not @id{NULL}, Lua stores in @T{*ud} the
 opaque pointer passed to @Lid{lua_newstate}.
+
+}
+
+@APIEntry{int lua_getctx  (lua_State *L, int *ctx);|
+@apii{0,0,-}
+
+This function is called by a continuation function @see{continuations}
+to retrieve the status of the thread and a context information.
+
+When called in the original function,
+@Lid{lua_getctx} always returns @Lid{LUA_OK}
+and does not change the value of its argument @id{ctx}.
+When called inside a continuation function,
+@Lid{lua_getctx} returns @Lid{LUA_YIELD} and sets
+the value of @id{ctx} to be the @x{context information}
+(the value passed as the @id{ctx} argument
+to the callee together with the continuation function).
+
+When the callee is @Lid{lua_pcallk},
+Lua may also call its continuation function
+to handle errors during the call.
+That is, upon an error in the function called by @Lid{lua_pcallk},
+Lua may not return @Lid{lua_pcallk}
+but instead may call the continuation function.
+In that case, a call to @Lid{lua_getctx} will return the error code
+(the value that would be returned by @Lid{lua_pcallk});
+the value of @id{ctx} will be set to the context information,
+as in the case of an yield.
 
 }
 
@@ -2662,7 +2807,7 @@ The return values of @Lid{lua_load} are:
 syntax error during pre-compilation;}
 
 @item{@Lid{LUA_ERRMEM}|
-memory allocation error.}
+@x{memory allocation error}.}
 
 @item{@Lid{LUA_ERRGCMM}|
 error while running a @idx{__gc} metamethod.
@@ -2684,14 +2829,6 @@ The @id{data} argument is an opaque value passed to the reader function.
 
 The @id{chunkname} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
-
-}
-
-@APIEntry{lua_State *lua_mainthread (lua_State *L);|
-@apii{0,0,-}
-
-Returns the @x{main thread} of the state @id{L}.
-(The main thread is the one created together with the state.)
 
 }
 
@@ -2850,7 +2987,7 @@ a runtime error.
 }
 
 @item{@defid{LUA_ERRMEM}|
-memory allocation error.
+@x{memory allocation error}.
 For such errors, Lua does not call the error handler function.
 }
 
@@ -2865,6 +3002,15 @@ It is generated by the garbage collector.)
 }
 
 }
+
+}
+
+@APIEntry{int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
+                          int ctx, lua_CFunction k);|
+@apii{nargs + 1,nresults|1,-}
+
+This function behaves exactly like @Lid{lua_pcall},
+but allows the called function to yield @see{continuations}.
 
 }
 
@@ -2967,7 +3113,7 @@ Pushes a number with value @id{n} onto the stack.
 Pushes a light userdata onto the stack.
 
 Userdata represent @N{C values} in Lua.
-A @def{light userdata} represents a pointer.
+A @def{light userdata} represents a pointer, a @T{void*}.
 It is a value (like a number):
 you do not create it, it has no individual metatable,
 and it is not collected (as it was never created).
@@ -3204,7 +3350,7 @@ with user data @id{ud}.
 Pops a table from the stack and sets it as
 the new environment for the value at the given index.
 If the value at the given index is
-neither a function nor a thread nor a userdata,
+neither a function nor a userdata,
 @Lid{lua_setfenv} returns 0.
 Otherwise it returns 1.
 
@@ -3483,18 +3629,42 @@ and pushes them onto the stack @id{to}.
 @APIEntry{int lua_yield  (lua_State *L, int nresults);|
 @apii{?,?,-}
 
+This function is equivalent to @Lid{lua_yieldk},
+but it has no continuation @see{continuations}.
+Therefore, when the thread resumes,
+it returns to the function that called
+the function calling @id{lua_yield}.
+
+}
+
+
+@APIEntry{int lua_yieldk  (lua_State *L, int nresults, int ctx,
+                           lua_CFunction k);|
+@apii{?,?,-}
+
 Yields a coroutine.
 
 This function should only be called as the
 return expression of a @N{C function}, as follows:
 @verbatim{
-return lua_yield (L, nresults);
+return lua_yield (L, nresults, i, k);
 }
-When a @N{C function} calls @Lid{lua_yield} in that way,
+When a @N{C function} calls @Lid{lua_yieldk} in that way,
 the running coroutine suspends its execution,
 and the call to @Lid{lua_resume} that started this coroutine returns.
 The parameter @id{nresults} is the number of values from the stack
 that are passed as results to @Lid{lua_resume}.
+
+When the coroutine is resumed again,
+Lua calls the given @x{continuation function} @id{k} to continue
+the execution of the C function that yielded @see{continuations}.
+This continuation function receives the same stack
+from the previous function,
+with the results removed and
+replaced by the arguments passed to @Lid{lua_resume}.
+Moreover,
+the continuation function may access the value @id{ctx}
+by calling @Lid{lua_getctx}.
 
 }
 
@@ -3634,7 +3804,7 @@ given as argument to a hook @seeC{lua_Hook}.
 To get information about a function you push it onto the stack
 and start the @id{what} string with the character @Char{>}.
 (In that case,
-@id{lua_getinfo} pops the function in the top of the stack.)
+@id{lua_getinfo} pops the function from the top of the stack.)
 For instance, to know in which line a function @id{f} was defined,
 you can write the following code:
 @verbatim{
@@ -3844,6 +4014,23 @@ when the index is greater than the number of upvalues.
 
 }
 
+@APIEntry{void *(lua_upvalueid) (lua_State *L, int funcindex, int n);|
+@apii{0,0,-}
+
+Returns an unique identifier for the upvalue numbered @id{n}
+from the closure at index @id{fidx}.
+Parameters @id{funcindex} and @id{n} are as in the @Lid{lua_getupvalue}
+@seeC{lua_getupvalue}
+(but @id{n} cannot be greater than the number of upvalues).
+
+These unique identifiers allow a program to check whether different
+closures share upvalues.
+Lua closures that share an upvalue
+(that is, that access a same external local variable)
+will return identical ids for those upvalue indices.
+
+}
+
 }
 
 }
@@ -3866,7 +4053,7 @@ have a prefix @id{luaL_}.
 
 All functions in the auxiliary library are built on
 top of the basic API,
-and so they provide nothing that cannot be done with this API.
+and so they provide nothing that cannot be done with that API.
 
 Several functions in the auxiliary library are used to
 check @N{C function} arguments.
@@ -4315,7 +4502,7 @@ an error message to the standard error output in case of fatal
 errors.
 
 Returns the new state,
-or @id{NULL} if there is a memory allocation error.
+or @id{NULL} if there is a @x{memory allocation error}.
 
 }
 
@@ -4475,8 +4662,10 @@ void luaL_register (lua_State *L,
 Opens a library.
 
 When called with @id{libname} equal to @id{NULL},
-it simply registers all functions in the list @id{l}
+it simply registers all functions in the array @id{l}
 @seeC{luaL_Reg} into the table on the top of the stack.
+The pointer @id{l} may be @id{NULL},
+representing an empty list.
 
 When called with a non-null @id{libname},
 @id{luaL_register} creates a new table @id{t},
@@ -4684,6 +4873,11 @@ the collector @see{GC}.
 Returns the previous value for @emph{step}.
 }
 
+@item{@Q{isrunning}|
+returns a boolean that tells whether the collector is running
+(i.e., not stopped).
+}
+
 }
 
 }
@@ -4721,19 +4915,6 @@ holds the global environment (that is, @T{_G._G = _G}).
 Lua itself does not use this variable;
 changing its value does not affect any environment,
 nor vice-versa.
-(Use @Lid{setfenv} to change environments.)
-
-}
-
-@LibEntry{getfenv ([f])|
-Returns the current environment in use by the function.
-@id{f} can be a Lua function or a number
-that specifies the function at that stack level:
-@N{Level 1} is the function calling @id{getfenv}.
-If the given function is not a Lua function,
-or if @id{f} is 0,
-@id{getfenv} returns the global environment.
-The default for @id{f} is 1.
 
 }
 
@@ -4760,7 +4941,8 @@ so that the construction
 for i,v in ipairs(t) do @rep{body} end
 }
 will iterate over the pairs (@T{1,t[1]}), (@T{2,t[2]}), @Cdots,
-up to the first integer key absent from the table.
+up to the length of the table,
+as defined by the length operator @see{len-op}.
 
 }
 
@@ -4915,20 +5097,6 @@ returns all arguments after argument number @id{index};
 a negative number indexes from the end (@num{-1} is the last argument).
 Otherwise, @id{index} must be the string @T{"#"},
 and @id{select} returns the total number of extra arguments it received.
-
-}
-
-@LibEntry{setfenv (f, table)|
-
-Sets the environment to be used by the given function.
-@id{f} can be a Lua function or a number
-that specifies the function at that stack level:
-@N{Level 1} is the function calling @id{setfenv}.
-@id{setfenv} returns the given function.
-
-As a special case, when @id{f} is 0 @id{setfenv} changes
-the environment of the running thread.
-In this case, @id{setfenv} returns no values.
 
 }
 
@@ -5320,7 +5488,7 @@ including if necessary a path and an extension.
 @id{funcname} must be the exact name exported by the @N{C library}
 (which may depend on the @N{C compiler} and linker used).
 
-This function is not supported by ANSI C.
+This function is not supported by @N{ANSI C}.
 As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the @id{dlfcn} standard).
@@ -5385,7 +5553,7 @@ To be used as an option to function @Lid{module}.
 
 }
 
-@sect2{@title{String Manipulation}
+@sect2{strlib| @title{String Manipulation}
 
 This library provides generic functions for string manipulation,
 such as finding and extracting substrings, and pattern matching.
@@ -5397,7 +5565,7 @@ Thus, the last character is at position @num{-1}, and so on.
 
 The string library provides all its functions inside the table
 @defid{string}.
-It also sets a metatable for strings
+It also sets a @x{metatable for strings}
 where the @id{__index} field points to the @id{string} table.
 Therefore, you can use the string functions in object-oriented style.
 For instance, @T{string.byte(s, i)}
@@ -6154,7 +6322,9 @@ negative displacements rotate to the right.
 Returns the number @id{x} shifted @id{disp} bits to the left.
 The number @id{disp} may be any representable integer.
 Negative displacements shift to the right.
-Displacements with absolute values higher than
+In any direction, vacant bits are filled with zeros.
+In particular,
+displacements with absolute values higher than
 the total number of bits in the representation of @id{x}
 result in zero (all bits are shifted out).
 
@@ -6169,6 +6339,10 @@ the following equality holds:
 @verbatim{
 assert(bit.bshift(b, disp) == math.floor(b * 2^disp))
 }
+
+This shift operation is what is called @x{logical shift}.
+For an @x{arithmetic shift},
+you should use the arithmetic operators.
 
 }
 
@@ -7134,6 +7308,7 @@ Here is the complete syntax of Lua in extended BNF.
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
+@OrNL	@Rw{in} exp @Rw{do} block @Rw{end}
 }
 
 @producname{laststat}@producbody{@Rw{return} @bnfopt{explist} @Or @Rw{break}}
