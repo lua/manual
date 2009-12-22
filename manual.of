@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.50 2009/09/11 17:33:14 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.51 2009/11/10 17:22:11 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1722,6 +1722,14 @@ can result in the collector never finishing a cycle.
 The default, 200, means that the collector runs at @Q{twice}
 the speed of memory allocation.
 
+If you set the step multiplier to a very large number
+(such as @M{2^30}),
+the collector behaves like a stop-the-world collector.
+If you then set the pause to 200,
+the collector behaves as in old Lua versions,
+doing a complete collection every time Lua doubles its
+memory usage.
+
 You can change these numbers by calling @Lid{lua_gc} in C
 or @Lid{collectgarbage} in Lua.
 With these functions you can also control 
@@ -2233,18 +2241,38 @@ but not exactly the same.
 Its arguments are
 @id{ud}, an opaque pointer passed to @Lid{lua_newstate};
 @id{ptr}, a pointer to the block being allocated/reallocated/freed;
-@id{osize}, the original size of the block;
+@id{osize}, the original size of the block or some code about what
+is being allocated;
 @id{nsize}, the new size of the block.
-@id{ptr} is @id{NULL} if and only if @id{osize} is zero.
-When @id{nsize} is zero, the allocator must return @id{NULL};
-if @id{osize} is not zero,
-it should free the block pointed to by @id{ptr}.
-When @id{nsize} is not zero, the allocator returns @id{NULL}
-if and only if it cannot fill the request.
-When @id{nsize} is not zero and @id{osize} is zero,
-the allocator should behave like @id{malloc}.
-When @id{nsize} and @id{osize} are not zero,
+
+When @id{ptr} is not @id{NULL},
+@id{osize} is the previous size of the block
+pointed by @id{ptr},
+that is, the size given when it was allocated or reallocated.
+
+When @id{ptr} is @id{NULL},
+@id{osize} codes the kind of object that Lua is allocating.
+@id{osize} is any of
+@Lid{LUA_TSTRING}, @Lid{LUA_TTABLE}, @Lid{LUA_TFUNCTION},
+@Lid{LUA_TUSERDATA}, or @Lid{LUA_TTHREAD} when (and only when)
+Lua is creating a new object of that type.
+When @id{osize} is some other value,
+Lua is allocating memory for something else.
+
+Lua assumes the following behavior from the allocator function:
+
+When @id{nsize} is zero:
+if @id{ptr} is not @id{NULL},
+the allocator should free the block pointed to by @id{ptr}.
+Anyway, the allocator must return @id{NULL}.
+
+When @id{nsize} is not zero:
+if @id{ptr} is @id{NULL},
+the allocator should behave like @id{malloc};
+when @id{ptr} is not @id{NULL},
 the allocator behaves like @id{realloc}.
+The allocator returns @id{NULL}
+if and only if it cannot fill the request.
 Lua assumes that the allocator never fails when
 @T{osize >= nsize}.
 
@@ -2266,6 +2294,9 @@ This code assumes
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
 @N{ANSI C} ensures both behaviors.
+It also assumes that @id{realloc} does not fail when shrinking a block.
+(@NANSI C} does not ensure this behavior,
+but it seems a safe assumption.)
 
 }
 
@@ -2386,12 +2417,13 @@ static int foo (lua_State *L) {
 
 
 @APIEntry{int lua_checkstack (lua_State *L, int extra);|
-@apii{0,0,m}
+@apii{0,0,-}
 
 Ensures that there are at least @id{extra} free stack slots in the stack.
 It returns false if it cannot grant the request,
 because it would cause the stack to be larger than a fixed maximum size
-(typically at least a few thousand elements).
+(typically at least a few thousand elements) or
+because it cannot allocate memory for the new stack size.
 This function never shrinks the stack;
 if the stack is already larger than the new size,
 it is left unchanged.
@@ -2785,11 +2817,20 @@ Returns 1 if the value at the given acceptable index is a userdata
 
 }
 
+@APIEntry{void lua_len (lua_State *L, int index);|
+@apii{0,1,e}
+
+Returns the @Q{length} of the value at the given acceptable index;
+it is equivalent to the @Char{#} operator in Lua @see(len-op).
+The result is pushed on the stack.
+
+}
+
 @APIEntry{
 int lua_load (lua_State *L,
               lua_Reader reader,
               void *data,
-              const char *chunkname);
+              const char *source);
 |
 @apii{0,1,-}
 
@@ -2827,7 +2868,7 @@ The @Lid{lua_load} function uses a user-supplied @id{reader} function
 to read the chunk @seeC{lua_Reader}.
 The @id{data} argument is an opaque value passed to the reader function.
 
-The @id{chunkname} argument gives a name to the chunk,
+The @id{source} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
 
 }
@@ -2925,21 +2966,8 @@ this confuses the next call to @Lid{lua_next}.
 
 The type of numbers in Lua.
 By default, it is double, but that can be changed in @id{luaconf.h}.
-
-Through the configuration file you can change
+Through this configuration file you can change
 Lua to operate with another type for numbers (e.g., float or long).
-
-}
-
-@APIEntry{size_t lua_objlen (lua_State *L, int index);|
-@apii{0,0,-}
-
-Returns the @Q{length} of the value at the given acceptable index:
-for strings, this is the string length;
-for tables, this is the result of the length operator (@Char{#});
-for userdata, this is the size of the block of memory allocated
-for the userdata;
-for other values, it @N{is 0}.
 
 }
 
@@ -3231,6 +3259,19 @@ that is, it does not invoke metamethods.
 
 }
 
+@APIEntry{size_t lua_rawlen (lua_State *L, int index);|
+@apii{0,0,-}
+
+Returns the raw @Q{length} of the value at the given acceptable index:
+for strings, this is the string length;
+for tables, this is the result of the length operator (@Char{#})
+with no metamethods;
+for userdata, this is the size of the block of memory allocated
+for the userdata;
+for other values, it @N{is 0}.
+
+}
+
 @APIEntry{void lua_rawset (lua_State *L, int index);|
 @apii{2,0,m}
 
@@ -3313,9 +3354,8 @@ and then pops the top element.
 
 Starts and resumes a coroutine in a given thread.
 
-To start a coroutine, you first create a new thread
-@seeC{lua_newthread};
-then you push onto its stack the main function plus any arguments;
+To start a coroutine,
+you push onto the thread stack the main function plus any arguments;
 then you call @Lid{lua_resume},
 with @id{narg} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
@@ -3323,13 +3363,15 @@ When it returns, the stack contains all values passed to @Lid{lua_yield},
 or all values returned by the body function.
 @Lid{lua_resume} returns
 @Lid{LUA_YIELD} if the coroutine yields,
-0 if the coroutine finishes its execution
+@Lid{LUA_OK} if the coroutine finishes its execution
 without errors,
 or an error code in case of errors @seeC{lua_pcall}.
+
 In case of errors,
 the stack is not unwound,
 so you can use the debug API over it.
 The error message is on the top of the stack.
+
 To resume a coroutine, you put on its stack only the values to
 be passed as results from @id{yield},
 and then call @Lid{lua_resume}.
@@ -3434,7 +3476,8 @@ which creates a Lua state from scratch.
 Returns the status of the thread @id{L}.
 
 The status can be 0 (@Lid{LUA_OK}) for a normal thread,
-an error code if the thread finished its execution with an error,
+an error code if the thread finished the execution
+of a @Lid{lua_resume} with an error,
 or @defid{LUA_YIELD} if the thread is suspended.
 
 }
@@ -3691,6 +3734,7 @@ typedef struct lua_Debug {
   int nups;                   /* (u) number of upvalues */
   int linedefined;            /* (S) */
   int lastlinedefined;        /* (S) */
+  char istailcall;            /* (t) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   @rep{other fields}
@@ -3708,10 +3752,15 @@ The fields of @Lid{lua_Debug} have the following meaning:
 @description{
 
 @item{@id{source}|
-If the function was defined in a string,
-then @T{source} is that string.
-If the function was defined in a file,
-then @T{source} starts with a @Char{@At} followed by the file name.
+the source of the chunk that created the function.
+If @T{source} starts with a @Char{@At},
+it means that the function was defined in a file where
+the file name follows the @Char{@At}.
+If @T{source} starts with a @Char{=},
+the rest of it should describe the source in a user-dependent manner.
+Otherwise,
+the function was defined in a string where
+@T{source} is that string.
 }
 
 @item{@id{short_src}|
@@ -3729,10 +3778,7 @@ the line number where the definition of the function ends.
 @item{@id{what}|
 the string @T{"Lua"} if the function is a Lua function,
 @T{"C"} if it is a @N{C function},
-@T{"main"} if it is the main part of a chunk,
-and @T{"tail"} if it was a function that did a tail call.
-In the latter case,
-Lua has no other information about the function.
+@T{"main"} if it is the main part of a chunk.
 }
 
 @item{@id{currentline}|
@@ -3760,6 +3806,11 @@ The value of @T{namewhat} can be
 @T{"field"}, @T{"upvalue"}, or @T{""} (the empty string),
 according to how the function was called.
 (Lua uses the empty string when no other option seems to apply.)
+}
+
+@item{@id{istailcall}|
+true if this function invocation was called by a tail call.
+In this case, the caller of this level is not in the stack.
 }
 
 @item{@id{nups}|
@@ -3828,6 +3879,9 @@ fills in the fields @id{source}, @id{short_src},
 }
 
 @item{@Char{l}| fills in the field @id{currentline};
+}
+
+@item{@Char{t}| fills in the field @id{istailcall};
 }
 
 @item{@Char{u}| fills in the field @id{nups};
@@ -3922,16 +3976,15 @@ Whenever a hook is called, its @id{ar} argument has its field
 @id{event} set to the specific event that triggered the hook.
 Lua identifies these events with the following constants:
 @defid{LUA_HOOKCALL}, @defid{LUA_HOOKRET},
-@defid{LUA_HOOKTAILRET}, @defid{LUA_HOOKLINE},
+@defid{LUA_HOOKTAILCALL}, @defid{LUA_HOOKLINE},
 and @defid{LUA_HOOKCOUNT}.
 Moreover, for line events, the field @id{currentline} is also set.
 To get the value of any other field in @id{ar},
 the hook must call @Lid{lua_getinfo}.
-For return events, @id{event} can be @id{LUA_HOOKRET},
-the normal value, or @id{LUA_HOOKTAILRET}.
-In the latter case, Lua is simulating a return from
-a function that did a tail call;
-in this case, it is useless to call @Lid{lua_getinfo}.
+
+For call events, @id{event} can be @id{LUA_HOOKCALL},
+the normal value, or @id{LUA_HOOKTAILCALL}, for a tail call;
+in this case, there will be no corresponding return event.
 
 While Lua is running a hook, it disables other calls to hooks.
 Therefore, if a hook calls back Lua to execute a function or a chunk,
@@ -4425,6 +4478,17 @@ Pushes the resulting string on the stack and returns it.
 
 }
 
+@APIEntry{int luaL_len (lua_State *L, int index);|
+@apii{0,1,e}
+
+Returns the @Q{length} of the value at the given acceptable index
+as a number;
+it is equivalent to the @Char{#} operator in Lua @see(len-op).
+Raises an error if the result of the operation is not a number.
+(This only may happen through metamethods.)
+
+}
+
 @APIEntry{
 int luaL_loadbuffer (lua_State *L,
                      const char *buff,
@@ -4690,6 +4754,18 @@ it returns @id{NULL} instead of throwing an error.
 
 }
 
+@APIEntry{luaL_traceback (lua_State *L, lua_State *L1,
+                          const char *msg, int level);|
+@apii{0,1,m}
+
+Creates and pushes a traceback of the stack @id{L1}.
+If @id{msg} is not @id{NULL} it is appended
+at the beginning of the traceback.
+The @id{level} parameter tells at which level
+to start the traceback.
+
+}
+
 @APIEntry{const char *luaL_typename (lua_State *L, int index);|
 @apii{0,0,-}
 
@@ -4946,22 +5022,42 @@ as defined by the length operator @see{len-op}.
 
 }
 
-@LibEntry{load (func [, chunkname])|
+@LibEntry{load (ld [, source [, mode]])|
 
-Loads a chunk using function @id{func} to get its pieces.
-Each call to @id{func} must return a string that concatenates
+Loads a chunk.
+
+If @id{ld} is a function,
+calls it repeatedly to get the chunk pieces.
+Each call to @id{ld} must return a string that concatenates
 with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
+
+If @id{ld} is a string, the chunk is this string.
 
 If there are no errors, 
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
 The environment of the returned function is the global environment.
 
-@id{chunkname} is used as the chunk name for error messages
-and debug information.
+@id{source} is used as the source of the chunk for error messages
+and debug information @see{debugI}.
 When absent,
 it defaults to @St{=(load)}.
+
+The string @id{mode} controls whether the chunk can be text or binary
+(that is, a precompiled chunk).
+A letter @Char{t} in @id{mode} allows a text chunk;
+a letter @Char{b} allows a binary chunk.
+The default is @St{bt}.
+
+}
+
+@LibEntry{loadin (env, ...)|
+
+This function is similar to @Lid{load},
+but sets @id{env} as the environment
+of the created function in case of success.
+The parameters after @id{env} are similar to those of @Lid{load}, too.
 
 }
 
@@ -5279,7 +5375,7 @@ Everything else is exported in a table @defid{package}.
 
 @LibEntry{module (name [, @Cdots])|
 
-Creates a module.
+Creates and returns a module.
 If there is a table in @T{package.loaded[name]},
 this table is the module.
 Otherwise, if there is a global table @id{t} with the given name,
@@ -5291,9 +5387,10 @@ This function also initializes @id{t._NAME} with the given name,
 @id{t._M} with the module (@id{t} itself),
 and @id{t._PACKAGE} with the package name
 (the full module name minus last component; see below).
-Finally, @id{module} sets @id{t} as the new environment
-of the current function and the new value of @T{package.loaded[name]},
+Finally, @id{module} sets @id{t} as the new value of @T{package.loaded[name]},
 so that @Lid{require} returns @id{t}.
+
+The @id{module} function returns the module table @id{t}.
 
 If @id{name} is a compound name
 (that is, one with components separated by dots),
@@ -5306,6 +5403,11 @@ field @id{b} of global @id{a}.
 This function can receive optional @emph{options} after
 the module name,
 where each option is a function to be applied over the module.
+
+To keep compatibility with old versions of Lua,
+@id{module} also sets @id{t} as the new environment
+of the current function.
+so that @Lid{require} returns @id{t}.
 
 }
 
@@ -6876,7 +6978,8 @@ or you can give a number as the value of @id{function},
 which means the function running at level @id{function} of the call stack
 of the given thread:
 @N{level 0} is the current function (@id{getinfo} itself);
-@N{level 1} is the function that called @id{getinfo};
+@N{level 1} is the function that called @id{getinfo}
+(except for tail calls, which do not count on the stack);
 and so on.
 If @id{function} is a number larger than the number of active functions,
 then @id{getinfo} returns @nil.
@@ -6967,8 +7070,8 @@ When called without arguments,
 
 When the hook is called, its first parameter is a string
 describing the event that has triggered its call:
-@T{"call"}, @T{"return"} (or @T{"tail return"},
-when simulating a return from a tail call),
+@T{"call"} (or @T{"tail call"}),
+@T{"return"},
 @T{"line"}, and @T{"count"}.
 For line events,
 the hook also gets the new line number as its second parameter.
@@ -6976,10 +7079,7 @@ Inside a hook,
 you can call @id{getinfo} with @N{level 2} to get more information about
 the running function
 (@N{level 0} is the @id{getinfo} function,
-and @N{level 1} is the hook function),
-unless the event is @T{"tail return"}.
-In this case, Lua is only simulating the return,
-and a call to @id{getinfo} will return invalid data.
+and @N{level 1} is the hook function).
 
 }
 
@@ -7014,7 +7114,10 @@ Otherwise, it returns the name of the upvalue.
 
 @LibEntry{debug.traceback ([thread,] [message] [, level])|
 
-Returns a string with a traceback of the call stack.
+If @id{message} is present but is not a string,
+this function returns @id{message} without further processing.
+Otherwise,
+returns a string with a traceback of the call stack.
 An optional @id{message} string is appended
 at the beginning of the traceback.
 An optional @id{level} number tells at which level
@@ -7147,8 +7250,8 @@ is a more portable solution.)
 @sect1{incompat| @title{Incompatibilities with the Previous Version}
 
 Here we list the incompatibilities that you may find when moving a program
-from @N{Lua 5.0} to @N{Lua 5.1}.
-You can avoid most of the incompatibilities compiling Lua with
+from @N{Lua 5.1} to @N{Lua 5.2}.
+You can avoid some incompatibilities compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
 all these compatibility options will be removed in the next version of Lua.
@@ -7157,23 +7260,21 @@ all these compatibility options will be removed in the next version of Lua.
 @itemize{
 
 @item{
-The vararg system changed from the pseudo-argument @id{arg} with a
-table with the extra arguments to the vararg expression.
-(See compile-time option @idx{LUA_COMPAT_VARARG} in @id{luaconf.h}.)
+Lua identifiers cannot use locale-dependent letters.
 }
 
 @item{
-There was a subtle change in the scope of the implicit
-variables of the @Rw{for} statement and for the @Rw{repeat} statement.
+Doing a step in the garbage collector does not restart the collector
+if it has been stopped.
 }
 
 @item{
-The long string/long comment syntax (@T{[[@rep{string}]]})
-does not allow nesting.
-You can use the new syntax (@T{[=[@rep{string}]=]}) in these cases.
-(See compile-time option @idx{LUA_COMPAT_LSTR} in @id{luaconf.h}.)
+Weak tables with weak keys now perform like @em{ephemeron tables}.
 }
 
+@item{
+Threads do not have individual environments.
+All threads share a sinle fixed environment.
 }
 
 }
@@ -7182,53 +7283,26 @@ You can use the new syntax (@T{[=[@rep{string}]=]}) in these cases.
 @itemize{
 
 @item{
-Function @id{string.gfind} was renamed @Lid{string.gmatch}.
-(See compile-time option @idx{LUA_COMPAT_GFIND} in @id{luaconf.h}.)
+The debug library is not loaded by default.
+You must explicitly require it.
 }
 
 @item{
-When @Lid{string.gsub} is called with a function as its
-third argument,
-whenever this function returns @nil or @Rw{false} the
-replacement string is the whole match,
-instead of the empty string.
+Functions @Lid{setfenv} and @Lid{getfenv} are deprecated.
+To set the environment of a Lua function,
+use lexical environments or the new function @Lid{loadin}.
+(If you really need them,
+you may use their equivalents in the debug library.)
 }
 
 @item{
-Function @id{table.setn} was deprecated.
-Function @id{table.getn} corresponds
-to the new length operator (@T{#});
-use the operator instead of the function.
-(See compile-time option @idx{LUA_COMPAT_GETN} in @id{luaconf.h}.)
+Function @Lid{math.log10} is deprecated.
+Use @Lid{math.log} with 10 as its second argument, instead.
 }
 
 @item{
-Function @id{loadlib} was renamed @Lid{package.loadlib}.
-(See compile-time option @idx{LUA_COMPAT_LOADLIB} in @id{luaconf.h}.)
-}
-
-@item{
-Function @id{math.mod} was renamed @Lid{math.fmod}.
-(See compile-time option @idx{LUA_COMPAT_MOD} in @id{luaconf.h}.)
-}
-
-@item{
-Functions @id{table.foreach} and @id{table.foreachi} are deprecated.
-You can use a for loop with @id{pairs} or @id{ipairs} instead.
-}
-
-@item{
-There were substantial changes in function @Lid{require} due to
-the new module system.
-However, the new behavior is mostly compatible with the old,
-but @id{require} gets the path from @Lid{package.path} instead
-of from @id{LUA_PATH}.
-}
-
-@item{
-Function @Lid{collectgarbage} has different arguments.
-Function @id{gcinfo} is deprecated;
-use @T{collectgarbage("count")} instead.
+Function @Lid{table.maxn} is deprecated.
+Write it in Lua if you really need it.
 }
 
 }
@@ -7239,36 +7313,22 @@ use @T{collectgarbage("count")} instead.
 @itemize{
 
 @item{
-The @id{luaopen_*} functions (to open libraries)
-cannot be called directly,
-like a regular C function.
-They must be called through Lua,
-like a Lua function.
+@Lid{luaL_typerror} was renamed @Lid{luaL_typeerror},
+to have a correct spelling.
 }
 
 @item{
-Function @id{lua_open} was replaced by @Lid{lua_newstate} to
-allow the user to set a memory-allocation function.
-You can use @Lid{luaL_newstate} from the standard library to
-create a state with a standard allocation function
-(based on @id{realloc}).
+Function @Lid{lua_cpcall} is deprecated.
+Use the new @id{cpcall} function defined in the registry instead.
 }
 
 @item{
-Functions @id{luaL_getn} and @id{luaL_setn}
-(from the auxiliary library) are deprecated.
-Use @Lid{lua_objlen} instead of @id{luaL_getn}
-and nothing instead of @id{luaL_setn}.
+Functions @Lid{lua_equal} and @Lid{lua_lessthan} are deprecated.
+Use the new @Lid{lua_compare} with appropriate options instead.
 }
 
 @item{
-Function @id{luaL_openlib} was replaced by @Lid{luaL_register}.
-}
-
-@item{
-Function @id{luaL_checkudata} now throws an error when the given value
-is not a userdata of the expected type.
-(In @N{Lua 5.0} it returned @id{NULL}.)
+Function @Lid{lua_objlen} was renamed @Lid{lua_rawlen}.
 }
 
 }
