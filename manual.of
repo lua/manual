@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.51 2009/11/10 17:22:11 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.52 2009/12/22 15:56:38 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -897,7 +897,7 @@ Otherwise, the @Q{concat} metamethod is called @see{metatable}.
 
 @sect3{len-op| @title{The Length Operator}
 
-The length operator is denoted by the unary operator @T{#}.
+The length operator is denoted by the unary prefix operator @T{#}.
 The length of a string is its number of bytes
 (that is, the usual meaning of string length when each
 character is one byte).
@@ -906,7 +906,8 @@ The length of a table @id{t} is defined to be any
 integer index @id{n}
 such that @T{t[n]} is not @nil and @T{t[n+1]} is @nil;
 moreover, if @T{t[1]} is @nil, @id{n} can be zero.
-For a regular array, with non-nil values from 1 to a given @id{n},
+For a regular array, where all non-nil values
+have keys from 1 to a given @id{n},
 its length is exactly that @id{n},
 the index of its last value.
 If the array has @Q{holes}
@@ -915,6 +916,9 @@ then @T{#t} can be any of the indices that
 directly precedes a @nil value
 (that is, it may consider any such @nil value as the end of
 the array). 
+
+A program can modify the behavior of the length operator for
+any value but strings through metamethods @see{metatable}.
 
 }
 
@@ -1465,14 +1469,13 @@ the @T{#} operation.
 function len_event (op)
   if type(op) == "string" then
     return strlen(op)         -- primitive string length
-  elseif type(op) == "table" then
-    return #op                -- primitive table length
   else
     local h = metatable(op).__len
     if h then
-      -- call the handler with the operand
-      return (h(op))
-    else  -- no handler available: default behavior
+      return (h(op))     -- call handler with the operand
+    elseif type(op) == "table" then
+      return #op                -- primitive table length
+    else  -- no handler available: error
       error(@Cdots)
     end
   end
@@ -1659,7 +1662,7 @@ Userdata and @N{C functions} are created sharing the environment
 of the creating @N{C function}.
 Non-nested Lua functions
 (created by @Lid{loadfile}, @Lid{loadstring} or @Lid{load})
-are created sharing the global environment.
+are created sharing the @x{global environment}.
 Nested Lua functions are created sharing the @x{current environment}
 of where it is defined.
 
@@ -2026,8 +2029,6 @@ the function environment,
 the registry,
 and the upvalues of a @N{C function} @see{c-closure}.
 
-The main environment (where global variables live) is
-always at pseudo-index @defid{LUA_GLOBALSINDEX}.
 The environment of the running @N{C function} is always
 at pseudo-index @defid{LUA_ENVIRONINDEX}.
 
@@ -2035,7 +2036,7 @@ To access and change the value of global variables,
 you can use regular table operations over an environment table.
 For instance, to access the value of a global variable, do
 @verbatim{
-lua_getfield(L, LUA_GLOBALSINDEX, varname);
+lua_getfield(L, LUA_ENVIRONINDEX, varname);
 }
 
 }
@@ -2109,8 +2110,12 @@ Other arguments to @id{cpcall} are passed to the called function.
 The @id{cpcall} function itself should be called with @Lid{lua_pcall},
 like any C function.
 }
-}
 
+@item{LUA_RIDX_GLOBALS| At this index the registry has
+the @x{global environment}.
+This is the @N{C equivalent} to the @Lid{_G} global variable.
+}
+}
 
 }
 
@@ -2295,7 +2300,7 @@ that @T{free(NULL)} has no effect and that
 @T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
 @N{ANSI C} ensures both behaviors.
 It also assumes that @id{realloc} does not fail when shrinking a block.
-(@NANSI C} does not ensure this behavior,
+(@N{ANSI C} does not ensure this behavior,
 but it seems a safe assumption.)
 
 }
@@ -2346,14 +2351,14 @@ a = f("how", t.x, 14)
 }
 Here it is @N{in C}:
 @verbatim{
-lua_getfield(L, LUA_GLOBALSINDEX, "f"); /* function to be called */
+lua_getfield(L, LUA_ENVIRONINDEX, "f"); /* function to be called */
 lua_pushstring(L, "how");                        /* 1st argument */
-lua_getfield(L, LUA_GLOBALSINDEX, "t");   /* table to be indexed */
+lua_getfield(L, LUA_ENVIRONINDEX, "t");   /* table to be indexed */
 lua_getfield(L, -1, "x");        /* push result of t.x (2nd arg) */
 lua_remove(L, -2);                  /* remove 't' from the stack */
 lua_pushinteger(L, 14);                          /* 3rd argument */
 lua_call(L, 3, 1);     /* call 'f' with 3 arguments and 1 result */
-lua_setfield(L, LUA_GLOBALSINDEX, "a");        /* set global 'a' */
+lua_setfield(L, LUA_ENVIRONINDEX, "a");        /* set global 'a' */
 }
 Note that the code above is @Q{balanced}:
 at its end, the stack is back to its original configuration.
@@ -2656,10 +2661,10 @@ for the @Q{index} event @see{metatable}.
 Pushes onto the stack the value of the global @id{name}.
 It is defined as a macro:
 @verbatim{
-#define lua_getglobal(L,s)  lua_getfield(L, LUA_GLOBALSINDEX, s)
+#define lua_getglobal(L,s)  lua_getfield(L, LUA_ENVIRONINDEX, s)
 }
 
-} 
+}
 
 @APIEntry{int lua_getmetatable (lua_State *L, int index);|
 @apii{0,0|1,-}
@@ -2821,7 +2826,7 @@ Returns 1 if the value at the given acceptable index is a userdata
 @apii{0,1,e}
 
 Returns the @Q{length} of the value at the given acceptable index;
-it is equivalent to the @Char{#} operator in Lua @see(len-op).
+it is equivalent to the @Char{#} operator in Lua @see{len-op}.
 The result is pushed on the stack.
 
 }
@@ -3418,7 +3423,7 @@ Pops a value from the stack and
 sets it as the new value of global @id{name}.
 It is defined as a macro:
 @verbatim{
-#define lua_setglobal(L,s)   lua_setfield(L, LUA_GLOBALSINDEX, s)
+#define lua_setglobal(L,s)   lua_setfield(L, LUA_ENVIRONINDEX, s)
 }
 
 }
@@ -3606,16 +3611,16 @@ or @id{LUA_TNONE} for a non-valid index
 (that is, an index to an @Q{empty} stack position).
 The types returned by @Lid{lua_type} are coded by the following constants
 defined in @id{lua.h}:
-@id{LUA_TNIL},
-@id{LUA_TNUMBER},
-@id{LUA_TBOOLEAN},
-@id{LUA_TSTRING},
-@id{LUA_TTABLE},
-@id{LUA_TFUNCTION},
-@id{LUA_TUSERDATA},
-@id{LUA_TTHREAD},
+@defid{LUA_TNIL},
+@defid{LUA_TNUMBER},
+@defid{LUA_TBOOLEAN},
+@defid{LUA_TSTRING},
+@defid{LUA_TTABLE},
+@defid{LUA_TFUNCTION},
+@defid{LUA_TUSERDATA},
+@defid{LUA_TTHREAD},
 and
-@id{LUA_TLIGHTUSERDATA}.
+@defid{LUA_TLIGHTUSERDATA}.
 
 }
 
@@ -3731,9 +3736,11 @@ typedef struct lua_Debug {
   const char *what;           /* (S) */
   const char *source;         /* (S) */
   int currentline;            /* (l) */
-  int nups;                   /* (u) number of upvalues */
   int linedefined;            /* (S) */
   int lastlinedefined;        /* (S) */
+  unsigned char nups;         /* (u) number of upvalues */
+  unsigned char nparams;      /* (u) number of parameters */
+  char isvararg;              /* (u) */
   char istailcall;            /* (t) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
@@ -3817,6 +3824,16 @@ In this case, the caller of this level is not in the stack.
 the number of upvalues of the function.
 }
 
+@item{@id{nparams}|
+the number of fixed parameters of the function
+(always @N{0 for} @N{C functions}).
+}
+
+@item{@id{isvararg}|
+whether the function is a vararg function
+(always true for @N{C functions}).
+}
+
 }
 
 }
@@ -3860,7 +3877,7 @@ For instance, to know in which line a function @id{f} was defined,
 you can write the following code:
 @verbatim{
 lua_Debug ar;
-lua_getfield(L, LUA_GLOBALSINDEX, "f");  /* get global 'f' */
+lua_getfield(L, LUA_ENVIRONINDEX, "f");  /* get global 'f' */
 lua_getinfo(L, ">S", &ar);
 printf("%d\n", ar.linedefined);
 }
@@ -4483,7 +4500,7 @@ Pushes the resulting string on the stack and returns it.
 
 Returns the @Q{length} of the value at the given acceptable index
 as a number;
-it is equivalent to the @Char{#} operator in Lua @see(len-op).
+it is equivalent to the @Char{#} operator in Lua @see{len-op}.
 Raises an error if the result of the operation is not a number.
 (This only may happen through metamethods.)
 
@@ -4974,7 +4991,7 @@ and returns @id{message} as the error message.
 Function @id{error} never returns.
 
 Usually, @id{error} adds some information about the error position
-at the beginning of the message.
+at the beginning of the message, if the message is a string.
 The @id{level} argument specifies how to get the error position.
 With @N{level 1} (the default), the error position is where the
 @id{error} function was called.
@@ -4987,7 +5004,7 @@ to the message.
 
 @LibEntry{_G|
 A global variable (not a function) that
-holds the global environment (that is, @T{_G._G = _G}).
+holds the @x{global environment} (so that @T{_G._G = _G}).
 Lua itself does not use this variable;
 changing its value does not affect any environment,
 nor vice-versa.
@@ -5253,19 +5270,6 @@ and @St{userdata}.
 
 }
 
-@LibEntry{unpack (list [, i [, j]])|
-Returns the elements from the given table.
-This function is equivalent to
-@verbatim{
-return list[i], list[i+1], @Cdots, list[j]
-}
-except that the above code can be written only for a fixed number
-of elements.
-By default, @id{i} @N{is 1} and @id{j} is the length of the list,
-as defined by the length operator @see{len-op}.
-
-}
-
 @LibEntry{_VERSION|
 A global variable (not a function) that
 holds a string containing the current interpreter version.
@@ -5407,7 +5411,6 @@ where each option is a function to be applied over the module.
 To keep compatibility with old versions of Lua,
 @id{module} also sets @id{t} as the new environment
 of the current function.
-so that @Lid{require} returns @id{t}.
 
 }
 
@@ -6044,6 +6047,16 @@ For instance, the item @T{%b()} matches expressions with
 balanced parentheses.
 }
 
+@item{
+@T{%f[@rep{set}]}, a @def{frontier pattern};
+such item matches an empty string at any position such that
+the next character belongs to @rep{set}
+and the previous character does not belong to @rep{set}.
+The set @rep{set} is interpreted as previously described.
+The beggining and the end of the subject are handled as if
+they were the character @Char{\0}.
+}
+
 }
 
 }
@@ -6117,12 +6130,11 @@ of table @id{t}.
 
 }
 
-@LibEntry{table.maxn (table)|
+@LibEntry{table.pack (@Cdots)|
 
-Returns the largest positive numerical index of the given table,
-or zero if the table has no positive numerical indices.
-(To do its job this function does a linear traversal of
-the whole table.) 
+Returns a new table with all parameters stored into
+keys 1, 2, etc.
+and with a field @St{n} with the total number of parameters.
 
 }
 
@@ -6153,6 +6165,19 @@ then the standard Lua operator @T{<} is used instead.
 The sort algorithm is not stable;
 that is, elements considered equal by the given order
 may have their relative positions changed by the sort.
+
+}
+
+@LibEntry{table.unpack (list [, i [, j]])|
+Returns the elements from the given table.
+This function is equivalent to
+@verbatim{
+return list[i], list[i+1], @Cdots, list[j]
+}
+except that the above code can be written only for a fixed number
+of elements.
+By default, @id{i} @N{is 1} and @id{j} is the length of the list,
+as defined by the length operator @see{len-op}.
 
 }
 
@@ -7207,6 +7232,15 @@ if you write an incomplete statement,
 the interpreter waits for its completion
 by issuing a different prompt.
 
+In case of unprotected errors in the script,
+the interpreter reports the error to the standard error stream.
+If the error object is a string,
+the interpreter adds a stack traceback to it.
+Otherwise, if the error object has a metamethod @id{__tostring},
+the interpreter calls this metamethod to produce the final message.
+Finally, if the error object is @nil,
+the interpreter does not report the error.
+
 If the global variable @defid{_PROMPT} contains a string,
 then its value is used as the prompt.
 Similarly, if the global variable @defid{_PROMPT2} contains a string,
@@ -7269,12 +7303,14 @@ if it has been stopped.
 }
 
 @item{
-Weak tables with weak keys now perform like @em{ephemeron tables}.
+Weak tables with weak keys now perform like @emph{ephemeron tables}.
 }
 
 @item{
 Threads do not have individual environments.
 All threads share a sinle fixed environment.
+}
+
 }
 
 }
@@ -7288,7 +7324,7 @@ You must explicitly require it.
 }
 
 @item{
-Functions @Lid{setfenv} and @Lid{getfenv} are deprecated.
+Functions @id{setfenv} and @id{getfenv} are deprecated.
 To set the environment of a Lua function,
 use lexical environments or the new function @Lid{loadin}.
 (If you really need them,
@@ -7296,13 +7332,18 @@ you may use their equivalents in the debug library.)
 }
 
 @item{
-Function @Lid{math.log10} is deprecated.
+Function @id{math.log10} is deprecated.
 Use @Lid{math.log} with 10 as its second argument, instead.
 }
 
 @item{
-Function @Lid{table.maxn} is deprecated.
+Function @id{table.maxn} is deprecated.
 Write it in Lua if you really need it.
+}
+
+@item{
+Function @id{unpack} was moved into the table library
+and therefore must be called as @Lid{table.unpack}.
 }
 
 }
@@ -7313,22 +7354,38 @@ Write it in Lua if you really need it.
 @itemize{
 
 @item{
-@Lid{luaL_typerror} was renamed @Lid{luaL_typeerror},
+Pseudoindex @id{LUA_GLOBALSINDEX} was deprecated.
+You may use the pseudoindex @Lid{LUA_ENVIRONINDEX} instead,
+if the @N{C function} does not change its standard environment.
+Otherwise, you should get the global environment from the registry
+@see{registry}.
+}
+
+@item{
+Macros @Lid{lua_getglobal}, @Lid{lua_setglobal}, and @Lid{lua_register}
+now operate over the function environment instead of the global
+environment.
+(This is more consistent with how Lua manipulates global variables.)
+}
+
+@item{
+@id{luaL_typerror} was renamed @Lid{luaL_typeerror},
 to have a correct spelling.
 }
 
 @item{
-Function @Lid{lua_cpcall} is deprecated.
-Use the new @id{cpcall} function defined in the registry instead.
+Function @id{lua_cpcall} is deprecated.
+Use the new @id{cpcall} function defined in the registry instead
+@see{registry}.
 }
 
 @item{
-Functions @Lid{lua_equal} and @Lid{lua_lessthan} are deprecated.
+Functions @id{lua_equal} and @id{lua_lessthan} are deprecated.
 Use the new @Lid{lua_compare} with appropriate options instead.
 }
 
 @item{
-Function @Lid{lua_objlen} was renamed @Lid{lua_rawlen}.
+Function @id{lua_objlen} was renamed @Lid{lua_rawlen}.
 }
 
 }
