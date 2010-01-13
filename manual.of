@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.52 2009/12/22 15:56:38 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.53 2010/01/08 18:18:46 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -118,10 +118,12 @@ and can contain the following C-like escape sequences:
 and @Char{\'} (apostrophe [single quote]).
 Moreover, a backslash followed by a real newline
 results in a newline in the string.
-A character in a string can also be specified by its numerical value
-using the escape sequence @T{\@rep{ddd}},
+A character in a string can also be specified by its numerical value.
+This can be done with the escape sequence @T{\x@rep{XX}},
+where @rep{XX} is a sequence of exactly two hexadecimal digits,
+and with the escape sequence @T{\@rep{ddd}},
 where @rep{ddd} is a sequence of up to three decimal digits.
-(Note that if a numerical escape is to be followed by a digit,
+(Note that if a decimal escape is to be followed by a digit,
 it must be expressed using exactly three digits.)
 Strings in Lua can contain any 8-bit value, including embedded zeros,
 which can be specified as @Char{\0}.
@@ -1726,7 +1728,8 @@ The default, 200, means that the collector runs at @Q{twice}
 the speed of memory allocation.
 
 If you set the step multiplier to a very large number
-(such as @M{2^30}),
+(larger than 10% of the maximum number of
+bytes that the program may use),
 the collector behaves like a stop-the-world collector.
 If you then set the pause to 200,
 the collector behaves as in old Lua versions,
@@ -4009,6 +4012,11 @@ this execution occurs without any calls to hooks.
 
 }
 
+@APIEntry{void lua_joinupvalue (lua_State *L, int fidx1, int n1,
+                                              int fidx2, int n2);|
+TO BE DONE!!
+}
+
 @APIEntry{int lua_sethook (lua_State *L, lua_Hook f, int mask, int count);|
 @apii{0,0,-}
 
@@ -4771,8 +4779,25 @@ it returns @id{NULL} instead of throwing an error.
 
 }
 
-@APIEntry{luaL_traceback (lua_State *L, lua_State *L1,
-                          const char *msg, int level);|
+@APIEntry{const char *luaL_tolstring (lua_State *L, int idx, size_t *len);|
+@apii{0,1,e}
+
+Converts any Lua value at the given acceptable index to a @N{C string}
+in a reasonable format.
+The resulting string is pushed onto the stack and also
+returned by the function.
+If @id{len} is not @id{NULL},
+the function also sets @T{*len} with the string length.
+
+If the value has a metatable with a @T{"__tostring"} field,
+then @id{luaL_tolstring} calls the corresponding metamethod
+with the value as argument,
+and uses the result of the call as its result.
+
+}
+
+@APIEntry{void luaL_traceback (lua_State *L, lua_State *L1,
+                               const char *msg, int level);|
 @apii{0,1,m}
 
 Creates and pushes a traceback of the stack @id{L1}.
@@ -5628,19 +5653,20 @@ A path is string containing a sequence of
 @emph{templates} separated by semicolons.
 For each template,
 the function changes each interrogation
-mark in the template by @id{name},
+mark in the template by a copy of @id{name}
+wherein all dots were replaced by the system's directory separator,
 and then tries to open the resulting file name.
 For instance, if the path is the string
 @verbatim{
 "./?.lua;./?.lc;/usr/local/?/init.lua"
 }
-the search for name @id{foo}
+the search for the name @id{foo.a}
 will try to open the files
-@T{./foo.lua}, @T{./foo.lc}, and
-@T{/usr/local/foo/init.lua}, in that order.
+@T{./foo/a.lua}, @T{./foo/a.lc}, and
+@T{/usr/local/foo/a/init.lua}, in that order.
 
 Returns the resulting name of the first file that it can
-open in read mode (after closing it),
+open in read mode (after closing the file),
 or @nil plus an error message if none succeeds.
 (This error message lists all file names it tried to open.)
 
@@ -6292,7 +6318,7 @@ Returns @M{m2@sp{e}} (@id{e} should be an integer).
 @LibEntry{math.log (x [, base])|
 
 Returns the logarithm of @id{x} in the given base.
-The default for @id{base} is $e$
+The default for @id{base} is @M{e}
 (so that the function returns the natural logarithm of @id{x}).
 
 }
@@ -7068,6 +7094,10 @@ The function returns @nil if there is no upvalue with the given index.
 
 }
 
+@LibEntry{debug.joinupvalue ()|
+TO BE DONE!!
+}
+
 @LibEntry{debug.setfenv (object, table)|
 
 Sets the environment of the given @id{object} to the given @id{table}.
@@ -7148,6 +7178,20 @@ at the beginning of the traceback.
 An optional @id{level} number tells at which level
 to start the traceback
 (default is 1, the function calling @id{traceback}).
+
+}
+
+@LibEntry{debug.upvalueid (function, n)|
+
+Returns an unique identifier (as a light userdata)
+for the upvalue numbered @id{n}
+from the given function.
+
+These unique identifiers allow a program to check whether different
+closures share upvalues.
+Lua closures that share an upvalue
+(that is, that access a same external local variable)
+will return identical ids for those upvalue indices.
 
 }
 
@@ -7308,7 +7352,7 @@ Weak tables with weak keys now perform like @emph{ephemeron tables}.
 
 @item{
 Threads do not have individual environments.
-All threads share a sinle fixed environment.
+All threads share a single fixed environment.
 }
 
 }
@@ -7354,7 +7398,7 @@ and therefore must be called as @Lid{table.unpack}.
 @itemize{
 
 @item{
-Pseudoindex @id{LUA_GLOBALSINDEX} was deprecated.
+Pseudoindex @id{LUA_GLOBALSINDEX} was removed.
 You may use the pseudoindex @Lid{LUA_ENVIRONINDEX} instead,
 if the @N{C function} does not change its standard environment.
 Otherwise, you should get the global environment from the registry
