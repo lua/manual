@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.53 2010/01/08 18:18:46 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.54 2010/01/13 16:50:58 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1349,6 +1349,12 @@ That is, the access to a metamethod does not invoke other metamethods,
 and the access to objects with no metatables does not fail
 (it simply results in @nil).
 
+For the unary @T{-} and @T{#} operators,
+the metamethod is called with an extra @nil as a second argument.
+This extra argument is only to simplify Lua's internals and
+may be removed in future versions and therefore it is not present
+in the following code.
+(For most uses this extra argument is irrelevant.)
 
 @description{
 
@@ -1470,13 +1476,13 @@ the @T{#} operation.
 @verbatim{
 function len_event (op)
   if type(op) == "string" then
-    return strlen(op)         -- primitive string length
+    return strlen(op)      -- primitive string length
   else
     local h = metatable(op).__len
     if h then
-      return (h(op))     -- call handler with the operand
+      return (h(op))       -- call handler with the operand
     elseif type(op) == "table" then
-      return #op                -- primitive table length
+      return #op              -- primitive table length
     else  -- no handler available: error
       error(@Cdots)
     end
@@ -3208,6 +3214,8 @@ it is assumed to end at the first zero.
 
 Returns a pointer to the internal copy of the string.
 
+If @id{s} is @id{NULL}, pushes @nil and returns @id{NULL}.
+
 }
 
 @APIEntry{int lua_pushthread (lua_State *L);|
@@ -4012,11 +4020,6 @@ this execution occurs without any calls to hooks.
 
 }
 
-@APIEntry{void lua_joinupvalue (lua_State *L, int fidx1, int n1,
-                                              int fidx2, int n2);|
-TO BE DONE!!
-}
-
 @APIEntry{int lua_sethook (lua_State *L, lua_Hook f, int mask, int count);|
 @apii{0,0,-}
 
@@ -4106,6 +4109,12 @@ closures share upvalues.
 Lua closures that share an upvalue
 (that is, that access a same external local variable)
 will return identical ids for those upvalue indices.
+
+}
+
+@APIEntry{void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
+                                              int fidx2, int n2);|
+TO BE DONE!!
 
 }
 
@@ -4423,6 +4432,19 @@ and the code making the call are all using the same version of Lua.
 Also checks whether the core running the call
 and the core that created the Lua state
 are using the same address space.
+
+}
+
+@APIEntry{int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
+                          int nresults);|
+@apii{0,0,-}
+
+Calls a C function in protected mode.
+
+This function is equivalent to @Lid{lua_pcall},
+but it calls the C function @id{f}
+(instead of a Lua function in the stack)
+and it does not have an error handler function.
 
 }
 
@@ -5831,6 +5853,7 @@ replaced by a replacement string specified by @id{repl},
 which can be a string, a table, or a function.
 @id{gsub} also returns, as its second value,
 the total number of matches that occurred.
+The name @id{gsub} comes from @emph{Global SUBstitution}.
 
 If @id{repl} is a string, then its value is used for replacement.
 The @N{character @T{%}} works as an escape character:
@@ -6455,22 +6478,21 @@ Returns the bitwise @x{or} of its operands.
 
 }
 
-@LibEntry{bit.brotate (x, disp)|
+@LibEntry{bit.btest (@Cdots)|
 
-Returns the number @id{x} rotated @id{disp} bits to the left.
-The number @id{disp} may be any representable integer.
-
-For any valid displacement,
-the following identity holds:
-@verbatim{
-assert(bit.rotate(x, disp) == bit.rotate(x, disp % 32))
-}
-This allows you to consider that 
-negative displacements rotate to the right.
+Returns a boolean signaling 
+whether the @x{bitwise and} of its operands is different from zero.
 
 }
 
-@LibEntry{bit.bshift (x, disp)|
+
+@LibEntry{bit.bxor (@Cdots)|
+
+Returns the bitwise @x{exclusive or} of its operands.
+
+}
+
+@LibEntry{bit.lshift (x, disp)|
 
 Returns the number @id{x} shifted @id{disp} bits to the left.
 The number @id{disp} may be any representable integer.
@@ -6484,32 +6506,61 @@ result in zero (all bits are shifted out).
 For positive displacements,
 the following equality holds:
 @verbatim{
-assert(bit.bshift(b, disp) == (b * 2^disp) % 2^32)
+assert(bit.lshift(b, disp) == (b * 2^disp) % 2^32)
 }
 
-For negative displacements,
+}
+
+@LibEntry{bit.rol (x, disp)|
+
+Returns the number @id{x} rotated @id{disp} bits to the left.
+The number @id{disp} may be any representable integer.
+
+For any valid displacement,
+the following identity holds:
+@verbatim{
+assert(bit.rol(x, disp) == bit.rol(x, disp % 32))
+}
+In particular,
+negative displacements rotate to the right.
+
+}
+
+@LibEntry{bit.ror (x, disp)|
+
+Returns the number @id{x} rotated @id{disp} bits to the right.
+The number @id{disp} may be any representable integer.
+
+For any valid displacement,
+the following identity holds:
+@verbatim{
+assert(bit.ror(x, disp) == bit.ror(x, disp % 32))
+}
+In particular,
+negative displacements rotate to the left.
+
+}
+
+@LibEntry{bit.rshift (x, disp)|
+
+Returns the number @id{x} shifted @id{disp} bits to the right.
+The number @id{disp} may be any representable integer.
+Negative displacements shift to the left.
+In any direction, vacant bits are filled with zeros.
+In particular,
+displacements with absolute values higher than
+the total number of bits in the representation of @id{x}
+result in zero (all bits are shifted out).
+
+For positive displacements,
 the following equality holds:
 @verbatim{
-assert(bit.bshift(b, disp) == math.floor(b * 2^disp))
+assert(bit.rshift(b, disp) == math.floor(b * 2^-disp))
 }
 
 This shift operation is what is called @x{logical shift}.
 For an @x{arithmetic shift},
 you should use the arithmetic operators.
-
-}
-
-@LibEntry{bit.btest (@Cdots)|
-
-Returns a boolean signaling 
-whether the @x{bitwise and} of its operands is different from zero.
-
-}
-
-
-@LibEntry{bit.bxor (@Cdots)|
-
-Returns the bitwise @x{exclusive or} of its operands.
 
 }
 
@@ -6569,7 +6620,7 @@ instead of returning an error code.
 
 }
 
-@LibEntry{io.lines ([filename])|
+@LibEntry{io.lines ([filename] [, keepNL])|
 
 Opens the given file name in read mode
 and returns an iterator function that,
@@ -6587,6 +6638,9 @@ The call @T{io.lines()} (with no file name) is equivalent
 to @T{io.input():lines()};
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
+
+By default, @id{lines} removes the newline at the end of each line.
+If @id{keepNL} is @rw{true}, it will keep the newlines.
 
 }
 
@@ -6679,7 +6733,7 @@ Saves any written data to @id{file}.
 
 }
 
-@LibEntry{file:lines ()|
+@LibEntry{file:lines ([keepNL])|
 
 Returns an iterator function that,
 each time it is called,
@@ -6688,9 +6742,13 @@ Therefore, the construction
 @verbatim{
 for line in file:lines() do @rep{body} end
 }
-will iterate over all lines of the file.
+will iterate over all lines of the file,
+starting at the current position.
 (Unlike @Lid{io.lines}, this function does not close the file
 when the loop ends.)
+
+By default, @id{lines} removes the newline at the end of each line.
+If @id{keepNL} is @rw{true}, it will keep the newlines.
 
 }
 
@@ -6702,7 +6760,7 @@ For each format,
 the function returns a string (or a number) with the characters read,
 or @nil if it cannot read data with the specified format.
 When called without formats,
-it uses a default format that reads the entire next line
+it uses a default format that reads the next line
 (see below).
 
 The available formats are
@@ -6719,9 +6777,14 @@ On end of file, it returns the empty string.
 }
 
 @item{@Q{*l}|
-reads the next line (skipping the end of line),
+reads the next line skipping the end of line,
 returning @nil on end of file.
 This is the default format.
+}
+
+@item{@Q{*L}|
+reads the next line keeping the end of line (if present),
+returning @nil on end of file.
 }
 
 @item{@emph{number}|
@@ -6972,17 +7035,14 @@ which automatically removes the file when the program ends.
 This library provides
 the functionality of the debug interface to Lua programs.
 You should exert care when using this library.
-The functions provided here should be used exclusively for debugging
-and similar tasks, such as profiling.
-Please resist the temptation to use them as a
-usual programming tool:
-they can be very slow.
-Moreover, several of these functions
-violate some assumptions about Lua code
+Several of these functions
+violate basic assumptions about Lua code
 (e.g., that variables local to a function
-cannot be accessed from outside or
-that userdata metatables cannot be changed by Lua code)
+cannot be accessed from outside;
+that userdata metatables cannot be changed by Lua code;
+that Lua programs do not crash)
 and therefore can compromise otherwise secure code.
+Moreover, some functions in this library may be slow.
 
 All functions in this library are provided
 inside the @defid{debug} table.
@@ -7094,10 +7154,6 @@ The function returns @nil if there is no upvalue with the given index.
 
 }
 
-@LibEntry{debug.joinupvalue ()|
-TO BE DONE!!
-}
-
 @LibEntry{debug.setfenv (object, table)|
 
 Sets the environment of the given @id{object} to the given @id{table}.
@@ -7192,6 +7248,12 @@ closures share upvalues.
 Lua closures that share an upvalue
 (that is, that access a same external local variable)
 will return identical ids for those upvalue indices.
+
+}
+
+@LibEntry{debug.upvaluejoin ()|
+
+TO BE DONE!!
 
 }
 
