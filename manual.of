@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.54 2010/01/13 16:50:58 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.55 2010/03/19 15:39:30 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -41,6 +41,775 @@ see Roberto's book, @emph{Programming in Lua (Second Edition)}.
 
 }
 
+
+@C{-------------------------------------------------------------------------}
+@sect1{basic| @title{Basic Concepts}
+
+This section describes some basic concepts of the language.
+
+@sect2{TypesSec| @title{Values and Types}
+
+Lua is a @emph{dynamically typed language}.
+This means that
+variables do not have types; only values do.
+There are no type definitions in the language.
+All values carry their own type.
+
+All values in Lua are @emph{first-class values}.
+This means that all values can be stored in variables,
+passed as arguments to other functions, and returned as results.
+
+There are eight @x{basic types} in Lua:
+@def{nil}, @def{boolean}, @def{number},
+@def{string}, @def{function}, @def{userdata},
+@def{thread}, and @def{table}.
+@emph{Nil} is the type of the value @nil,
+whose main property is to be different from any other value;
+it usually represents the absence of a useful value.
+@emph{Boolean} is the type of the values @false and @true.
+Both @nil and @false make a condition false;
+any other value makes it true.
+@emph{Number} represents real (double-precision floating-point) numbers.
+(It is easy to build Lua interpreters that use other
+internal representations for numbers,
+such as single-precision float or long integers;
+see file @id{luaconf.h}.)
+@emph{String} represents arrays of characters.
+@index{eight-bit clean}
+Lua is 8-bit clean:
+strings can contain any 8-bit value,
+including embedded zeros (@Char{\0}).
+
+Lua can call (and manipulate) functions written in Lua and
+functions written in C
+@see{functioncall}.
+
+The type @emph{userdata} is provided to allow arbitrary @N{C data} to
+be stored in Lua variables.
+This type corresponds to a block of raw memory
+and has no pre-defined operations in Lua,
+except assignment and identity test.
+However, by using @emph{metatables},
+the programmer can define operations for userdata values
+@see{metatable}.
+Userdata values cannot be created or modified in Lua,
+only through the @N{C API}.
+This guarantees the integrity of data owned by the host program.
+
+The type @def{thread} represents independent threads of execution
+and it is used to implement coroutines @see{coroutine}.
+Do not confuse Lua threads with operating-system threads.
+Lua supports coroutines on all systems,
+even those that do not support threads.
+
+The type @emph{table} implements @x{associative arrays},
+that is, @x{arrays} that can be indexed not only with numbers,
+but with any value (except @nil).
+Tables can be @emph{heterogeneous};
+that is, they can contain values of all types (except @nil).
+Tables are the sole data structuring mechanism in Lua;
+they can be used to represent ordinary arrays,
+symbol tables, sets, records, graphs, trees, etc.
+To represent @x{records}, Lua uses the field name as an index.
+The language supports this representation by
+providing @id{a.name} as syntactic sugar for @T{a["name"]}.
+There are several convenient ways to create tables in Lua
+@see{tableconstructor}.
+
+Like indices,
+the value of a table field can be of any type (except @nil).
+In particular,
+because functions are first-class values,
+table fields can contain functions.
+Thus tables can also carry @emph{methods} @see{func-def}.
+
+Tables, functions, threads, and (full) userdata values are @emph{objects}:
+variables do not actually @emph{contain} these values,
+only @emph{references} to them.
+Assignment, parameter passing, and function returns
+always manipulate references to such values;
+these operations do not imply any kind of copy.
+
+The library function @Lid{type} returns a string describing the type
+of a given value.
+
+}
+
+@sect2{globalenv| @title{Environments and the Global Environment}
+
+As discussed in @refsec{variables} and @refsec{assignment},
+any reference to a global name @id{var} is syntactically translated 
+to @T{_ENV.var}.
+Moreover, any chunk is compiled in the scope of an external
+variable called @id{_ENV} @see{chunks}.
+Any table used as the value of @id{_ENV} is usually called
+an @def{environment}.
+
+Lua keeps a distinguished environment called the @def{global environment}.
+This value is kept at a special index in the C registry @see{registry}.
+In Lua, the variable @Lid{_G} is initialized with this same value.
+
+When Lua compiles a chunk,
+it initializes the value of its @id{_ENV} variable 
+with the global environment @seeF{load}.
+Therefore, by default,
+global variables in Lua code refer to entries in the global environment.
+Moreover, all standard libraries are loaded in the global environment,
+and several functions there operate on that environment.
+You can use @Lid{loadin} to load a chunk with a different environment.
+(In C, you have to load the chunk and then change the value
+of its first upvalue.)
+
+If you change the global environment in the registry
+(through C code or the debug library),
+all chunks loaded after the change will get the new environment.
+Previously loaded chunks are not affected, however,
+as each has its own copy of the environment in its @id{_ENV} variable.
+Moreover, the variable @Lid{_G}
+(which is stored in the original global environment)
+is never updated by Lua.
+
+}
+
+@sect2{error| @title{Error Handling}
+
+Because Lua is an embedded extension language,
+all Lua actions start from @N{C code} in the host program
+calling a function from the Lua library @seeC{lua_pcall}.
+Whenever an error occurs during Lua compilation or execution,
+control returns to C,
+which can take appropriate measures
+(such as printing an error message).
+
+Lua code can explicitly generate an error by calling the
+@Lid{error} function.
+If you need to catch errors in Lua,
+you can use the @Lid{pcall} function.
+
+}
+
+@sect2{metatable| @title{Metatables}
+
+Every value in Lua can have a @emph{metatable}.
+This @def{metatable} is an ordinary Lua table
+that defines the behavior of the original value
+under certain special operations.
+You can change several aspects of the behavior
+of operations over a value by setting specific fields in its metatable.
+For instance, when a non-numeric value is the operand of an addition,
+Lua checks for a function in the field @T{"__add"} in its metatable.
+If it finds one,
+Lua calls this function to perform the addition.
+
+We call the keys in a metatable @def{events}
+and the values @def{metamethods}.
+In the previous example, the event is @T{"add"} 
+and the metamethod is the function that performs the addition.
+
+You can query the metatable of any value
+through the @Lid{getmetatable} function.
+
+You can replace the metatable of tables
+through the @Lid{setmetatable}
+function.
+You cannot change the metatable of other types from Lua
+(except by using the debug library);
+you must use the @N{C API} for that.
+
+Tables and full userdata have individual metatables
+(although multiple tables and userdata can share their metatables).
+Values of all other types share one single metatable per type;
+that is, there is one single metatable for all numbers,
+one for all strings, etc.
+By default, a value has no metatable,
+but the string library sets a metatable for the string type @see{strlib}.
+
+A metatable controls how an object behaves in arithmetic operations,
+order comparisons, concatenation, length operation, and indexing.
+A metatable also can define a function to be called when a userdata
+is garbage collected.
+For each of these operations Lua associates a specific key
+called an @emph{event}.
+When Lua performs one of these operations over a value,
+it checks whether this value has a metatable with the corresponding event.
+If so, the value associated with that key (the metamethod)
+controls how Lua will perform the operation.
+
+Metatables control the operations listed next.
+Each operation is identified by its corresponding name.
+The key for each operation is a string with its name prefixed by
+two underscores, @Char{__};
+for instance, the key for operation @Q{add} is the
+string @T{"__add"}.
+The semantics of these operations is better explained by a Lua function
+describing how the interpreter executes the operation.
+
+The code shown here in Lua is only illustrative;
+the real behavior is hard coded in the interpreter
+and it is much more efficient than this simulation.
+All functions used in these descriptions
+(@Lid{rawget}, @Lid{tonumber}, etc.)
+are described in @See{predefined}.
+In particular, to retrieve the metamethod of a given object,
+we use the expression
+@verbatim{
+metatable(obj)[event]
+}
+This should be read as
+@verbatim{
+rawget(getmetatable(obj) or {}, event)
+}
+@format{/pagebreak}
+That is, the access to a metamethod does not invoke other metamethods,
+and the access to objects with no metatables does not fail
+(it simply results in @nil).
+
+For the unary @T{-} and @T{#} operators,
+the metamethod is called repeating the first argument as a second argument.
+This extra argument is only to simplify Lua's internals;
+it may be removed in future versions and therefore it is not present
+in the following code.
+(For most uses this extra argument is irrelevant.)
+
+@description{
+
+@item{@Q{add}|
+the @T{+} operation.
+@Lidx{__add}
+
+The function @T{getbinhandler} below defines how Lua chooses a handler
+for a binary operation.
+First, Lua tries the first operand.
+If its type does not define a handler for the operation,
+then Lua tries the second operand.
+@verbatim{
+function getbinhandler (op1, op2, event)
+  return metatable(op1)[event] or metatable(op2)[event]
+end
+}
+By using this function,
+the behavior of the @T{op1 + op2} is
+@verbatim{
+function add_event (op1, op2)
+  local o1, o2 = tonumber(op1), tonumber(op2)
+  if o1 and o2 then  -- both operands are numeric?
+    return o1 + o2   -- '+' here is the primitive 'add'
+  else  -- at least one of the operands is not numeric
+    local h = getbinhandler(op1, op2, "__add")
+    if h then
+      -- call the handler with both operands
+      return (h(op1, op2))
+    else  -- no handler available: default behavior
+      error(@Cdots)
+    end
+  end
+end
+}
+}
+
+@item{@Q{sub}|
+the @T{-} operation.
+@Lidx{__sub}
+Behavior similar to the @Q{add} operation.
+}
+
+@item{@Q{mul}|
+the @T{*} operation.
+@Lidx{__mul}
+Behavior similar to the @Q{add} operation.
+}
+
+@item{@Q{div}|
+the @T{/} operation.
+@Lidx{__div}
+Behavior similar to the @Q{add} operation.
+}
+
+@item{@Q{mod}|
+the @T{%} operation.
+@Lidx{__mod}
+Behavior similar to the @Q{add} operation,
+with the operation
+@T{o1 - floor(o1/o2)*o2} as the primitive operation.
+}
+
+@item{@Q{pow}|
+the @T{^} (exponentiation) operation.
+@Lidx{__pow}
+Behavior similar to the @Q{add} operation,
+with the function @T{pow} (from the @N{C math} library)
+as the primitive operation.
+}
+
+@item{@Q{unm}|
+the unary @T{-} operation.
+@Lidx{__unm}
+@verbatim{
+function unm_event (op)
+  local o = tonumber(op)
+  if o then  -- operand is numeric?
+    return -o  -- '-' here is the primitive 'unm'
+  else  -- the operand is not numeric.
+    -- Try to get a handler from the operand
+    local h = metatable(op).__unm
+    if h then
+      -- call the handler with the operand
+      return (h(op))
+    else  -- no handler available: default behavior
+      error(@Cdots)
+    end
+  end
+end
+}
+}
+
+
+@item{@Q{concat}|
+the @T{..} (concatenation) operation.
+@Lidx{__concat}
+@verbatim{
+function concat_event (op1, op2)
+  if (type(op1) == "string" or type(op1) == "number") and
+     (type(op2) == "string" or type(op2) == "number") then
+    return op1 .. op2  -- primitive string concatenation
+  else
+    local h = getbinhandler(op1, op2, "__concat")
+    if h then
+      return (h(op1, op2))
+    else
+      error(@Cdots)
+    end
+  end
+end
+}
+}
+
+
+@item{@Q{len}|
+the @T{#} operation.
+@Lidx{__len}
+@verbatim{
+function len_event (op)
+  if type(op) == "string" then
+    return strlen(op)      -- primitive string length
+  else
+    local h = metatable(op).__len
+    if h then
+      return (h(op))       -- call handler with the operand
+    elseif type(op) == "table" then
+      return #op              -- primitive table length
+    else  -- no handler available: error
+      error(@Cdots)
+    end
+  end
+end
+}
+See @See{len-op} for a description of the length of a table.
+}
+
+
+@item{@Q{eq}|
+the @T{==} operation.
+@Lidx{__eq}
+The function @T{getequalhandler} defines how Lua chooses a metamethod
+for equality.
+A metamethod is selected only when both values
+being compared have the same type
+and the same metamethod for the selected operation.
+@verbatim{
+function getequalhandler (op1, op2, event)
+  if type(op1) ~= type(op2) then return nil end
+  local mm1 = metatable(op1)[event]
+  local mm2 = metatable(op2)[event]
+  if mm1 == mm2 then return mm1 else return nil end
+end
+}
+The @Q{eq} event is defined as follows:
+@verbatim{
+function eq_event (op1, op2)
+  if type(op1) ~= type(op2) then  -- different types?
+    return false   -- different values
+  end
+  if op1 == op2 then   -- primitive equal?
+    return true   -- values are equal
+  end
+  -- try metamethod
+  local h = getequalhandler(op1, op2, "__eq")
+  if h then
+    return (h(op1, op2))
+  else
+    return false
+  end
+end
+}
+}
+
+@item{@Q{lt}|
+the @T{<} operation.
+@Lidx{__lt}
+@verbatim{
+function lt_event (op1, op2)
+  if type(op1) == "number" and type(op2) == "number" then
+    return op1 < op2   -- numeric comparison
+  elseif type(op1) == "string" and type(op2) == "string" then
+    return op1 < op2   -- lexicographic comparison
+  else
+    local h = getbinhandler(op1, op2, "__lt")
+    if h then
+      return (h(op1, op2))
+    else
+      error(@Cdots)
+    end
+  end
+end
+}
+}
+
+@item{@Q{le}|
+the @T{<=} operation.
+@Lidx{__lt}
+@verbatim{
+function le_event (op1, op2)
+  if type(op1) == "number" and type(op2) == "number" then
+    return op1 <= op2   -- numeric comparison
+  elseif type(op1) == "string" and type(op2) == "string" then
+    return op1 <= op2   -- lexicographic comparison
+  else
+    local h = getbinhandler(op1, op2, "__le")
+    if h then
+      return (h(op1, op2))
+    else
+      h = getbinhandler(op1, op2, "__lt")
+      if h then
+        return not h(op2, op1)
+      else
+        error(@Cdots)
+      end
+    end
+  end
+end
+}
+Note that, in the absence of a @Q{le} metamethod,
+Lua tries the @Q{lt}, assuming that @T{a <= b} is
+equivalent to @T{not (b < a)}.
+}
+
+@item{@Q{index}|
+The indexing access @T{table[key]}.
+@Lidx{__index}
+@verbatim{
+function gettable_event (table, key)
+  local h
+  if type(table) == "table" then
+    local v = rawget(table, key)
+    if v ~= nil then return v end
+    h = metatable(table).__index
+    if h == nil then return nil end
+  else
+    h = metatable(table).__index
+    if h == nil then
+      error(@Cdots)
+    end
+  end
+  if type(h) == "function" then
+    return (h(table, key))     -- call the handler
+  else return h[key]           -- or repeat operation on it
+  end
+end
+}
+}
+
+@item{@Q{newindex}|
+The indexing assignment @T{table[key] = value}.
+@Lidx{__newindex}
+@verbatim{
+function settable_event (table, key, value)
+  local h
+  if type(table) == "table" then
+    local v = rawget(table, key)
+    if v ~= nil then rawset(table, key, value); return end
+    h = metatable(table).__newindex
+    if h == nil then rawset(table, key, value); return end
+  else
+    h = metatable(table).__newindex
+    if h == nil then
+      error(@Cdots)
+    end
+  end
+  if type(h) == "function" then
+    h(table, key,value)           -- call the handler
+  else h[key] = value             -- or repeat operation on it
+  end
+end
+}
+}
+
+@item{@Q{call}|
+called when Lua calls a value.
+@Lidx{__call}
+@verbatim{
+function function_event (func, ...)
+  if type(func) == "function" then
+    return func(...)   -- primitive call
+  else
+    local h = metatable(func).__call
+    if h then
+      return h(func, ...)
+    else
+      error(@Cdots)
+    end
+  end
+end
+}
+}
+
+}
+
+}
+
+@sect2{GC| @title{Garbage Collection}
+
+Lua performs automatic memory management.
+This means that
+you have to worry neither about allocating memory for new objects
+nor about freeing it when the objects are no longer needed.
+Lua manages memory automatically by running
+a @def{garbage collector} to collect all @emph{dead objects}
+(that is, objects that are no longer accessible from Lua).
+All memory used by Lua is subject to automatic management:
+tables, userdata, functions, threads, strings, etc.
+
+Lua implements an incremental mark-and-sweep collector.
+It uses two numbers to control its garbage-collection cycles:
+the @def{garbage-collector pause} and
+the @def{garbage-collector step multiplier}.
+Both use percentage points as units
+(so that a value of 100 means an internal value of 1).
+
+The garbage-collector pause
+controls how long the collector waits before starting a new cycle.
+Larger values make the collector less aggressive.
+Values smaller than 100 mean the collector will not wait to
+start a new cycle.
+A value of 200 means that the collector waits for the total memory in use
+to double before starting a new cycle.
+
+The step multiplier
+controls the relative speed of the collector relative to
+memory allocation.
+Larger values make the collector more aggressive but also increase
+the size of each incremental step.
+Values smaller than 100 make the collector too slow and
+can result in the collector never finishing a cycle.
+The default, 200, means that the collector runs at @Q{twice}
+the speed of memory allocation.
+
+If you set the step multiplier to a very large number
+(larger than 10% of the maximum number of
+bytes that the program may use),
+the collector behaves like a stop-the-world collector.
+If you then set the pause to 200,
+the collector behaves as in old Lua versions,
+doing a complete collection every time Lua doubles its
+memory usage.
+
+You can change these numbers by calling @Lid{lua_gc} in C
+or @Lid{collectgarbage} in Lua.
+With these functions you can also control 
+the collector directly (e.g., stop and restart it).
+
+
+@sect3{finalizers| @title{Garbage-Collection Metamethods}
+
+Using the @N{C API},
+you can set garbage-collector metamethods for userdata @see{metatable}.
+These metamethods are also called @def{finalizers}.
+Finalizers allow you to coordinate Lua's garbage collection
+with external resource management
+(such as closing files, network or database connections,
+or freeing your own memory).
+
+Garbage userdata with a field @idx{__gc} in their metatables are not
+collected immediately by the garbage collector.
+Instead, Lua puts them in a list.
+After the collection,
+Lua does the equivalent of the following function
+for each userdata in that list:
+@verbatim{
+function gc_event (udata)
+  local h = metatable(udata).__gc
+  if h then
+    h(udata)
+  end
+end
+}
+
+At the end of each garbage-collection cycle,
+the finalizers for userdata are called in @emph{reverse}
+order of their creation,
+among those collected in that cycle.
+That is, the first finalizer to be called is the one associated
+with the userdata created last in the program.
+The userdata itself is freed only in the next garbage-collection cycle.
+
+}
+
+@sect3{weak-table| @title{Weak Tables}
+
+A @def{weak table} is a table whose elements are
+@def{weak references}.
+A weak reference is ignored by the garbage collector.
+In other words,
+if the only references to an object are weak references,
+then the garbage collector will collect this object.
+
+A weak table can have weak keys, weak values, or both.
+A table with weak keys allows the collection of its keys,
+but prevents the collection of its values.
+A table with both weak keys and weak values allows the collection of
+both keys and values.
+In any case, if either the key or the value is collected,
+the whole pair is removed from the table.
+The weakness of a table is controlled by the
+@id{__mode} field of its metatable.
+If the @id{__mode} field is a string containing the @N{character @Char{k}},
+the keys in the table are weak.
+If @id{__mode} contains @Char{v},
+the values in the table are weak.
+
+A table with weak keys and strong values
+is also called an @def{ephemeron table}.
+In an ephemeron table,
+a value is considered reachable only if its key is reachable.
+In particular,
+if the only reference to a key comes from its value,
+the pair is removed.
+
+After you use a table as a metatable,
+you should not change the value of its @id{__mode} field.
+Otherwise, the weak behavior of the tables controlled by this
+metatable is undefined.
+
+Only objects that have an explicit construction
+can be removed from weak tables.
+Values, such as numbers and booleans,
+are not subject to garbage collection,
+and therefore are not removed from weak tables
+(unless its associated value is collected).
+Lua treats strings and @x{light C functions} as non-object values.
+
+Userdata with @x{finalizers} has a special behavior in weak tables.
+When a userdata is a value in a weak table,
+it is removed from the table the first time it is collected,
+before running its finalizer.
+When it is a key, however,
+it is removed from the table only when it is really freed,
+after running its finalizer.
+This behavior allows the finalizer to access values
+associated with the userdata through weak tables.
+
+}
+
+}
+
+@sect2{coroutine| @title{Coroutines}
+
+Lua supports coroutines,
+also called @emph{collaborative multithreading}.
+A coroutine in Lua represents an independent thread of execution.
+Unlike threads in multithread systems, however,
+a coroutine only suspends its execution by explicitly calling
+a yield function.
+
+You create a coroutine with a call to @Lid{coroutine.create}.
+Its sole argument is a function
+that is the main function of the coroutine.
+The @id{create} function only creates a new coroutine and
+returns a handle to it (an object of type @emph{thread});
+it does not start the coroutine execution.
+
+When you first call @Lid{coroutine.resume},
+passing as its first argument
+a thread returned by @Lid{coroutine.create},
+the coroutine starts its execution,
+at the first line of its main function.
+Extra arguments passed to @Lid{coroutine.resume} are passed on
+to the coroutine main function.
+After the coroutine starts running,
+it runs until it terminates or @emph{yields}.
+
+A coroutine can terminate its execution in two ways:
+normally, when its main function returns
+(explicitly or implicitly, after the last instruction);
+and abnormally, if there is an unprotected error.
+In the first case, @Lid{coroutine.resume} returns @true,
+plus any values returned by the coroutine main function.
+In case of errors, @Lid{coroutine.resume} returns @false
+plus an error message.
+
+A coroutine yields by calling @Lid{coroutine.yield}.
+When a coroutine yields,
+the corresponding @Lid{coroutine.resume} returns immediately,
+even if the yield happens inside nested function calls
+(that is, not in the main function,
+but in a function directly or indirectly called by the main function).
+In the case of a yield, @Lid{coroutine.resume} also returns @true,
+plus any values passed to @Lid{coroutine.yield}.
+The next time you resume the same coroutine,
+it continues its execution from the point where it yielded,
+with the call to @Lid{coroutine.yield} returning any extra
+arguments passed to @Lid{coroutine.resume}.
+
+Like @Lid{coroutine.create},
+the @Lid{coroutine.wrap} function also creates a coroutine,
+but instead of returning the coroutine itself,
+it returns a function that, when called, resumes the coroutine.
+Any arguments passed to this function
+go as extra arguments to @Lid{coroutine.resume}.
+@Lid{coroutine.wrap} returns all the values returned by @Lid{coroutine.resume},
+except the first one (the boolean error code).
+Unlike @Lid{coroutine.resume},
+@Lid{coroutine.wrap} does not catch errors;
+any error is propagated to the caller.
+
+As an example,
+consider the following code:
+@verbatim{
+function foo (a)
+  print("foo", a)
+  return coroutine.yield(2*a)
+end
+
+co = coroutine.create(function (a,b)
+      print("co-body", a, b)
+      local r = foo(a+1)
+      print("co-body", r)
+      local r, s = coroutine.yield(a+b, a-b)
+      print("co-body", r, s)
+      return b, "end"
+end)
+       
+print("main", coroutine.resume(co, 1, 10))
+print("main", coroutine.resume(co, "r"))
+print("main", coroutine.resume(co, "x", "y"))
+print("main", coroutine.resume(co, "x", "y"))
+}
+When you run it, it produces the following output:
+@verbatim{
+co-body 1       10
+foo     2
+
+main    true    4
+co-body r
+main    true    11      -9
+co-body x       y
+main    true    10      end
+main    false   cannot resume dead coroutine
+}
+
+}
+
+}
 
 
 @C{-------------------------------------------------------------------------}
@@ -93,7 +862,7 @@ Lua is a case-sensitive language:
 are two different, valid names.
 As a convention, names starting with an underscore followed by
 uppercase letters (such as @Lid{_VERSION})
-are reserved for internal global variables used by Lua.
+are reserved for variables used by Lua.
 
 The following strings denote other @x{tokens}:
 @verbatim{
@@ -116,12 +885,19 @@ and can contain the following C-like escape sequences:
 @Char{\\} (backslash),
 @Char{\"} (quotation mark [double quote]),
 and @Char{\'} (apostrophe [single quote]).
-Moreover, a backslash followed by a real newline
+A backslash followed by a real newline
 results in a newline in the string.
-A character in a string can also be specified by its numerical value.
+The escape sequence @Char{\*} skips the following span
+of white-space characters,
+including line breaks;
+it is particularly useful to break and ident a string 
+into multiple lines without adding the newlines and spaces
+into the string contents.
+
+A character in a literal string can also be specified by its numerical value.
 This can be done with the escape sequence @T{\x@rep{XX}},
 where @rep{XX} is a sequence of exactly two hexadecimal digits,
-and with the escape sequence @T{\@rep{ddd}},
+or with the escape sequence @T{\@rep{ddd}},
 where @rep{ddd} is a sequence of up to three decimal digits.
 (Note that if a decimal escape is to be followed by a digit,
 it must be expressed using exactly three digits.)
@@ -191,109 +967,6 @@ Long comments are frequently used to disable code temporarily.
 
 }
 
-@sect2{TypesSec| @title{Values and Types}
-
-Lua is a @emph{dynamically typed language}.
-This means that
-variables do not have types; only values do.
-There are no type definitions in the language.
-All values carry their own type.
-
-All values in Lua are @emph{first-class values}.
-This means that all values can be stored in variables,
-passed as arguments to other functions, and returned as results.
-
-There are eight @x{basic types} in Lua:
-@def{nil}, @def{boolean}, @def{number},
-@def{string}, @def{function}, @def{userdata},
-@def{thread}, and @def{table}.
-@emph{Nil} is the type of the value @nil,
-whose main property is to be different from any other value;
-it usually represents the absence of a useful value.
-@emph{Boolean} is the type of the values @false and @true.
-Both @nil and @false make a condition false;
-any other value makes it true.
-@emph{Number} represents real (double-precision floating-point) numbers.
-(It is easy to build Lua interpreters that use other
-internal representations for numbers,
-such as single-precision float or long integers;
-see file @id{luaconf.h}.)
-@emph{String} represents arrays of characters.
-@index{eight-bit clean}
-Lua is 8-bit clean:
-strings can contain any 8-bit character,
-including embedded zeros (@Char{\0}) @see{lexical}.
-
-Lua can call (and manipulate) functions written in Lua and
-functions written in C
-@see{functioncall}.
-
-The type @emph{userdata} is provided to allow arbitrary @N{C data} to
-be stored in Lua variables.
-This type corresponds to a block of raw memory
-and has no pre-defined operations in Lua,
-except assignment and identity test.
-However, by using @emph{metatables},
-the programmer can define operations for userdata values
-@see{metatable}.
-Userdata values cannot be created or modified in Lua,
-only through the @N{C API}.
-This guarantees the integrity of data owned by the host program.
-
-The type @def{thread} represents independent threads of execution
-and it is used to implement coroutines @see{coroutine}.
-Do not confuse Lua threads with operating-system threads.
-Lua supports coroutines on all systems,
-even those that do not support threads.
-
-The type @emph{table} implements @x{associative arrays},
-that is, @x{arrays} that can be indexed not only with numbers,
-but with any value (except @nil).
-Tables can be @emph{heterogeneous};
-that is, they can contain values of all types (except @nil).
-Tables are the sole data structuring mechanism in Lua;
-they can be used to represent ordinary arrays,
-symbol tables, sets, records, graphs, trees, etc.
-To represent @x{records}, Lua uses the field name as an index.
-The language supports this representation by
-providing @id{a.name} as syntactic sugar for @T{a["name"]}.
-There are several convenient ways to create tables in Lua
-@see{tableconstructor}.
-
-Like indices,
-the value of a table field can be of any type (except @nil).
-In particular,
-because functions are first-class values,
-table fields can contain functions.
-Thus tables can also carry @emph{methods} @see{func-def}.
-
-Tables, functions, threads, and (full) userdata values are @emph{objects}:
-variables do not actually @emph{contain} these values,
-only @emph{references} to them.
-Assignment, parameter passing, and function returns
-always manipulate references to such values;
-these operations do not imply any kind of copy.
-
-The library function @Lid{type} returns a string describing the type
-of a given value.
-
-
-@sect3{coercion| @title{Coercion}
-
-Lua provides automatic conversion between
-string and number values at run time.
-Any arithmetic operation applied to a string tries to convert
-this string to a number, following the usual conversion rules.
-Conversely, whenever a number is used where a string is expected,
-the number is converted to a string, in a reasonable format.
-For complete control over how numbers are converted to strings,
-use the @id{format} function from the string library
-@seeF{string.format}.
-
-}
-
-}
-
 @sect2{variables| @title{Variables}
 
 Variables are places that store values.
@@ -309,7 +982,7 @@ which is a particular kind of local variable):
 }
 @bnfNter{Name} denotes identifiers, as defined in @See{lexical}.
 
-Any variable is assumed to be global unless explicitly declared
+Any variable name is assumed to be global unless explicitly declared
 as a local @see{localvar}.
 @x{Local variables} are @emph{lexically scoped}:
 local variables can be freely accessed by functions
@@ -321,8 +994,7 @@ Square brackets are used to index a table:
 @Produc{
 @producname{var}@producbody{prefixexp @bnfter{[} exp @bnfter{]}}
 }
-The meaning of accesses to global variables 
-and table fields can be changed via metatables.
+The meaning of accesses to table fields can be changed via metatables.
 An access to an indexed variable @T{t[i]} is equivalent to
 a call @T{gettable_event(t,i)}.
 (See @See{metatable} for a complete description of the
@@ -336,21 +1008,10 @@ The syntax @id{var.Name} is just syntactic sugar for
 @producname{var}@producbody{prefixexp @bnfter{.} @bnfNter{Name}}
 }
 
-All global variables live as fields in ordinary Lua tables,
-called @def{environment tables} or simply
-@emph{environments} @see{environ}.
 An access to a global variable @id{x}
-is equivalent to @id{_env.x},
-which in turn is equivalent to
-@verbatim{
-gettable_event(_env, "x")
-}
-where @id{_env} is the @x{current environment} @see{environ}.
-(See @See{metatable} for a complete description of the
-@id{gettable_event} function.
-This function is not defined or callable in Lua.
-Similarly, the @id{_env} variable is not defined in Lua.
-We use them here only for explanatory purposes.)
+is equivalent to @id{_ENV.x}.
+Due to the way that chunks are compiled,
+@id{_ENV} is never a global name @see{globalenv}.
 
 }
 
@@ -367,17 +1028,24 @@ and variable declarations.
 The unit of execution of Lua is called a @def{chunk}.
 A chunk is simply a sequence of statements,
 which are executed sequentially.
-Each statement can be optionally followed by a semicolon:
 @Produc{
-@producname{chunk}@producbody{@bnfrep{stat @bnfopt{@bnfter{;}}}}
+@producname{chunk}@producbody{@bnfrep{stat }}
 }
-There are no empty statements and thus @Char{;;} is not legal.
+Lua has @def{empty statements}
+that allow you to separate statements with semicolons,
+start a chunk with a semicolon
+or write two semicolons in sequence:
+@Produc{
+@producname{stat}@producbody{@bnfter{;}}
+}
 
 Lua handles a chunk as the body of an anonymous function 
 with a variable number of arguments
 @see{func-def}.
 As such, chunks can define local variables,
 receive arguments, and return values.
+Moreover, such anonymous function is compiled as in the
+scope of an external local variable called @id{_ENV} @see{globalenv}.
 
 A chunk can be stored in a file or in a string inside the host program.
 To execute a chunk,
@@ -470,14 +1138,7 @@ We use it here only for explanatory purposes.)
 
 An assignment to a global variable @T{x = val}
 is equivalent to the assignment
-@T{_env.x = val},
-which in turn is equivalent to
-@verbatim{
-settable_event(_env, "x", val)
-}
-where @id{_env} is the environment of the running function.
-(The @id{_env} variable is not defined in Lua.
-We use it here only for explanatory purposes.)
+@T{_ENV.x = val} @see{globalenv}.
 
 }
 
@@ -515,7 +1176,7 @@ from a function or a chunk (which is just a function).
 Functions and chunks can return more than one value,
 and so the syntax for the @Rw{return} statement is
 @Produc{
-@producname{stat}@producbody{@Rw{return} @bnfopt{explist}}
+@producname{stat}@producbody{@Rw{return} @bnfopt{explist} @bnfopt{@bnfter{;}}}
 }
 
 The @Rw{break} statement is used to terminate the execution of a
@@ -523,7 +1184,7 @@ The @Rw{break} statement is used to terminate the execution of a
 skipping to the next statement after the loop:
 @index{break statement}
 @Produc{
-@producname{stat}@producbody{@Rw{break}}
+@producname{stat}@producbody{@Rw{break} @bnfopt{@bnfter{;}}}
 }
 A @Rw{break} ends the innermost enclosing loop.
 
@@ -688,35 +1349,6 @@ The visibility rules for local variables are explained in @See{visibility}.
 
 }
 
-@sect3{lexenv| @title{Lexical Environments}
-
-A lexical environment defines a new @x{current environment} @see{environ}
-for the code inside its block:
-@Produc{
-@producname{stat}@producbody{@Rw{in} exp @Rw{do} block @Rw{end}}
-}
-That is, a lexical environment changes the
-table used to resolve all accesses
-to global (free) variables inside a block.
-
-Inside a lexical environment,
-the result of @T{@rep{exp}} becomes the current environment.
-Expression @T{@rep{exp}} is evaluated only once in the beginning of
-the statement and it is stored in a hidden local variable named
-@defid{(environment)}.
-Then, any global variable
-(that is, a variable not declared as a local)
-@id{var} inside @T{@rep{block}} is accessed as
-@T{(environment).@rep{var}}.
-Moreover, functions defined inside the block also use the
-current environment as their environments @see{environ}.
-
-A lexical environment does not shadow local declarations.
-That is, any local variable that is visible just before
-a lexical environment is still visible inside the environment.
-
-}
-
 }
 
 @sect2{expressions| @title{Expressions}
@@ -812,6 +1444,20 @@ a % b == a - math.floor(a/b)*b
 }
 That is, it is the remainder of a division that rounds
 the quotient towards minus infinity.
+
+}
+
+@sect3{coercion| @title{Coercion}
+
+Lua provides automatic conversion between
+string and number values at run time.
+Any arithmetic operation applied to a string tries to convert
+this string to a number, following the usual conversion rules.
+Conversely, whenever a number is used where a string is expected,
+the number is converted to a string, in a reasonable format.
+For complete control over how numbers are converted to strings,
+use the @id{format} function from the string library
+@seeF{string.format}.
 
 }
 
@@ -1038,20 +1684,6 @@ A call of the form @T{f'@rep{string}'}
 is syntactic sugar for @T{f('@rep{string}')};
 that is, the argument list is a single literal string.
 
-As an exception to the @x{free-form} character of Lua,
-you cannot put a line break before the @Char{(} in a function call.
-This restriction avoids some ambiguities in the language.
-If you write
-@verbatim{
-a = f
-(g).x(a)
-}
-Lua would see that as a single statement, @T{a = f(g).x(a)}.
-In this case, if you want two statements,
-you must add a semi-colon between them.
-If you actually want to call @id{f},
-you must remove the line break before @T{(g)}.
-
 A call of the form @id{return} @emph{functioncall} is called
 a @def{tail call}.
 Lua implements @def{proper tail calls}
@@ -1256,680 +1888,6 @@ while all of them share the same @id{x}.
 
 }
 
-@sect2{error| @title{Error Handling}
-
-Because Lua is an embedded extension language,
-all Lua actions start from @N{C code} in the host program
-calling a function from the Lua library @seeC{lua_pcall}.
-Whenever an error occurs during Lua compilation or execution,
-control returns to C,
-which can take appropriate measures
-(such as printing an error message).
-
-Lua code can explicitly generate an error by calling the
-@Lid{error} function.
-If you need to catch errors in Lua,
-you can use the @Lid{pcall} function.
-
-}
-
-@sect2{metatable| @title{Metatables}
-
-Every value in Lua can have a @emph{metatable}.
-This @def{metatable} is an ordinary Lua table
-that defines the behavior of the original value
-under certain special operations.
-You can change several aspects of the behavior
-of operations over a value by setting specific fields in its metatable.
-For instance, when a non-numeric value is the operand of an addition,
-Lua checks for a function in the field @T{"__add"} in its metatable.
-If it finds one,
-Lua calls this function to perform the addition.
-
-We call the keys in a metatable @def{events}
-and the values @def{metamethods}.
-In the previous example, the event is @T{"add"} 
-and the metamethod is the function that performs the addition.
-
-You can query the metatable of any value
-through the @Lid{getmetatable} function.
-
-You can replace the metatable of tables
-through the @Lid{setmetatable}
-function.
-You cannot change the metatable of other types from Lua
-(except by using the debug library);
-you must use the @N{C API} for that.
-
-Tables and full userdata have individual metatables
-(although multiple tables and userdata can share their metatables).
-Values of all other types share one single metatable per type;
-that is, there is one single metatable for all numbers,
-one for all strings, etc.
-By default, a value has no metatable,
-but the string library sets a metatable for the string type @see{strlib}.
-
-A metatable controls how an object behaves in arithmetic operations,
-order comparisons, concatenation, length operation, and indexing.
-A metatable also can define a function to be called when a userdata
-is garbage collected.
-For each of these operations Lua associates a specific key
-called an @emph{event}.
-When Lua performs one of these operations over a value,
-it checks whether this value has a metatable with the corresponding event.
-If so, the value associated with that key (the metamethod)
-controls how Lua will perform the operation.
-
-Metatables control the operations listed next.
-Each operation is identified by its corresponding name.
-The key for each operation is a string with its name prefixed by
-two underscores, @Char{__};
-for instance, the key for operation @Q{add} is the
-string @T{"__add"}.
-The semantics of these operations is better explained by a Lua function
-describing how the interpreter executes the operation.
-
-The code shown here in Lua is only illustrative;
-the real behavior is hard coded in the interpreter
-and it is much more efficient than this simulation.
-All functions used in these descriptions
-(@Lid{rawget}, @Lid{tonumber}, etc.)
-are described in @See{predefined}.
-In particular, to retrieve the metamethod of a given object,
-we use the expression
-@verbatim{
-metatable(obj)[event]
-}
-This should be read as
-@verbatim{
-rawget(getmetatable(obj) or {}, event)
-}
-@format{/pagebreak}
-That is, the access to a metamethod does not invoke other metamethods,
-and the access to objects with no metatables does not fail
-(it simply results in @nil).
-
-For the unary @T{-} and @T{#} operators,
-the metamethod is called with an extra @nil as a second argument.
-This extra argument is only to simplify Lua's internals and
-may be removed in future versions and therefore it is not present
-in the following code.
-(For most uses this extra argument is irrelevant.)
-
-@description{
-
-@item{@Q{add}|
-the @T{+} operation.
-@Lidx{__add}
-
-The function @T{getbinhandler} below defines how Lua chooses a handler
-for a binary operation.
-First, Lua tries the first operand.
-If its type does not define a handler for the operation,
-then Lua tries the second operand.
-@verbatim{
-function getbinhandler (op1, op2, event)
-  return metatable(op1)[event] or metatable(op2)[event]
-end
-}
-By using this function,
-the behavior of the @T{op1 + op2} is
-@verbatim{
-function add_event (op1, op2)
-  local o1, o2 = tonumber(op1), tonumber(op2)
-  if o1 and o2 then  -- both operands are numeric?
-    return o1 + o2   -- '+' here is the primitive 'add'
-  else  -- at least one of the operands is not numeric
-    local h = getbinhandler(op1, op2, "__add")
-    if h then
-      -- call the handler with both operands
-      return (h(op1, op2))
-    else  -- no handler available: default behavior
-      error(@Cdots)
-    end
-  end
-end
-}
-}
-
-@item{@Q{sub}|
-the @T{-} operation.
-@Lidx{__sub}
-Behavior similar to the @Q{add} operation.
-}
-
-@item{@Q{mul}|
-the @T{*} operation.
-@Lidx{__mul}
-Behavior similar to the @Q{add} operation.
-}
-
-@item{@Q{div}|
-the @T{/} operation.
-@Lidx{__div}
-Behavior similar to the @Q{add} operation.
-}
-
-@item{@Q{mod}|
-the @T{%} operation.
-@Lidx{__mod}
-Behavior similar to the @Q{add} operation,
-with the operation
-@T{o1 - floor(o1/o2)*o2} as the primitive operation.
-}
-
-@item{@Q{pow}|
-the @T{^} (exponentiation) operation.
-@Lidx{__pow}
-Behavior similar to the @Q{add} operation,
-with the function @T{pow} (from the @N{C math} library)
-as the primitive operation.
-}
-
-@item{@Q{unm}|
-the unary @T{-} operation.
-@Lidx{__unm}
-@verbatim{
-function unm_event (op)
-  local o = tonumber(op)
-  if o then  -- operand is numeric?
-    return -o  -- '-' here is the primitive 'unm'
-  else  -- the operand is not numeric.
-    -- Try to get a handler from the operand
-    local h = metatable(op).__unm
-    if h then
-      -- call the handler with the operand
-      return (h(op))
-    else  -- no handler available: default behavior
-      error(@Cdots)
-    end
-  end
-end
-}
-}
-
-
-@item{@Q{concat}|
-the @T{..} (concatenation) operation.
-@Lidx{__concat}
-@verbatim{
-function concat_event (op1, op2)
-  if (type(op1) == "string" or type(op1) == "number") and
-     (type(op2) == "string" or type(op2) == "number") then
-    return op1 .. op2  -- primitive string concatenation
-  else
-    local h = getbinhandler(op1, op2, "__concat")
-    if h then
-      return (h(op1, op2))
-    else
-      error(@Cdots)
-    end
-  end
-end
-}
-}
-
-
-@item{@Q{len}|
-the @T{#} operation.
-@Lidx{__len}
-@verbatim{
-function len_event (op)
-  if type(op) == "string" then
-    return strlen(op)      -- primitive string length
-  else
-    local h = metatable(op).__len
-    if h then
-      return (h(op))       -- call handler with the operand
-    elseif type(op) == "table" then
-      return #op              -- primitive table length
-    else  -- no handler available: error
-      error(@Cdots)
-    end
-  end
-end
-}
-See @See{len-op} for a description of the length of a table.
-}
-
-
-@item{@Q{eq}|
-the @T{==} operation.
-@Lidx{__eq}
-The function @T{getcomphandler} defines how Lua chooses a metamethod
-for comparison operators.
-A metamethod only is selected when both objects
-being compared have the same type
-and the same metamethod for the selected operation.
-@verbatim{
-function getcomphandler (op1, op2, event)
-  if type(op1) ~= type(op2) then return nil end
-  local mm1 = metatable(op1)[event]
-  local mm2 = metatable(op2)[event]
-  if mm1 == mm2 then return mm1 else return nil end
-end
-}
-The @Q{eq} event is defined as follows:
-@verbatim{
-function eq_event (op1, op2)
-  if type(op1) ~= type(op2) then  -- different types?
-    return false   -- different objects
-  end
-  if op1 == op2 then   -- primitive equal?
-    return true   -- objects are equal
-  end
-  -- try metamethod
-  local h = getcomphandler(op1, op2, "__eq")
-  if h then
-    return (h(op1, op2))
-  else
-    return false
-  end
-end
-}
-@T{a ~= b} is equivalent to @T{not (a == b)}.
-}
-
-@item{@Q{lt}|
-the @T{<} operation.
-@Lidx{__lt}
-@verbatim{
-function lt_event (op1, op2)
-  if type(op1) == "number" and type(op2) == "number" then
-    return op1 < op2   -- numeric comparison
-  elseif type(op1) == "string" and type(op2) == "string" then
-    return op1 < op2   -- lexicographic comparison
-  else
-    local h = getcomphandler(op1, op2, "__lt")
-    if h then
-      return (h(op1, op2))
-    else
-      error(@Cdots)
-    end
-  end
-end
-}
-@T{a > b} is equivalent to @T{b < a}.
-}
-
-@item{@Q{le}|
-the @T{<=} operation.
-@Lidx{__lt}
-@verbatim{
-function le_event (op1, op2)
-  if type(op1) == "number" and type(op2) == "number" then
-    return op1 <= op2   -- numeric comparison
-  elseif type(op1) == "string" and type(op2) == "string" then
-    return op1 <= op2   -- lexicographic comparison
-  else
-    local h = getcomphandler(op1, op2, "__le")
-    if h then
-      return (h(op1, op2))
-    else
-      h = getcomphandler(op1, op2, "__lt")
-      if h then
-        return not h(op2, op1)
-      else
-        error(@Cdots)
-      end
-    end
-  end
-end
-}
-@T{a >= b} is equivalent to @T{b <= a}.
-Note that, in the absence of a @Q{le} metamethod,
-Lua tries the @Q{lt}, assuming that @T{a <= b} is
-equivalent to @T{not (b < a)}.
-}
-
-@item{@Q{index}|
-The indexing access @T{table[key]}.
-@Lidx{__index}
-@verbatim{
-function gettable_event (table, key)
-  local h
-  if type(table) == "table" then
-    local v = rawget(table, key)
-    if v ~= nil then return v end
-    h = metatable(table).__index
-    if h == nil then return nil end
-  else
-    h = metatable(table).__index
-    if h == nil then
-      error(@Cdots)
-    end
-  end
-  if type(h) == "function" then
-    return (h(table, key))     -- call the handler
-  else return h[key]           -- or repeat operation on it
-  end
-end
-}
-}
-
-@item{@Q{newindex}|
-The indexing assignment @T{table[key] = value}.
-@Lidx{__newindex}
-@verbatim{
-function settable_event (table, key, value)
-  local h
-  if type(table) == "table" then
-    local v = rawget(table, key)
-    if v ~= nil then rawset(table, key, value); return end
-    h = metatable(table).__newindex
-    if h == nil then rawset(table, key, value); return end
-  else
-    h = metatable(table).__newindex
-    if h == nil then
-      error(@Cdots)
-    end
-  end
-  if type(h) == "function" then
-    h(table, key,value)           -- call the handler
-  else h[key] = value             -- or repeat operation on it
-  end
-end
-}
-}
-
-@item{@Q{call}|
-called when Lua calls a value.
-@Lidx{__call}
-@verbatim{
-function function_event (func, ...)
-  if type(func) == "function" then
-    return func(...)   -- primitive call
-  else
-    local h = metatable(func).__call
-    if h then
-      return h(func, ...)
-    else
-      error(@Cdots)
-    end
-  end
-end
-}
-}
-
-}
-
-}
-
-@sect2{environ| @title{Environments}
-
-Each function and userdata in Lua
-has a table associated with it,
-called its @def{environment}.
-Like metatables, environments are regular tables and
-multiple objects can share the same environment.
-From Lua,
-you can manipulate the environment of an object
-only through the debug library @see{libdebug}.
-
-Userdata and @N{C functions} are created sharing the environment
-of the creating @N{C function}.
-Non-nested Lua functions
-(created by @Lid{loadfile}, @Lid{loadstring} or @Lid{load})
-are created sharing the @x{global environment}.
-Nested Lua functions are created sharing the @x{current environment}
-of where it is defined.
-
-Environments associated with userdata have no meaning for Lua.
-It is only a convenience feature for programmers to associate a table to
-a userdata.
-
-The environment associated with a @N{C function} can be directly
-accessed by @N{C code} @see{pseudo-index}.
-It is used as the default environment for other @N{C functions}
-and userdata created by the function.
-
-The environment associated with a Lua function is used as the
-current environment of all code in the function outside
-a @x{lexical environment} @see{lexenv}.
-A lexical environment changes the 
-current environment inside its scope.
-In any case,
-the @def{current environment} is the table 
-Lua uses to resolve global variables and to initialize
-the environment of nested functions.
-
-}
-
-@sect2{GC| @title{Garbage Collection}
-
-Lua performs automatic memory management.
-This means that
-you have to worry neither about allocating memory for new objects
-nor about freeing it when the objects are no longer needed.
-Lua manages memory automatically by running
-a @def{garbage collector} from time to time
-to collect all @emph{dead objects}
-(that is, objects that are no longer accessible from Lua).
-All memory used by Lua is subject to automatic management:
-tables, userdata, functions, threads, strings, etc.
-
-Lua implements an incremental mark-and-sweep collector.
-It uses two numbers to control its garbage-collection cycles:
-the @def{garbage-collector pause} and
-the @def{garbage-collector step multiplier}.
-Both use percentage points as units
-(so that a value of 100 means an internal value of 1).
-
-The garbage-collector pause
-controls how long the collector waits before starting a new cycle.
-Larger values make the collector less aggressive.
-Values smaller than 100 mean the collector will not wait to
-start a new cycle.
-A value of 200 means that the collector waits for the total memory in use
-to double before starting a new cycle.
-
-The step multiplier
-controls the relative speed of the collector relative to
-memory allocation.
-Larger values make the collector more aggressive but also increase
-the size of each incremental step.
-Values smaller than 100 make the collector too slow and
-can result in the collector never finishing a cycle.
-The default, 200, means that the collector runs at @Q{twice}
-the speed of memory allocation.
-
-If you set the step multiplier to a very large number
-(larger than 10% of the maximum number of
-bytes that the program may use),
-the collector behaves like a stop-the-world collector.
-If you then set the pause to 200,
-the collector behaves as in old Lua versions,
-doing a complete collection every time Lua doubles its
-memory usage.
-
-You can change these numbers by calling @Lid{lua_gc} in C
-or @Lid{collectgarbage} in Lua.
-With these functions you can also control 
-the collector directly (e.g., stop and restart it).
-
-
-@sect3{finalizers| @title{Garbage-Collection Metamethods}
-
-Using the @N{C API},
-you can set garbage-collector metamethods for userdata @see{metatable}.
-These metamethods are also called @def{finalizers}.
-Finalizers allow you to coordinate Lua's garbage collection
-with external resource management
-(such as closing files, network or database connections,
-or freeing your own memory).
-
-Garbage userdata with a field @idx{__gc} in their metatables are not
-collected immediately by the garbage collector.
-Instead, Lua puts them in a list.
-After the collection,
-Lua does the equivalent of the following function
-for each userdata in that list:
-@verbatim{
-function gc_event (udata)
-  local h = metatable(udata).__gc
-  if h then
-    h(udata)
-  end
-end
-}
-
-At the end of each garbage-collection cycle,
-the finalizers for userdata are called in @emph{reverse}
-order of their creation,
-among those collected in that cycle.
-That is, the first finalizer to be called is the one associated
-with the userdata created last in the program.
-The userdata itself is freed only in the next garbage-collection cycle.
-
-}
-
-@sect3{weak-table| @title{Weak Tables}
-
-A @def{weak table} is a table whose elements are
-@def{weak references}.
-A weak reference is ignored by the garbage collector.
-In other words,
-if the only references to an object are weak references,
-then the garbage collector will collect this object.
-
-A weak table can have weak keys, weak values, or both.
-A table with weak keys allows the collection of its keys,
-but prevents the collection of its values.
-A table with both weak keys and weak values allows the collection of
-both keys and values.
-In any case, if either the key or the value is collected,
-the whole pair is removed from the table.
-The weakness of a table is controlled by the
-@id{__mode} field of its metatable.
-If the @id{__mode} field is a string containing the @N{character @Char{k}},
-the keys in the table are weak.
-If @id{__mode} contains @Char{v},
-the values in the table are weak.
-
-Userdata with @x{finalizers} has a special behavior in weak tables.
-When a userdata is a value in a weak table,
-it is removed from the table the first time it is collected,
-before running its finalizer.
-When it is a key, however,
-it is removed from the table only when it is really freed,
-after running its finalizer.
-This behavior allows the finalizer to access values
-associated with the userdata through weak tables.
-
-A table with weak keys and strong values
-is also called an @def{ephemeron table}.
-In an ephemeron table,
-a value is considered reachable only if its key is reachable.
-In particular,
-if the only reference to a key comes from its value,
-the pair is removed.
-
-After you use a table as a metatable,
-you should not change the value of its @id{__mode} field.
-Otherwise, the weak behavior of the tables controlled by this
-metatable is undefined.
-
-}
-
-}
-
-@sect2{coroutine| @title{Coroutines}
-
-Lua supports coroutines,
-also called @emph{collaborative multithreading}.
-A coroutine in Lua represents an independent thread of execution.
-Unlike threads in multithread systems, however,
-a coroutine only suspends its execution by explicitly calling
-a yield function.
-
-You create a coroutine with a call to @Lid{coroutine.create}.
-Its sole argument is a function
-that is the main function of the coroutine.
-The @id{create} function only creates a new coroutine and
-returns a handle to it (an object of type @emph{thread});
-it does not start the coroutine execution.
-
-When you first call @Lid{coroutine.resume},
-passing as its first argument
-a thread returned by @Lid{coroutine.create},
-the coroutine starts its execution,
-at the first line of its main function.
-Extra arguments passed to @Lid{coroutine.resume} are passed on
-to the coroutine main function.
-After the coroutine starts running,
-it runs until it terminates or @emph{yields}.
-
-A coroutine can terminate its execution in two ways:
-normally, when its main function returns
-(explicitly or implicitly, after the last instruction);
-and abnormally, if there is an unprotected error.
-In the first case, @Lid{coroutine.resume} returns @true,
-plus any values returned by the coroutine main function.
-In case of errors, @Lid{coroutine.resume} returns @false
-plus an error message.
-
-A coroutine yields by calling @Lid{coroutine.yield}.
-When a coroutine yields,
-the corresponding @Lid{coroutine.resume} returns immediately,
-even if the yield happens inside nested function calls
-(that is, not in the main function,
-but in a function directly or indirectly called by the main function).
-In the case of a yield, @Lid{coroutine.resume} also returns @true,
-plus any values passed to @Lid{coroutine.yield}.
-The next time you resume the same coroutine,
-it continues its execution from the point where it yielded,
-with the call to @Lid{coroutine.yield} returning any extra
-arguments passed to @Lid{coroutine.resume}.
-
-Like @Lid{coroutine.create},
-the @Lid{coroutine.wrap} function also creates a coroutine,
-but instead of returning the coroutine itself,
-it returns a function that, when called, resumes the coroutine.
-Any arguments passed to this function
-go as extra arguments to @Lid{coroutine.resume}.
-@Lid{coroutine.wrap} returns all the values returned by @Lid{coroutine.resume},
-except the first one (the boolean error code).
-Unlike @Lid{coroutine.resume},
-@Lid{coroutine.wrap} does not catch errors;
-any error is propagated to the caller.
-
-As an example,
-consider the following code:
-@verbatim{
-function foo (a)
-  print("foo", a)
-  return coroutine.yield(2*a)
-end
-
-co = coroutine.create(function (a,b)
-      print("co-body", a, b)
-      local r = foo(a+1)
-      print("co-body", r)
-      local r, s = coroutine.yield(a+b, a-b)
-      print("co-body", r, s)
-      return b, "end"
-end)
-       
-print("main", coroutine.resume(co, 1, 10))
-print("main", coroutine.resume(co, "r"))
-print("main", coroutine.resume(co, "x", "y"))
-print("main", coroutine.resume(co, "x", "y"))
-}
-When you run it, it produces the following output:
-@verbatim{
-co-body 1       10
-foo     2
-
-main    true    4
-co-body r
-main    true    11      -9
-co-body x       y
-main    true    10      end
-main    false   cannot resume dead coroutine
-}
-
-}
-
 }
 
 
@@ -2033,20 +1991,9 @@ Unless otherwise noted,
 any function that accepts valid indices also accepts @def{pseudo-indices},
 which represent some Lua values that are accessible to @N{C code}
 but which are not in the stack.
-Pseudo-indices are used to access the thread environment,
-the function environment,
-the registry,
+Pseudo-indices are used to access
+the registry
 and the upvalues of a @N{C function} @see{c-closure}.
-
-The environment of the running @N{C function} is always
-at pseudo-index @defid{LUA_ENVIRONINDEX}.
-
-To access and change the value of global variables,
-you can use regular table operations over an environment table.
-For instance, to access the value of a global variable, do
-@verbatim{
-lua_getfield(L, LUA_ENVIRONINDEX, varname);
-}
 
 }
 
@@ -2099,25 +2046,6 @@ The following constants are defined:
 @item{LUA_RIDX_MAINTHREAD| At this index the registry has
 the main thread of the state.
 (The main thread is the one created together with the state.)
-}
-@item{LUA_RIDX_CPCALL| At this index the registry has
-the @defid{cpcall} function.
-This function allows you to call any
-@Lid{lua_CFunction} without creating a closure for it,
-therefore preventing an unprotected @x{memory allocation error}.
-
-The address of the function to be called must be stored in a variable,
-whose address is passed as the first argument to @id{cpcall},
-as a light userdata.
-Note that the light userdata in the first argument should not
-point to the function to be called,
-but to a variable containing the pointer to the function.
-@N{ANSI C} does not allow the direct assignment of a function address to
-the @T{void*} in a light userdata.
-
-Other arguments to @id{cpcall} are passed to the called function.
-The @id{cpcall} function itself should be called with @Lid{lua_pcall},
-like any C function.
 }
 
 @item{LUA_RIDX_GLOBALS| At this index the registry has
@@ -2178,10 +2106,10 @@ To explain continuations,
 let us set some terminology.
 We have a C function called from Lua which we will call
 the @emph{original function}.
-This original function may call one of those three functions in the C API,
+This original function then calls one of those three functions in the C API,
 which we will call the @emph{callee function},
-that may yield the current thread.
-(This will happen when the callee function is @Lid{lua_yieldk},
+that then yields the current thread.
+(This can happen when the callee function is @Lid{lua_yieldk},
 or when the callee function is either @Lid{lua_callk} or @Lid{lua_pcallk}
 and the function called by them yields.)
 
@@ -2239,6 +2167,15 @@ tells whether the function may throw errors:
 only due to not enough memory;
 @Char{e} means the function may throw other kinds of errors;
 @Char{v} means the function may throw an error on purpose.
+
+
+@APIEntry{void lua_absindex (lua_State *L, int idx);|
+@apii{0,0,-}
+
+Converts the @x{acceptable index} @id{idx} into an @x{absolute index}
+(that is, one that does not depend on the stack top).
+
+}
 
 
 @APIEntry{
@@ -2360,14 +2297,14 @@ a = f("how", t.x, 14)
 }
 Here it is @N{in C}:
 @verbatim{
-lua_getfield(L, LUA_ENVIRONINDEX, "f"); /* function to be called */
+lua_getglobal(L, "f");                  /* function to be called */
 lua_pushstring(L, "how");                        /* 1st argument */
-lua_getfield(L, LUA_ENVIRONINDEX, "t");   /* table to be indexed */
+lua_getglobal(L, "t");                    /* table to be indexed */
 lua_getfield(L, -1, "x");        /* push result of t.x (2nd arg) */
 lua_remove(L, -2);                  /* remove 't' from the stack */
 lua_pushinteger(L, 14);                          /* 3rd argument */
 lua_call(L, 3, 1);     /* call 'f' with 3 arguments and 1 result */
-lua_setfield(L, LUA_ENVIRONINDEX, "a");        /* set global 'a' */
+lua_setglobal(L, "a");                         /* set global 'a' */
 }
 Note that the code above is @Q{balanced}:
 at its end, the stack is back to its original configuration.
@@ -2668,10 +2605,7 @@ for the @Q{index} event @see{metatable}.
 @apii{0,1,e}
 
 Pushes onto the stack the value of the global @id{name}.
-It is defined as a macro:
-@verbatim{
-#define lua_getglobal(L,s)  lua_getfield(L, LUA_ENVIRONINDEX, s)
-}
+It is defined as a macro.
 
 }
 
@@ -2885,6 +2819,12 @@ The @id{data} argument is an opaque value passed to the reader function.
 The @id{source} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
 
+If the resulting function has upvalues,
+the first upvalue is set to the value of the @x{global environment}
+stored at index @id{LUA_RIDX_GLOBALS} in the registry @see{registry}.
+(When loading main chunks,
+this upvalue will be the @id{_ENV} variable @see{globalenv}.)
+
 }
 
 @APIEntry{lua_State *lua_newstate (lua_Alloc f, void *ud);|
@@ -3090,10 +3030,15 @@ associated with the function.
 
 The maximum value for @id{n} is 255.
 
+When @id{n} is zero,
+this function creates a @def{light C function},
+which is just a pointer to the @N{C function}.
+In that case, it cannot throw a memory error.
+
 }
 
 @APIEntry{void lua_pushcfunction (lua_State *L, lua_CFunction f);|
-@apii{0,1,m}
+@apii{0,1,-}
 
 Pushes a @N{C function} onto the stack.
 This function receives a pointer to a C function
@@ -3209,7 +3154,7 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
-The string cannot contain embedded zeros;
+The string should not contain embedded zeros;
 it is assumed to end at the first zero.
 
 Returns a pointer to the internal copy of the string.
@@ -3432,10 +3377,7 @@ for the @Q{newindex} event @see{metatable}.
 
 Pops a value from the stack and
 sets it as the new value of global @id{name}.
-It is defined as a macro:
-@verbatim{
-#define lua_setglobal(L,s)   lua_setfield(L, LUA_ENVIRONINDEX, s)
-}
+It is defined as a macro.
 
 }
 
@@ -3888,7 +3830,7 @@ For instance, to know in which line a function @id{f} was defined,
 you can write the following code:
 @verbatim{
 lua_Debug ar;
-lua_getfield(L, LUA_ENVIRONINDEX, "f");  /* get global 'f' */
+lua_getglobal(L, "f");  /* get global 'f' */
 lua_getinfo(L, ">S", &ar);
 printf("%d\n", ar.linedefined);
 }
@@ -4142,6 +4084,12 @@ All functions in the auxiliary library are built on
 top of the basic API,
 and so they provide nothing that cannot be done with that API.
 
+Several functions in the auxiliary library use internally some
+extra stack slots.
+When a function in the auxiliary library uses less than five slots,
+it does not check the stack size;
+it simply assumes that there are enough slots.
+
 Several functions in the auxiliary library are used to
 check @N{C function} arguments.
 Because the error message is formatted for arguments
@@ -4172,7 +4120,7 @@ Adds the character @id{c} to the buffer @id{B}
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
 @seeC{luaL_Buffer}.
-The string may contain embedded zeros.
+The string can contain embedded zeros.
 
 }
 
@@ -4191,7 +4139,7 @@ buffer area @seeC{luaL_prepbuffer}.
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
 @seeC{luaL_Buffer}.
-The string may not contain embedded zeros.
+The string should not contain embedded zeros.
 
 }
 
@@ -4435,19 +4383,6 @@ are using the same address space.
 
 }
 
-@APIEntry{int luaL_cpcall (lua_State *L, lua_CFunction f, int nargs,
-                          int nresults);|
-@apii{0,0,-}
-
-Calls a C function in protected mode.
-
-This function is equivalent to @Lid{lua_pcall},
-but it calls the C function @id{f}
-(instead of a Lua function in the stack)
-and it does not have an error handler function.
-
-}
-
 @APIEntry{int luaL_dofile (lua_State *L, const char *filename);|
 @apii{0,?,m}
 
@@ -4532,7 +4467,7 @@ Returns the @Q{length} of the value at the given acceptable index
 as a number;
 it is equivalent to the @Char{#} operator in Lua @see{len-op}.
 Raises an error if the result of the operation is not a number.
-(This only may happen through metamethods.)
+(This only can happen through metamethods.)
 
 }
 
@@ -4617,8 +4552,42 @@ or @id{NULL} if there is a @x{memory allocation error}.
 
 }
 
+@APIEntry{void luaL_openlib (lua_State *L,
+                             const char *libname,
+                             const luaL_Reg *l,
+                             int nup);|
+@apii{nup + (0|1),1,e}
+
+Opens a library.
+
+When called with @id{libname} equal to @id{NULL},
+it simply registers all functions in the array @id{l}
+@seeC{luaL_Reg} into the table on the top of the stack.
+The pointer @id{l} may be @id{NULL},
+representing an empty list.
+
+When called with a non-null @id{libname},
+@id{luaL_openlib} creates a new table @id{t},
+sets it as the value of the global variable @id{libname},
+sets it as the value of @T{package.loaded[libname]},
+and registers on it all functions in the list @id{l}.
+If there is a table in @T{package.loaded[libname]} or
+in global variable @id{libname},
+reuses this table instead of creating a new one.
+
+In any case the function leaves the table
+on the top of the stack.
+
+When @id{nup} is not zero,
+all functions are created sharing @id{nup} upvalues,
+which must be previously pushed on the stack
+(on top of the library table, if present).
+These values are popped from the stack after the registration.
+
+}
+
 @APIEntry{void luaL_openlibs (lua_State *L);|
-@apii{0,0,m}
+@apii{0,0,e}
 
 Opens all standard Lua libraries into the given state.
 
@@ -4755,7 +4724,7 @@ typedef struct luaL_Reg {
 |
 
 Type for arrays of functions to be registered by
-@Lid{luaL_register}.
+@Lid{luaL_openlib}.
 @id{name} is the function name and @id{func} is a pointer to
 the function.
 Any array of @Lid{luaL_Reg} must end with an sentinel entry
@@ -4770,25 +4739,8 @@ void luaL_register (lua_State *L,
 |
 @apii{0|1,1,m}
 
-Opens a library.
-
-When called with @id{libname} equal to @id{NULL},
-it simply registers all functions in the array @id{l}
-@seeC{luaL_Reg} into the table on the top of the stack.
-The pointer @id{l} may be @id{NULL},
-representing an empty list.
-
-When called with a non-null @id{libname},
-@id{luaL_register} creates a new table @id{t},
-sets it as the value of the global variable @id{libname},
-sets it as the value of @T{package.loaded[libname]},
-and registers on it all functions in the list @id{l}.
-If there is a table in @T{package.loaded[libname]} or in
-variable @id{libname},
-reuses this table instead of creating a new one.
-
-In any case the function leaves the table
-on the top of the stack.
+This macro is equivalent to calling @Lid{luaL_openlib}
+with no upvalues.
 
 }
 
@@ -5051,7 +5003,7 @@ to the message.
 
 @LibEntry{_G|
 A global variable (not a function) that
-holds the @x{global environment} (so that @T{_G._G = _G}).
+holds the @x{global environment} @see{globalenv}.
 Lua itself does not use this variable;
 changing its value does not affect any environment,
 nor vice-versa.
@@ -5065,24 +5017,6 @@ Otherwise,
 if the object's metatable has a @T{"__metatable"} field,
 returns the associated value.
 Otherwise, returns the metatable of the given object.
-
-}
-
-@LibEntry{ipairs (t)|
-
-If @id{t} has a metamethod @id{__ipairs},
-calls it with @id{t} as argument and returns the first three
-results from the call.
-
-Otherwise,
-returns three values: an iterator function, the table @id{t}, and 0,
-so that the construction
-@verbatim{
-for i,v in ipairs(t) do @rep{body} end
-}
-will iterate over the pairs (@T{1,t[1]}), (@T{2,t[2]}), @Cdots,
-up to the length of the table,
-as defined by the length operator @see{len-op}.
 
 }
 
@@ -5101,7 +5035,10 @@ If @id{ld} is a string, the chunk is this string.
 If there are no errors, 
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
-The environment of the returned function is the global environment.
+If the resulting function has upvalues,
+the first upvalue is set to the value of the @x{global environment}
+(When loading main chunks,
+this upvalue will be the @id{_ENV} variable @see{globalenv}.)
 
 @id{source} is used as the source of the chunk for error messages
 and debug information @see{debugI}.
@@ -5119,8 +5056,9 @@ The default is @St{bt}.
 @LibEntry{loadin (env, ...)|
 
 This function is similar to @Lid{load},
-but sets @id{env} as the environment
+but sets @id{env} as the value of the first upvalue
 of the created function in case of success.
+(Usually this first upvalue will be @id{_ENV} @see{globalenv}.)
 The parameters after @id{env} are similar to those of @Lid{load}, too.
 
 }
@@ -5169,7 +5107,7 @@ you can use @T{next(t)} to check whether a table is empty.
 The order in which the indices are enumerated is not specified,
 @emph{even for numeric indices}.
 (To traverse a table in numeric order,
-use a numerical @Rw{for} or the @Lid{ipairs} function.)
+use a numerical @Rw{for}.)
 
 The behavior of @id{next} is @emph{undefined} if,
 during the traversal,
@@ -6001,8 +5939,6 @@ represents the character @emph{x} itself.
 
 @item{@T{%x}| represents all hexadecimal digits.}
 
-@item{@T{%z}| represents the character with representation 0.}
-
 @item{@T{%@rep{x}}| (where @rep{x} is any non-alphanumeric character)
 represents the character @rep{x}.
 This is the standard way to escape the magic characters.
@@ -6138,8 +6074,6 @@ the current string position (a number).
 For instance, if we apply the pattern @T{"()aa()"} on the
 string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 
-A pattern cannot contain embedded zeros.  Use @T{%z} instead.
-
 }
 
 }
@@ -6204,9 +6138,9 @@ Sorts table elements in a given order, @emph{in-place},
 from @T{table[1]} to @T{table[n]},
 where @id{n} is the length of the table.
 If @id{comp} is given,
-then it must be a function that receives two table elements,
-and returns true
-when the first is less than the second
+then it must be a function that receives two table elements
+and returns true when the first element must come
+before the second in the final order
 (so that @T{not comp(a[i+1],a[i])} will be true after the sort).
 If @id{comp} is not given,
 then the standard Lua operator @T{<} is used instead.
@@ -6640,7 +6574,7 @@ that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
 
 By default, @id{lines} removes the newline at the end of each line.
-If @id{keepNL} is @rw{true}, it will keep the newlines.
+If @id{keepNL} is @Rw{true}, it will keep the newlines.
 
 }
 
@@ -6748,7 +6682,7 @@ starting at the current position.
 when the loop ends.)
 
 By default, @id{lines} removes the newline at the end of each line.
-If @id{keepNL} is @rw{true}, it will keep the newlines.
+If @id{keepNL} is @Rw{true}, it will keep the newlines.
 
 }
 
@@ -7306,7 +7240,7 @@ $ lua -e'a=1' -e 'print(a)' script.lua
 }
 will first set @id{a} to 1, then print the value of @id{a} (which is @Char{1}),
 and finally run the file @id{script.lua} with no arguments.
-(Here @T{$} is the shell prompt. Your prompt may be different.)
+(Here @T{$} is the shell prompt. Your prompt can be different.)
 
 Before starting to run the script,
 @id{lua} collects all arguments in the command line
@@ -7376,7 +7310,7 @@ as in
 #!/usr/local/bin/lua
 }
 (Of course,
-the location of the Lua interpreter may be different in your machine.
+the location of the Lua interpreter can be different in your machine.
 If @id{lua} is in your @id{PATH},
 then 
 @verbatim{
@@ -7389,7 +7323,7 @@ is a more portable solution.)
 
 @sect1{incompat| @title{Incompatibilities with the Previous Version}
 
-Here we list the incompatibilities that you may find when moving a program
+Here we list the incompatibilities that you can find when moving a program
 from @N{Lua 5.1} to @N{Lua 5.2}.
 You can avoid some incompatibilities compiling Lua with
 appropriate options (see file @id{luaconf.h}).
@@ -7417,6 +7351,13 @@ Threads do not have individual environments.
 All threads share a single fixed environment.
 }
 
+@item{
+The event @emph{tail return} in debug hooks was removed.
+Instead, tail calls generate a special new event,
+@emph{tail call}, so that the debuger can know there will
+not be a corresponding return event.
+}
+
 }
 
 }
@@ -7432,9 +7373,13 @@ You must explicitly require it.
 @item{
 Functions @id{setfenv} and @id{getfenv} are deprecated.
 To set the environment of a Lua function,
-use lexical environments or the new function @Lid{loadin}.
-(If you really need them,
-you may use their equivalents in the debug library.)
+use the variable @id{_ENV} or the new function @Lid{loadin}.
+}
+
+@item{
+Function @id{ipairs} is deprecated.
+Use a numerical for loop instead,
+or write it in Lua.
 }
 
 @item{
@@ -7452,6 +7397,23 @@ Function @id{unpack} was moved into the table library
 and therefore must be called as @Lid{table.unpack}.
 }
 
+@item{
+Character class @T{%z} in patterns is deprecated,
+as now patterns may contain @Char{\0} as a regular character.
+}
+
+@item{
+Lua does not have bytecode verification anymore.
+So, all functions that load code
+(@Lid{load}, @Lid{loadfile}, @Lid{loadstring})
+are potentially insecure when loading untrusted binary data.
+(Actually, those functions were already insecure because
+of bugs in the verification algorithm.)
+When in doubt,
+use the @id{mode} argument in function @Lid{load}
+to restrict it to loading textual chunks.
+}
+
 }
 
 }
@@ -7461,10 +7423,17 @@ and therefore must be called as @Lid{table.unpack}.
 
 @item{
 Pseudoindex @id{LUA_GLOBALSINDEX} was removed.
-You may use the pseudoindex @Lid{LUA_ENVIRONINDEX} instead,
-if the @N{C function} does not change its standard environment.
-Otherwise, you should get the global environment from the registry
+You must get the global environment from the registry
 @see{registry}.
+}
+
+@item{
+Pseudoindex @id{LUA_ENVIRONINDEX} was removed.
+C functions do not have environments any more.
+Use an upvalue with a shared table if you need to keep
+shared state among several C functions.
+(You may use @Lid{luaL_openlib} to open a C library
+with all functions sharing a common upvalue.)
 }
 
 @item{
@@ -7481,8 +7450,8 @@ to have a correct spelling.
 
 @item{
 Function @id{lua_cpcall} is deprecated.
-Use the new @id{cpcall} function defined in the registry instead
-@see{registry}.
+You can simply push the function with @Lid{lua_pushcfunction}
+and call it with @Lid{lua_pcall}.
 }
 
 @item{
@@ -7511,13 +7480,14 @@ Here is the complete syntax of Lua in extended BNF.
 
 @Produc{
 
-@producname{chunk}@producbody{@bnfrep{stat @bnfopt{@bnfter{;}}}
+@producname{chunk}@producbody{@bnfrep{stat}
                               @bnfopt{laststat @bnfopt{@bnfter{;}}}}
 
 @producname{block}@producbody{chunk}
 
 @producname{stat}@producbody{
-	varlist @bnfter{=} explist
+	@bnfter{;}
+@OrNL	varlist @bnfter{=} explist
 @OrNL	functioncall
 @OrNL	@Rw{do} block @Rw{end}
 @OrNL	@Rw{while} exp @Rw{do} block @Rw{end}
