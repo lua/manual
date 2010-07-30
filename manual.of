@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.56 2010/05/17 18:28:03 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.57 2010/07/30 14:48:40 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2270,13 +2270,13 @@ The function follows the semantics of the corresponding Lua operator
 The value of @id{op} must be one of the following constants:
 @description{
 
-@item{@@defid{LUA_OPADD}|performs addition (@T{+})}
-@item{@@defid{LUA_OPSUB}|performs subtraction (@T{-})}
-@item{@@defid{LUA_OPMUL}|performs multiplication (@T{*})}
-@item{@@defid{LUA_OPDIV}|performs division (@T{/})}
-@item{@@defid{LUA_OPMOD}|performs modulo (@T{%})}
-@item{@@defid{LUA_OPPOw}|performs exponentiation (@T{^})}
-@item{@@defid{LUA_OPUNM}|performs mathematical negation (unary @T{-})}
+@item{@defid{LUA_OPADD}|performs addition (@T{+})}
+@item{@defid{LUA_OPSUB}|performs subtraction (@T{-})}
+@item{@defid{LUA_OPMUL}|performs multiplication (@T{*})}
+@item{@defid{LUA_OPDIV}|performs division (@T{/})}
+@item{@defid{LUA_OPMOD}|performs modulo (@T{%})}
+@item{@defid{LUA_OPPOw}|performs exponentiation (@T{^})}
+@item{@defid{LUA_OPUNM}|performs mathematical negation (unary @T{-})}
 
 }
 
@@ -2443,9 +2443,9 @@ Also @N{returns 0} if any of the indices is non valid.
 The value of @id{op} must be one of the following constants:
 @description{
 
-@item{@@defid{LUA_OPEQ}|compares for equality (@T{==})}
-@item{@@defid{LUA_OPLT}|compares for less than (@T{<})}
-@item{@@defid{LUA_OPLE}|compares for less or equal (@T{<=})}
+@item{@defid{LUA_OPEQ}|compares for equality (@T{==})}
+@item{@defid{LUA_OPLT}|compares for less than (@T{<})}
+@item{@defid{LUA_OPLE}|compares for less or equal (@T{<=})}
 
 }
 
