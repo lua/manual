@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.55 2010/03/19 15:39:30 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.56 2010/05/17 18:28:03 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -807,6 +807,10 @@ main    true    10      end
 main    false   cannot resume dead coroutine
 }
 
+You can also create and manipulate coroutines through the C API:
+see functions @Lid{lua_newthread}, @Lid{lua_resume},
+and @Lid{lua_yield}.
+
 }
 
 }
@@ -1023,20 +1027,40 @@ This set includes
 assignments, control structures, function calls,
 and variable declarations.
 
-@sect3{chunks| @title{Chunks}
+@sect3{@title{Blocks}
 
-The unit of execution of Lua is called a @def{chunk}.
-A chunk is simply a sequence of statements,
-which are executed sequentially.
+A @x{block} is a list of statements,
+which are executed sequentially:
 @Produc{
-@producname{chunk}@producbody{@bnfrep{stat }}
+@producname{block}@producbody{@bnfrep{stat}}
 }
 Lua has @def{empty statements}
 that allow you to separate statements with semicolons,
-start a chunk with a semicolon
+start a block with a semicolon
 or write two semicolons in sequence:
 @Produc{
 @producname{stat}@producbody{@bnfter{;}}
+}
+
+A block can be explicitly delimited to produce a single statement:
+@Produc{
+@producname{stat}@producbody{@Rw{do} block @Rw{end}}
+}
+Explicit blocks are useful
+to control the scope of variable declarations.
+Explicit blocks are also sometimes used to
+add a @Rw{return} or @Rw{break} statement in the middle
+of another block @see{control}.
+
+}
+
+@sect3{chunks| @title{Chunks}
+
+The unit of execution of Lua is called a @def{chunk}.
+Syntactically,
+a chunk is simply a block:
+@Produc{
+@producname{chunk}@producbody{block}
 }
 
 Lua handles a chunk as the body of an anonymous function 
@@ -1058,25 +1082,6 @@ see program @idx{luac} for details.
 Programs in source and compiled forms are interchangeable;
 Lua automatically detects the file type and acts accordingly.
 @index{pre-compilation}
-
-}
-
-@sect3{@title{Blocks}
-A @x{block} is a list of statements;
-syntactically, a block is the same as a chunk:
-@Produc{
-@producname{block}@producbody{chunk}
-}
-
-A block can be explicitly delimited to produce a single statement:
-@Produc{
-@producname{stat}@producbody{@Rw{do} block @Rw{end}}
-}
-Explicit blocks are useful
-to control the scope of variable declarations.
-Explicit blocks are also sometimes used to
-add a @Rw{return} or @Rw{break} statement in the middle
-of another block @see{control}.
 
 }
 
@@ -1432,7 +1437,7 @@ Lua supports the usual @x{arithmetic operators}:
 the binary @T{+} (addition),
 @T{-} (subtraction), @T{*} (multiplication),
 @T{/} (division), @T{%} (modulo), and @T{^} (exponentiation);
-and unary @T{-} (negation).
+and unary @T{-} (mathematical negation).
 If the operands are numbers, or strings that can be converted to
 numbers @see{coercion},
 then all operations have the usual meaning.
@@ -1472,12 +1477,15 @@ Equality (@T{==}) first compares the type of its operands.
 If the types are different, then the result is @false.
 Otherwise, the values of the operands are compared.
 Numbers and strings are compared in the usual way.
-Objects (tables, userdata, threads, and functions)
+Tables, userdata, and threads
 are compared by @emph{reference}:
 two objects are considered equal only if they are the @emph{same} object.
 Every time you create a new object
-(a table, userdata, thread, or function),
+(a table, userdata, or thread),
 this new object is different from any previously existing object.
+Closures with the same reference are always equal.
+Closures with any detectable difference
+(different behavior, different definition) are always different.
 
 You can change the way that Lua compares tables and userdata 
 by using the @Q{eq} metamethod @see{metatable}.
@@ -1550,10 +1558,10 @@ The length of a string is its number of bytes
 (that is, the usual meaning of string length when each
 character is one byte).
 
-The length of a table @id{t} is defined to be any
-integer index @id{n}
+The length of a table @id{t} can be any integer index @id{n}
 such that @T{t[n]} is not @nil and @T{t[n+1]} is @nil;
 moreover, if @T{t[1]} is @nil, @id{n} can be zero.
+(All accesses are assumed to be raw for this description.)
 For a regular array, where all non-nil values
 have keys from 1 to a given @id{n},
 its length is exactly that @id{n},
@@ -1763,8 +1771,7 @@ the function is @emph{instantiated} (or @emph{closed}).
 This function instance (or @emph{closure})
 is the final value of the expression.
 Different instances of the same function
-can refer to different  external local variables
-and can have different environment tables.
+can refer to different  external local variables.
 
 Parameters act as local variables that are
 initialized with the argument values:
@@ -2169,7 +2176,7 @@ only due to not enough memory;
 @Char{v} means the function may throw an error on purpose.
 
 
-@APIEntry{void lua_absindex (lua_State *L, int idx);|
+@APIEntry{int lua_absindex (lua_State *L, int idx);|
 @apii{0,0,-}
 
 Converts the @x{acceptable index} @id{idx} into an @x{absolute index}
@@ -2248,6 +2255,33 @@ that @T{free(NULL)} has no effect and that
 It also assumes that @id{realloc} does not fail when shrinking a block.
 (@N{ANSI C} does not ensure this behavior,
 but it seems a safe assumption.)
+
+}
+
+@APIEntry{int lua_arith (lua_State *L, int op);|
+@apii{2,1,e}
+
+Performs an arithmetic operation over the two values at the top
+of the stack (with the value at the top being the second operand),
+pops these values, and pushes the result of the operation.
+The function follows the semantics of the corresponding Lua operator
+(that is, it may call metamethods).
+
+The value of @id{op} must be one of the following constants:
+@description{
+
+@item{@@defid{LUA_OPADD}|performs addition (@T{+})}
+@item{@@defid{LUA_OPSUB}|performs subtraction (@T{-})}
+@item{@@defid{LUA_OPMUL}|performs multiplication (@T{*})}
+@item{@@defid{LUA_OPDIV}|performs division (@T{/})}
+@item{@@defid{LUA_OPMOD}|performs modulo (@T{%})}
+@item{@@defid{LUA_OPPOw}|performs exponentiation (@T{^})}
+@item{@@defid{LUA_OPUNM}|performs mathematical negation (unary @T{-})}
+
+}
+
+When the operation is @id{LUA_OPUNM},
+the caller must push a @nil value for the second operand.
 
 }
 
@@ -2402,7 +2436,7 @@ to avoid growing too large.
 Returns 1 if the value at acceptable index @id{index1} satisfies @id{op}
 when compared with the value at acceptable index @id{index2},
 following the semantics of the corresponding Lua operator
-(that is, may call metamethods).
+(that is, it may call metamethods).
 Otherwise @N{returns 0}.
 Also @N{returns 0} if any of the indices is non valid.
 
@@ -2583,11 +2617,12 @@ as in the case of an yield.
 
 }
 
-@APIEntry{void lua_getfenv (lua_State *L, int index);|
+@APIEntry{void lua_getuservalue (lua_State *L, int index);|
 @apii{0,1,-}
 
-Pushes onto the stack the environment table of
-the value at the given index.
+Pushes onto the stack the Lua value associated with the userdata
+at the given index.
+This Lua value must be a table or @nil.
 
 }
 
@@ -3061,7 +3096,7 @@ and return its results @seeC{lua_CFunction}.
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
-It is similar to the @N{C function} @id{sprintf},
+It is similar to the @ANSI{sprintf},
 but has some important differences:
 @itemize{
 
@@ -3347,14 +3382,13 @@ with user data @id{ud}.
 
 }
 
-@APIEntry{int lua_setfenv (lua_State *L, int index);|
+@APIEntry{int lua_setuservalue (lua_State *L, int index);|
 @apii{1,0,-}
 
-Pops a table from the stack and sets it as
-the new environment for the value at the given index.
-If the value at the given index is
-neither a function nor a userdata,
-@Lid{lua_setfenv} returns 0.
+Pops a table or @nil from the stack and sets it as
+the new value associated to the userdata at the given index.
+If the value at the given index is not a userdata,
+@id{lua_setuservalue} returns 0.
 Otherwise it returns 1.
 
 }
@@ -3417,7 +3451,7 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 
 @APIEntry{typedef struct lua_State lua_State;|
 
-Opaque structure that keeps the whole state of a Lua interpreter.
+An opaque structure that keeps the whole state of a Lua interpreter.
 The Lua library is fully reentrant:
 it has no global variables.
 All information about a state is kept in this structure.
@@ -3437,6 +3471,11 @@ The status can be 0 (@Lid{LUA_OK}) for a normal thread,
 an error code if the thread finished the execution
 of a @Lid{lua_resume} with an error,
 or @defid{LUA_YIELD} if the thread is suspended.
+
+You can only call functions in threads with status @Lid{LUA_OK}.
+You can resume threads with status @Lid{LUA_OK}
+(to start a new coroutine) or @Lid{LUA_YIELD}
+(to resume a corotine).
 
 }
 
@@ -3467,14 +3506,26 @@ otherwise, returns @id{NULL}.
 @APIEntry{lua_Integer lua_tointeger (lua_State *L, int index);|
 @apii{0,0,-}
 
+A macro equivalent to @T{lua_tointegerx(L, index, NULL)}.
+
+}
+
+@APIEntry{lua_Integer lua_tointegerx (lua_State *L, int index, int *isnum);|
+@apii{0,0,-}
+
 Converts the Lua value at the given acceptable index
 to the signed integral type @Lid{lua_Integer}.
 The Lua value must be a number or a string convertible to a number
 @see{coercion};
-otherwise, @Lid{lua_tointeger} @N{returns 0}.
+otherwise, @Lid{lua_tointegerx} @N{returns 0}.
 
 If the number is not an integer,
 it is truncated in some non-specified way.
+
+If @id{isnum} is different from @id{NULL},
+its referent is assigned a boolean value that
+indicates whether the operation succeeded.
+
 
 }
 
@@ -3506,11 +3557,22 @@ will be valid after the corresponding value is removed from the stack.
 @APIEntry{lua_Number lua_tonumber (lua_State *L, int index);|
 @apii{0,0,-}
 
+A macro equivalent to @T{lua_tonumberx(L, index, NULL)}.
+
+}
+
+@APIEntry{lua_Number lua_tonumberx (lua_State *L, int index, int *isnum);|
+@apii{0,0,-}
+
 Converts the Lua value at the given acceptable index
 to the @N{C type} @Lid{lua_Number} @seeC{lua_Number}.
 The Lua value must be a number or a string convertible to a number
 @see{coercion};
-otherwise, @Lid{lua_tonumber} @N{returns 0}.
+otherwise, @Lid{lua_tonumberx} @N{returns 0}.
+
+If @id{isnum} is different from @id{NULL},
+its referent is assigned a boolean value that
+indicates whether the operation succeeded.
 
 }
 
@@ -3702,7 +3764,7 @@ typedef struct lua_Debug {
 |
 
 A structure used to carry different pieces of
-information about an active function.
+information about a function or an activation record.
 @Lid{lua_getstack} fills only the private part
 of this structure, for later use.
 To fill the other fields of @Lid{lua_Debug} with useful information,
@@ -3880,8 +3942,11 @@ This function returns 0 on error
 @APIEntry{const char *lua_getlocal (lua_State *L, lua_Debug *ar, int n);|
 @apii{0,0|1,-}
 
-Gets information about a local variable of a given activation record.
-The parameter @id{ar} must be a valid activation record that was
+Gets information about a local variable of
+a given activation record or a given function.
+
+In the first case,
+the parameter @id{ar} must be a valid activation record that was
 filled by a previous call to @Lid{lua_getstack} or
 given as argument to a hook @seeC{lua_Hook}.
 The index @id{n} selects which local variable to inspect
@@ -3893,6 +3958,12 @@ and returns its name.
 Variable names starting with @Char{(} (open parentheses)
 represent internal variables
 (loop control variables, temporaries, and @N{C function} locals).
+
+In the second case, @id{ar} should be @id{NULL} and the function
+to be inspected must be at the top of the stack.
+In this case, only parameters of Lua functions are visible
+(as there is no information about what variables are active)
+and no values are pushed onto the stack.
 
 Returns @id{NULL} (and pushes nothing)
 when the index is greater than
@@ -4522,6 +4593,22 @@ it does not run it.
 
 }
 
+
+@APIEntry{int luaL_newlib (lua_State *L, const luaL_Reg *l);|
+@apii{0,1,m}
+
+Equivalent to @Lid{luaL_setfuncs} with no upvalues,
+but first creates a new table wherein to register the functions
+in list @id{l}. 
+
+Leaves the new table on the stack.
+
+It is implemented as a macro.
+The array @id{l} must be the actual array,
+not a pointer to it.
+
+}
+
 @APIEntry{int luaL_newmetatable (lua_State *L, const char *tname);|
 @apii{0,1,m}
 
@@ -4552,36 +4639,19 @@ or @id{NULL} if there is a @x{memory allocation error}.
 
 }
 
-@APIEntry{void luaL_openlib (lua_State *L,
-                             const char *libname,
-                             const luaL_Reg *l,
-                             int nup);|
-@apii{nup + (0|1),1,e}
+@APIEntry{void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);|
+@apii{nup,0,e}
 
-Opens a library.
-
-When called with @id{libname} equal to @id{NULL},
-it simply registers all functions in the array @id{l}
-@seeC{luaL_Reg} into the table on the top of the stack.
+Registers all functions in the array @id{l}
+@seeC{luaL_Reg} into the table on the top of the stack
+(below optional upvalues, see next).
 The pointer @id{l} may be @id{NULL},
 representing an empty list.
-
-When called with a non-null @id{libname},
-@id{luaL_openlib} creates a new table @id{t},
-sets it as the value of the global variable @id{libname},
-sets it as the value of @T{package.loaded[libname]},
-and registers on it all functions in the list @id{l}.
-If there is a table in @T{package.loaded[libname]} or
-in global variable @id{libname},
-reuses this table instead of creating a new one.
-
-In any case the function leaves the table
-on the top of the stack.
 
 When @id{nup} is not zero,
 all functions are created sharing @id{nup} upvalues,
 which must be previously pushed on the stack
-(on top of the library table, if present).
+on top of the library table.
 These values are popped from the stack after the registration.
 
 }
@@ -4724,7 +4794,7 @@ typedef struct luaL_Reg {
 |
 
 Type for arrays of functions to be registered by
-@Lid{luaL_openlib}.
+@Lid{luaL_setfuncs}.
 @id{name} is the function name and @id{func} is a pointer to
 the function.
 Any array of @Lid{luaL_Reg} must end with an sentinel entry
@@ -4732,15 +4802,18 @@ in which both @id{name} and @id{func} are @id{NULL}.
 
 }
 
-@APIEntry{
-void luaL_register (lua_State *L,
-                    const char *libname,
-                    const luaL_Reg *l);
-|
-@apii{0|1,1,m}
+@APIEntry{void luaL_requiref (lua_State *L, const char *modname,
+                              lua_CFunction openf, int glb);|
+@apii{0,1,e}
 
-This macro is equivalent to calling @Lid{luaL_openlib}
-with no upvalues.
+Calls function @id{openf} with string @id{modname} as an argument
+and sets the call result in @T{package.loaded[modname]},
+as if that function has been called through @Lid{require}.
+
+If @id{glb} is true,
+also stores the result into global @id{modname}.
+
+Leaves a copy of that result on the stack.
 
 }
 
@@ -4855,9 +4928,11 @@ and are provided as separate @N{C modules}.
 Currently, Lua has the following standard libraries:
 @itemize{
 
-@item{basic library, which includes the coroutine sub-library;}
+@item{basic library;}
 
 @item{package library;}
+
+@item{coroutine library;}
 
 @item{string manipulation;}
 
@@ -4885,6 +4960,7 @@ Alternatively,
 it can open them individually by calling
 @defid{luaopen_base} (for the basic library),
 @defid{luaopen_package} (for the package library),
+@defid{luaopen_coroutine} (for the coroutine library),
 @defid{luaopen_string} (for the string library),
 @defid{luaopen_table} (for the table library),
 @defid{luaopen_math} (for the mathematical library),
@@ -5017,6 +5093,23 @@ Otherwise,
 if the object's metatable has a @T{"__metatable"} field,
 returns the associated value.
 Otherwise, returns the metatable of the given object.
+
+}
+
+@LibEntry{ipairs (t)|
+
+If @id{t} has a metamethod @id{__ipairs},
+calls it with @id{t} as argument and returns the first three
+results from the call.
+
+Otherwise,
+returns three values: an iterator function, the table @id{t}, and 0,
+so that the construction
+@verbatim{
+for i,v in ipairs(t) do @rep{body} end
+}
+will iterate over the pairs (@T{1,t[1]}), (@T{2,t[2]}), @Cdots,
+up to the first integer key absent from the table.
 
 }
 
@@ -5356,48 +5449,11 @@ Any arguments to @id{yield} are passed as extra results to @id{resume}.
 @sect2{@title{Modules}
 
 The package library provides basic
-facilities for loading and building modules in Lua.
-It exports two of its functions directly in the global environment:
-@Lid{require} and @Lid{module}.
+facilities for loading modules in Lua.
+It exports one function directly in the global environment:
+@Lid{require}.
 Everything else is exported in a table @defid{package}.
 
-
-@LibEntry{module (name [, @Cdots])|
-
-Creates and returns a module.
-If there is a table in @T{package.loaded[name]},
-this table is the module.
-Otherwise, if there is a global table @id{t} with the given name,
-this table is the module.
-Otherwise creates a new table @id{t} and
-sets it as the value of the global @id{name} and
-the value of @T{package.loaded[name]}.
-This function also initializes @id{t._NAME} with the given name,
-@id{t._M} with the module (@id{t} itself),
-and @id{t._PACKAGE} with the package name
-(the full module name minus last component; see below).
-Finally, @id{module} sets @id{t} as the new value of @T{package.loaded[name]},
-so that @Lid{require} returns @id{t}.
-
-The @id{module} function returns the module table @id{t}.
-
-If @id{name} is a compound name
-(that is, one with components separated by dots),
-@id{module} creates (or reuses, if they already exist)
-tables for each component.
-For instance, if @id{name} is @id{a.b.c},
-then @id{module} stores the module table in field @id{c} of
-field @id{b} of global @id{a}.
-
-This function can receive optional @emph{options} after
-the module name,
-where each option is a function to be applied over the module.
-
-To keep compatibility with old versions of Lua,
-@id{module} also sets @id{t} as the new environment
-of the current function.
-
-}
 
 @LibEntry{require (modname)|
 
@@ -5475,7 +5531,8 @@ The path used by @Lid{require} to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
-using the environment variable @defid{LUA_CPATH}
+using the environment variable @defid{LUA_CPATH_5_2}
+or the environment variable @defid{LUA_CPATH}
 or a default path defined in @id{luaconf.h}.
 
 }
@@ -5590,7 +5647,8 @@ plus other Unix systems that support the @id{dlfcn} standard).
 The path used by @Lid{require} to search for a Lua loader.
 
 At start-up, Lua initializes this variable with
-the value of the environment variable @defid{LUA_PATH} or
+the value of the environment variable @defid{LUA_PATH_5_2} or
+the environment variable @defid{LUA_PATH} or
 with a default path defined in @id{luaconf.h},
 if the environment variable is not defined.
 Any @St{;;} in the value of the environment variable
@@ -5629,16 +5687,6 @@ Returns the resulting name of the first file that it can
 open in read mode (after closing the file),
 or @nil plus an error message if none succeeds.
 (This error message lists all file names it tried to open.)
-
-}
-
-@LibEntry{package.seeall (module)|
-
-Sets a metatable for @id{module} with
-its @id{__index} field referring to the global environment,
-so that this module inherits values
-from the global environment.
-To be used as an option to function @Lid{module}.
 
 }
 
@@ -5695,6 +5743,7 @@ a copy of the function.
 }
 
 @LibEntry{string.find (s, pattern [, init [, plain]])|
+
 Looks for the first match of
 @id{pattern} in the string @id{s}.
 If it finds a match, then @id{find} returns the indices @N{of @T{s}}
@@ -5717,10 +5766,10 @@ after the two indices.
 }
 
 @LibEntry{string.format (formatstring, @Cdots)|
+
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
-The format string follows the same rules as the @id{printf} family of
-standard @N{C functions}.
+The format string follows the same rules as the @ANSI{sprintf}.
 The only differences are that the options/modifiers
 @T{*}, @id{l}, @id{L}, @id{n}, @id{p},
 and @id{h} are not supported
@@ -5926,6 +5975,8 @@ represents the character @emph{x} itself.
 @item{@T{%c}| represents all control characters.}
 
 @item{@T{%d}| represents all digits.}
+
+@item{@T{%g}| represents all printable characters except space.}
 
 @item{@T{%l}| represents all lowercase letters.}
 
@@ -6536,7 +6587,7 @@ Without a @id{file}, closes the default output file.
 
 @LibEntry{io.flush ()|
 
-Equivalent to @T{file:flush} over the default output file.
+Equivalent to @T{io.output():flush()}.
 
 }
 
@@ -6621,7 +6672,7 @@ on all platforms.
 
 @LibEntry{io.read (@Cdots)|
 
-Equivalent to @T{io.input():read}.
+Equivalent to @T{io.input():read(@Cdots)}.
 
 }
 
@@ -6644,7 +6695,7 @@ or @nil if @id{obj} is not a file handle.
 
 @LibEntry{io.write (@Cdots)|
 
-Equivalent to @T{io.output():write}.
+Equivalent to @T{io.output():write(@Cdots)}.
 
 
 }
@@ -6839,7 +6890,7 @@ and @id{isdst} (daylight saving flag, a boolean).
 
 If @id{format} is not @St{*t},
 then @id{date} returns the date as a string,
-formatted according to the same rules as the @N{C function} @id{strftime}.
+formatted according to the same rules as the @ANSI{strftime}.
 
 When called without arguments,
 @id{date} returns a reasonable date and time representation that depends on
@@ -6858,7 +6909,7 @@ this value is exactly @id{t2}@M{-}@id{t1}.
 
 @LibEntry{os.execute ([command])|
 
-This function is equivalent to the @N{C function} @id{system}.
+This function is equivalent to the @ANSI{system}.
 It passes @id{command} to be executed by an operating system shell.
 It returns a status code, which is system-dependent.
 If @id{command} is absent, then it returns nonzero if a shell is available
@@ -6868,7 +6919,7 @@ and zero otherwise.
 
 @LibEntry{os.exit ([code [, close])|
 
-Calls the @N{C function} @id{exit},
+Calls the @ANSI{exit},
 with an optional @id{code},
 to terminate the host program.
 The default value for @id{code} is the success code.
@@ -7001,8 +7052,9 @@ within any function, and so have no direct access to local variables.
 
 }
 
-@LibEntry{debug.getfenv (o)|
-Returns the environment of object @id{o}.
+@LibEntry{debug.getuservalue (u)|
+
+Returns the Lua value associated to userdata @id{u}.
 
 }
 
@@ -7050,20 +7102,23 @@ about the @Lid{print} function.
 
 }
 
-@LibEntry{debug.getlocal ([thread,] level, local)|
+@LibEntry{debug.getlocal ([thread,] f, local)|
 
 This function returns the name and the value of the local variable
-with index @id{local} of the function at level @id{level} of the stack.
+with index @id{local} of the function at level @id{f} of the stack.
 (The first parameter or local variable has @N{index 1}, and so on,
 until the last active local variable.)
 The function returns @nil if there is no local
 variable with the given index,
-and raises an error when called with a @id{level} out of range.
+and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
 
 Variable names starting with @Char{(} (open parentheses)
 represent internal variables
 (loop control variables, temporaries, and @N{C function} locals).
+
+The parameter @id{f} may also be a function.
+In that case, @id{getlocal} returns only the name of function parameters.
 
 }
 
@@ -7088,10 +7143,13 @@ The function returns @nil if there is no upvalue with the given index.
 
 }
 
-@LibEntry{debug.setfenv (object, table)|
+@LibEntry{debug.setuservalue (udata, value)|
 
-Sets the environment of the given @id{object} to the given @id{table}.
-Returns @id{object}.
+Sets the given @id{value} as
+the Lua value associated to the given @id{udata}.
+@id{value} must be a table or @nil.
+
+Returns @id{udata}.
 
 }
 
@@ -7228,7 +7286,8 @@ when the standard input (@id{stdin}) is a terminal,
 and as @T{lua -} otherwise.
 
 Before running any argument,
-the interpreter checks for an environment variable @defid{LUA_INIT}.
+the interpreter checks for an environment variable @defid{LUA_INIT_5_2}
+(or @defid{LUA_INIT} if it is not defined).
 If its format is @T{@At@rep{filename}},
 then @id{lua} executes the file.
 Otherwise, @id{lua} executes the string itself.
@@ -7366,6 +7425,12 @@ not be a corresponding return event.
 @itemize{
 
 @item{
+Function @id{module} is deprecated.
+Modules are not expected to set global variables anymore,
+and it is easy to set up a module with regular Lua code.
+}
+
+@item{
 The debug library is not loaded by default.
 You must explicitly require it.
 }
@@ -7374,12 +7439,6 @@ You must explicitly require it.
 Functions @id{setfenv} and @id{getfenv} are deprecated.
 To set the environment of a Lua function,
 use the variable @id{_ENV} or the new function @Lid{loadin}.
-}
-
-@item{
-Function @id{ipairs} is deprecated.
-Use a numerical for loop instead,
-or write it in Lua.
 }
 
 @item{
@@ -7428,19 +7487,19 @@ You must get the global environment from the registry
 }
 
 @item{
-Pseudoindex @id{LUA_ENVIRONINDEX} was removed.
+Pseudoindex @id{LUA_ENVIRONINDEX}
+and functions @id{lua_getfenv}/@id{lua_setfenv}
+were removed.
 C functions do not have environments any more.
 Use an upvalue with a shared table if you need to keep
 shared state among several C functions.
-(You may use @Lid{luaL_openlib} to open a C library
+(You may use @Lid{luaL_setfuncs} to open a C library
 with all functions sharing a common upvalue.)
-}
 
-@item{
-Macros @Lid{lua_getglobal}, @Lid{lua_setglobal}, and @Lid{lua_register}
-now operate over the function environment instead of the global
-environment.
-(This is more consistent with how Lua manipulates global variables.)
+To manipulate the @Q{environment} of a userdata
+(which is not called @Q{environment} anymore),
+use the new functions
+@Lid{lua_getuservalue} and @Lid{lua_setuservalue}.
 }
 
 @item{
@@ -7480,10 +7539,10 @@ Here is the complete syntax of Lua in extended BNF.
 
 @Produc{
 
-@producname{chunk}@producbody{@bnfrep{stat}
-                              @bnfopt{laststat @bnfopt{@bnfter{;}}}}
+@producname{chunk}@producbody{block}
 
-@producname{block}@producbody{chunk}
+@producname{block}@producbody{@bnfrep{stat}
+                              @bnfopt{laststat @bnfopt{@bnfter{;}}}}
 
 @producname{stat}@producbody{
 	@bnfter{;}
