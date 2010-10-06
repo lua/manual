@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.57 2010/07/30 14:48:40 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.58 2010/07/30 19:05:32 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -24,7 +24,7 @@ Through the use of @N{C functions}, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
 The Lua distribution includes a sample host program called @id{lua},
-which uses the Lua library to offer a complete, stand-alone Lua interpreter.
+which uses the Lua library to offer a complete, standalone Lua interpreter.
 
 Lua is free software,
 and is provided as usual with no guarantees,
@@ -141,7 +141,18 @@ As discussed in @refsec{variables} and @refsec{assignment},
 any reference to a global name @id{var} is syntactically translated 
 to @T{_ENV.var}.
 Moreover, any chunk is compiled in the scope of an external
-variable called @id{_ENV} @see{chunks}.
+variable called @id{_ENV} @see{chunks},
+so @id{_ENV} itself is never a global name in a chunk.
+
+Despite the existence of this external @id{_ENV} variable and
+the translation of global names,
+@id{_ENV} is a completely regular name.
+In particular,
+you can define new variables and parameters with that name.
+Each reference to a global name uses the @id{_ENV} that is
+visible at that point in the program,
+following the usual visibility rules of Lua.
+
 Any table used as the value of @id{_ENV} is usually called
 an @def{environment}.
 
@@ -197,7 +208,7 @@ under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
 For instance, when a non-numeric value is the operand of an addition,
-Lua checks for a function in the field @T{"__add"} in its metatable.
+Lua checks for a function in the field @St{__add} in its metatable.
 If it finds one,
 Lua calls this function to perform the addition.
 
@@ -240,7 +251,7 @@ Each operation is identified by its corresponding name.
 The key for each operation is a string with its name prefixed by
 two underscores, @Char{__};
 for instance, the key for operation @Q{add} is the
-string @T{"__add"}.
+string @St{__add}.
 The semantics of these operations is better explained by a Lua function
 describing how the interpreter executes the operation.
 
@@ -629,28 +640,39 @@ with external resource management
 (such as closing files, network or database connections,
 or freeing your own memory).
 
-Garbage userdata with a field @idx{__gc} in their metatables are not
-collected immediately by the garbage collector.
-Instead, Lua puts them in a list.
+For a userdata to be finalized when collected,
+you must @emph{mark} it first.
+@index{mark (for finalization)}
+You mark a userdata for finalization when you set its metatable
+and the metatable has a field indexed by the string @St{__gc}.
+Note that if you set a metatable without a @idx{__gc} field
+and later create that field,
+the userdata will not be marked for finalization.
+However, after a userdata is marked,
+you can freely change the @idx{__gc} field of its metatable.
+
+When a marked userdata becomes garbage,
+it is not collected immediately by the garbage collector.
+Instead, Lua puts it in a list.
 After the collection,
 Lua does the equivalent of the following function
 for each userdata in that list:
 @verbatim{
 function gc_event (udata)
   local h = metatable(udata).__gc
-  if h then
+  if type(h) == "function" then
     h(udata)
   end
 end
 }
 
 At the end of each garbage-collection cycle,
-the finalizers for userdata are called in @emph{reverse}
-order of their creation,
-among those collected in that cycle.
-That is, the first finalizer to be called is the one associated
-with the userdata created last in the program.
-The userdata itself is freed only in the next garbage-collection cycle.
+the finalizers for userdata are called in
+the reverse order that they were marked for collection,
+among those collected in that cycle;
+that is, the first finalizer to be called is the one associated
+with the userdata marked last in the program.
+The userdata memory is freed only in the next garbage-collection cycle.
 
 }
 
@@ -682,7 +704,7 @@ is also called an @def{ephemeron table}.
 In an ephemeron table,
 a value is considered reachable only if its key is reachable.
 In particular,
-if the only reference to a key comes from its value,
+if the only reference to a key comes through its value,
 the pair is removed.
 
 After you use a table as a metatable,
@@ -698,8 +720,8 @@ and therefore are not removed from weak tables
 (unless its associated value is collected).
 Lua treats strings and @x{light C functions} as non-object values.
 
-Userdata with @x{finalizers} has a special behavior in weak tables.
-When a userdata is a value in a weak table,
+Userdata marked for finalization has a special behavior in weak tables.
+When a marked userdata is a value in a weak table,
 it is removed from the table the first time it is collected,
 before running its finalizer.
 When it is a key, however,
@@ -1070,6 +1092,8 @@ As such, chunks can define local variables,
 receive arguments, and return values.
 Moreover, such anonymous function is compiled as in the
 scope of an external local variable called @id{_ENV} @see{globalenv}.
+The resulting function always has @id{_ENV} as its only upvalue,
+even if it does not use that variable.
 
 A chunk can be stored in a file or in a string inside the host program.
 To execute a chunk,
@@ -1958,7 +1982,7 @@ if it lies @N{between 1} and the stack top
 
 @sect2{@title{Stack Size}
 
-When you interact with Lua API,
+When you interact with the Lua API,
 you are responsible for ensuring consistency.
 In particular,
 @emph{you are responsible for controlling stack overflow}.
@@ -2036,8 +2060,12 @@ This table is always located at pseudo-index
 Any @N{C library} can store data into this table,
 but it should take care to choose keys different from those used
 by other libraries, to avoid collisions.
-Typically, you should use as key a string containing your library name
-or a light userdata with the address of a @N{C object} in your code.
+Typically, you should use as key a string containing your library name,
+or a light userdata with the address of a @N{C object} in your code,
+or any Lua object created by your code.
+As with global names,
+string keys starting with an underscore followed by
+uppercase letters are reserved for Lua.
 
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
@@ -2103,7 +2131,7 @@ Lua cannot return to @id{foo} any more,
 because the @id{longjmp} removes its frame from the C stack.
 
 To avoid this kind of problem,
-Lua raises an error whenever it tries to yield accross an API call,
+Lua raises an error whenever it tries to yield across an API call,
 except for three functions:
 @Lid{lua_yieldk}, @Lid{lua_callk}, and @Lid{lua_pcallk}.
 All those functions receive a @def{continuation function}
@@ -2854,8 +2882,8 @@ The @id{data} argument is an opaque value passed to the reader function.
 The @id{source} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
 
-If the resulting function has upvalues,
-the first upvalue is set to the value of the @x{global environment}
+If the resulting function has one upvalue,
+this upvalue is set to the value of the @x{global environment}
 stored at index @id{LUA_RIDX_GLOBALS} in the registry @see{registry}.
 (When loading main chunks,
 this upvalue will be the @id{_ENV} variable @see{globalenv}.)
@@ -3475,7 +3503,7 @@ or @defid{LUA_YIELD} if the thread is suspended.
 You can only call functions in threads with status @Lid{LUA_OK}.
 You can resume threads with status @Lid{LUA_OK}
 (to start a new coroutine) or @Lid{LUA_YIELD}
-(to resume a corotine).
+(to resume a coroutine).
 
 }
 
@@ -4127,7 +4155,9 @@ will return identical ids for those upvalue indices.
 
 @APIEntry{void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
                                               int fidx2, int n2);|
-TO BE DONE!!
+
+Make the @id{n1}-th upvalue of the Lua closure at index @id{fidx1}
+refer to the @id{n2}-th upvalue of the Lua closure at index @id{fidx2}.
 
 }
 
@@ -4715,7 +4745,7 @@ returns @id{d}.
 Otherwise, raises an error.
 
 If @id{l} is not @id{NULL},
-fills the position @T{*l} with the results's length.
+fills the position @T{*l} with the result's length.
 
 }
 
@@ -5151,7 +5181,8 @@ The default is @St{bt}.
 This function is similar to @Lid{load},
 but sets @id{env} as the value of the first upvalue
 of the created function in case of success.
-(Usually this first upvalue will be @id{_ENV} @see{globalenv}.)
+(When loading main chunks,
+this upvalue will be the @id{_ENV} variable @see{globalenv}.)
 The parameters after @id{env} are similar to those of @Lid{load}, too.
 
 }
@@ -5483,9 +5514,9 @@ it tries an @emph{all-in-one} loader @see{pdf-package.loaders}.
 
 Once a loader is found,
 @id{require} calls the loader with a single argument, @id{modname}.
-If the loader returns any value,
+If the loader returns any non-nil value,
 @id{require} assigns the returned value to @T{package.loaded[modname]}.
-If the loader returns no value and
+If the loader does not return a non-nil value and
 has not assigned any value to @T{package.loaded[modname]},
 then @id{require} assigns @Rw{true} to this entry.
 In any case, @id{require} returns the
@@ -5517,7 +5548,7 @@ Default is @Char{?}.}
 is replaced by the executable's directory.
 Default is @Char{!}.}
 
-@item{The fifth line is a mark to ignore all before it when bulding the
+@item{The fifth line is a mark to ignore all before it when building the
 @id{luaopen_} function name.
 Default is @Char{-}.}
 
@@ -6002,7 +6033,8 @@ when used to represent itself in a pattern.
 represents the class which is the union of all
 characters in @rep{set}.
 A range of characters can be specified by
-separating the end characters of the range with a @Char{-}.
+separating the end characters of the range,
+in ascending order, with a @Char{-},
 All classes @T{%}@emph{x} described above can also be used as
 components in @rep{set}.
 All other characters in @rep{set} represent themselves.
@@ -6089,7 +6121,7 @@ such item matches an empty string at any position such that
 the next character belongs to @rep{set}
 and the previous character does not belong to @rep{set}.
 The set @rep{set} is interpreted as previously described.
-The beggining and the end of the subject are handled as if
+The beginning and the end of the subject are handled as if
 they were the character @Char{\0}.
 }
 
@@ -6708,7 +6740,7 @@ their handles are garbage collected,
 but that takes an unpredictable amount of time to happen.
 
 If @id{file} was created with @Lid{io.popen},
-a sucessful close returns the exit status of the process.
+a successful close returns the exit status of the process.
 
 }
 
@@ -6919,9 +6951,13 @@ and zero otherwise.
 
 @LibEntry{os.exit ([code [, close])|
 
-Calls the @ANSI{exit},
-with an optional @id{code},
-to terminate the host program.
+Calls the @ANSI{exit} to terminate the host program.
+If @id{code} is @Rw{true},
+the returned status is @idx{EXIT_SUCCESS};
+if @id{code} is @Rw{false},
+the returned status is @idx{EXIT_FAILURE}.
+if @id{code} is a number,
+the returned status is this number.
 The default value for @id{code} is the success code.
 
 If the optional second argument @id{close} is true,
@@ -7243,9 +7279,10 @@ will return identical ids for those upvalue indices.
 
 }
 
-@LibEntry{debug.upvaluejoin ()|
+@LibEntry{debug.upvaluejoin (func1, n1, func2, n2)|
 
-TO BE DONE!!
+Make the @id{n1}-th upvalue of the Lua closure @id{func1}
+refer to the @id{n2}-th upvalue of the Lua closure @id{func2}.
 
 }
 
@@ -7255,15 +7292,15 @@ TO BE DONE!!
 
 
 @C{-------------------------------------------------------------------------}
-@sect1{lua-sa| @title{Lua Stand-alone}
+@sect1{lua-sa| @title{Lua Standalone}
 
 Although Lua has been designed as an extension language,
 to be embedded in a host @N{C program},
-it is also frequently used as a stand-alone language.
-An interpreter for Lua as a stand-alone language,
+it is also frequently used as a standalone language.
+An interpreter for Lua as a standalone language,
 called simply @id{lua},
 is provided with the standard distribution.
-The @x{stand-alone interpreter} includes
+The @x{standalone interpreter} includes
 all standard libraries, including the debug library.
 Its usage is:
 @verbatim{
@@ -7360,7 +7397,7 @@ right after the assignment to @id{_PROMPT}.
 
 To allow the use of Lua as a
 script interpreter in Unix systems,
-the stand-alone interpreter skips
+the standalone interpreter skips
 the first line of a chunk if it starts with @T{#}.
 Therefore, Lua scripts can be made into executable programs
 by using @T{chmod +x} and @N{the @T{#!}} form,
@@ -7413,7 +7450,7 @@ All threads share a single fixed environment.
 @item{
 The event @emph{tail return} in debug hooks was removed.
 Instead, tail calls generate a special new event,
-@emph{tail call}, so that the debuger can know there will
+@emph{tail call}, so that the debugger can know there will
 not be a corresponding return event.
 }
 
@@ -7503,6 +7540,24 @@ use the new functions
 }
 
 @item{
+Function @id{luaL_register} is deprecated.
+Use @Lid{luaL_setfuncs} so that your module does not
+create globals anymore.
+(Modules are not expected to set global variables anymore.)
+}
+
+@item{
+Finalizers (@St{__gc} metamethods) for userdata are called in the
+reverse order that they were marked,
+not that they were created @see{finalizers}.
+(Most userdata are marked immediately after they are created.)
+Moreover,
+if the metatable does not have a @St{__gc} field when set,
+the finalizer will not be called,
+even if it is set later.
+}
+
+@item{
 @id{luaL_typerror} was renamed @Lid{luaL_typeerror},
 to have a correct spelling.
 }
@@ -7560,7 +7615,6 @@ Here is the complete syntax of Lua in extended BNF.
 @OrNL	@Rw{function} funcname funcbody
 @OrNL	@Rw{local} @Rw{function} @bnfNter{Name} funcbody
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
-@OrNL	@Rw{in} exp @Rw{do} block @Rw{end}
 }
 
 @producname{laststat}@producbody{@Rw{return} @bnfopt{explist} @Or @Rw{break}}
