@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.59 2010/10/06 17:44:23 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.60 2010/10/28 15:57:13 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2303,7 +2303,7 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPMUL}|performs multiplication (@T{*})}
 @item{@defid{LUA_OPDIV}|performs division (@T{/})}
 @item{@defid{LUA_OPMOD}|performs modulo (@T{%})}
-@item{@defid{LUA_OPPOw}|performs exponentiation (@T{^})}
+@item{@defid{LUA_OPPOW}|performs exponentiation (@T{^})}
 @item{@defid{LUA_OPUNM}|performs mathematical negation (unary @T{-})}
 
 }
