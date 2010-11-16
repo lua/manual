@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.60 2010/10/28 15:57:13 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.61 2010/10/29 12:51:39 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -199,7 +199,7 @@ you can use the @Lid{pcall} function.
 
 }
 
-@sect2{metatable| @title{Metatables}
+@sect2{metatable| @title{Metatables and Metamethods}
 
 Every value in Lua can have a @emph{metatable}.
 This @def{metatable} is an ordinary Lua table
@@ -214,7 +214,7 @@ Lua calls this function to perform the addition.
 
 We call the keys in a metatable @def{events}
 and the values @def{metamethods}.
-In the previous example, the event is @T{"add"} 
+In the previous example, the event is @T{"__add"} 
 and the metamethod is the function that performs the addition.
 
 You can query the metatable of any value
@@ -276,7 +276,7 @@ and the access to objects with no metatables does not fail
 (it simply results in @nil).
 
 For the unary @T{-} and @T{#} operators,
-the metamethod is called repeating the first argument as a second argument.
+the metamethod is called with a dummy second argument.
 This extra argument is only to simplify Lua's internals;
 it may be removed in future versions and therefore it is not present
 in the following code.
@@ -2276,13 +2276,12 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
     return realloc(ptr, nsize);
 }
 }
-This code assumes
+Note that @N{ANSI C} ensures
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
-@N{ANSI C} ensures both behaviors.
-It also assumes that @id{realloc} does not fail when shrinking a block.
-(@N{ANSI C} does not ensure this behavior,
-but it seems a safe assumption.)
+This code assumes that @id{realloc} does not fail when shrinking a block.
+@N{ANSI C} does not ensure this behavior,
+but it seems a safe assumption.
 
 }
 
@@ -4731,6 +4730,15 @@ These values are popped from the stack after the registration.
 
 }
 
+@APIEntry{void luaL_setmetatable (lua_State *L, const char *tname);|
+@apii{0,0,-}
+
+Sets the metatable of the object at the top of the stack
+as the metatable associated with name @id{tname}
+in the registry @seeC{luaL_newmetatable}.
+
+}
+
 @APIEntry{void luaL_openlibs (lua_State *L);|
 @apii{0,0,e}
 
@@ -4949,19 +4957,6 @@ to start the traceback.
 @apii{0,0,-}
 
 Returns the name of the type of the value at the given index.
-
-}
-
-@APIEntry{int luaL_typeerror (lua_State *L, int narg, const char *tname);|
-@apii{0,0,v}
-
-Generates an error with a message like the following:
-@verbatim{
-@rep{location}: bad argument @rep{narg} to '@rep{func}' (@rep{tname} expected, got @rep{rt})
-}
-where @T{@rep{location}} is produced by @Lid{luaL_where},
-@T{@rep{func}} is the name of the current function,
-and @T{@rep{rt}} is the type name of the actual argument.
 
 }
 
@@ -5529,8 +5524,6 @@ In case of error, propagates the error.
 @LibEntry{coroutine.yield (@Cdots)|
 
 Suspends the execution of the calling coroutine.
-The coroutine cannot be running a @N{C function},
-a metamethod, or an iterator.
 Any arguments to @id{yield} are passed as extra results to @id{resume}.
 
 }
@@ -6715,17 +6708,11 @@ instead of returning an error code.
 
 }
 
-@LibEntry{io.lines ([filename] [, keepNL])|
+@LibEntry{io.lines ([filename] @Cdots)|
 
 Opens the given file name in read mode
-and returns an iterator function that,
-each time it is called,
-returns a new line from the file.
-Therefore, the construction
-@verbatim{
-for line in io.lines(filename) do @rep{body} end
-}
-will iterate over all lines of the file.
+and returns an iterator function that
+works like @T{file:lines(@Cdots)} over the oppened file.
 When the iterator function detects the end of file,
 it returns @nil (to finish the loop) and automatically closes the file.
 
@@ -6733,9 +6720,6 @@ The call @T{io.lines()} (with no file name) is equivalent
 to @T{io.input():lines()};
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
-
-By default, @id{lines} removes the newline at the end of each line.
-If @id{keepNL} is @Rw{true}, it will keep the newlines.
 
 }
 
@@ -6828,22 +6812,21 @@ Saves any written data to @id{file}.
 
 }
 
-@LibEntry{file:lines ([keepNL])|
+@LibEntry{file:lines (@Cdots)|
 
 Returns an iterator function that,
 each time it is called,
-returns a new line from the file.
+reads the file according to the given formats.
+When no format is given,
+uses @Q{*l} as a default.
 Therefore, the construction
 @verbatim{
-for line in file:lines() do @rep{body} end
+for c in file:lines(1) do @rep{body} end
 }
-will iterate over all lines of the file,
+will iterate over all characters of the file,
 starting at the current position.
 (Unlike @Lid{io.lines}, this function does not close the file
 when the loop ends.)
-
-By default, @id{lines} removes the newline at the end of each line.
-If @id{keepNL} is @Rw{true}, it will keep the newlines.
 
 }
 
@@ -7546,11 +7529,6 @@ and it is easy to set up a module with regular Lua code.
 }
 
 @item{
-The debug library is not loaded by default.
-You must explicitly require it.
-}
-
-@item{
 Functions @id{setfenv} and @id{getfenv} are deprecated.
 To set the environment of a Lua function,
 use the variable @id{_ENV} or the new function @Lid{loadin}.
@@ -7636,8 +7614,8 @@ even if it is set later.
 }
 
 @item{
-@id{luaL_typerror} was renamed @Lid{luaL_typeerror},
-to have a correct spelling.
+@id{luaL_typerror} was deprecated.
+Write your own version if you need it.
 }
 
 @item{
