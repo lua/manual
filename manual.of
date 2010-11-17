@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.61 2010/10/29 12:51:39 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.62 2010/11/16 11:38:25 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1202,8 +1202,8 @@ declared inside the loop block.
 The @Rw{return} statement is used to return values
 from a function or a chunk (which is just a function).
 @index{return statement}
-Functions and chunks can return more than one value,
-and so the syntax for the @Rw{return} statement is
+Functions can return more than one value,
+so the syntax for the @Rw{return} statement is
 @Produc{
 @producname{stat}@producbody{@Rw{return} @bnfopt{explist} @bnfopt{@bnfter{;}}}
 }
@@ -1850,6 +1850,11 @@ Results are returned using the @Rw{return} statement @see{control}.
 If control reaches the end of a function
 without encountering a @Rw{return} statement,
 then the function returns with no results.
+
+@index{multiple return}
+There is a system-dependent limit on the number of values
+that a function may return.
+This limit is guaranteed to be larger than 1000.
 
 The @emph{colon} syntax
 is used for defining @def{methods},
@@ -4244,7 +4249,7 @@ in alphabetical order.
 
 
 @APIEntry{void luaL_addchar (luaL_Buffer *B, char c);|
-@apii{0,0,m}
+@apii{?,?,m}
 
 Adds the character @id{c} to the buffer @id{B}
 @seeC{luaL_Buffer}.
@@ -4252,7 +4257,7 @@ Adds the character @id{c} to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);|
-@apii{0,0,m}
+@apii{?,?,m}
 
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
@@ -4262,7 +4267,7 @@ The string can contain embedded zeros.
 }
 
 @APIEntry{void luaL_addsize (luaL_Buffer *B, size_t n);|
-@apii{0,0,m}
+@apii{?,?,m}
 
 Adds to the buffer @id{B} @seeC{luaL_Buffer}
 a string of length @id{n} previously copied to the
@@ -4271,7 +4276,7 @@ buffer area @seeC{luaL_prepbuffer}.
 }
 
 @APIEntry{void luaL_addstring (luaL_Buffer *B, const char *s);|
-@apii{0,0,m}
+@apii{?,?,m}
 
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
@@ -4281,7 +4286,7 @@ The string should not contain embedded zeros.
 }
 
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
-@apii{1,0,m}
+@apii{1,?,m}
 
 Adds the value at the top of the stack
 to the buffer @id{B}
@@ -4350,6 +4355,25 @@ This call leaves the final string on the top of the stack.
 
 }
 
+If you know beforehand the total size of the resulting string,
+you can use the buffer like this:
+@itemize{
+
+@item{First you declare a variable @id{b} of type @Lid{luaL_Buffer}.}
+
+@item{Then you initialize it and preallocate a space of
+size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
+
+@item{Then you copy the string into that space.}
+
+@item{
+You finish by calling @T{luaL_pushresult(&b, sz)},
+where @id{sz} is the total size of the resulting string
+copied into that space.
+}
+
+}
+
 During its normal operation,
 a string buffer uses a variable number of stack slots.
 So, while using a buffer, you cannot assume that you know where
@@ -4374,6 +4398,14 @@ Initializes a buffer @id{B}.
 This function does not allocate any space;
 the buffer must be declared as a variable
 @seeC{luaL_Buffer}.
+
+}
+
+@APIEntry{char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);|
+@apii{?,?,m}
+
+Equivalent to the sequence
+@Lid{luaL_buffinit}, @Lid{luaL_prepbuffsize}.
 
 }
 
@@ -4571,6 +4603,16 @@ as @T{return luaL_error(@rep{args})}.
 
 }
 
+@APIEntry{void luaL_findtable (lua_State *L, int idx, const char *fname);|
+@apii{0,1,m}
+
+Ensures that the value @T{t[fname]},
+where @id{t} is the value at the valid index @id{idx},
+is a table,
+and pushes that table onto the stack.
+
+}
+
 @APIEntry{int luaL_getmetafield (lua_State *L, int obj, const char *e);|
 @apii{0,0|1,m}
 
@@ -4713,32 +4755,6 @@ or @id{NULL} if there is a @x{memory allocation error}.
 
 }
 
-@APIEntry{void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);|
-@apii{nup,0,e}
-
-Registers all functions in the array @id{l}
-@seeC{luaL_Reg} into the table on the top of the stack
-(below optional upvalues, see next).
-The pointer @id{l} may be @id{NULL},
-representing an empty list.
-
-When @id{nup} is not zero,
-all functions are created sharing @id{nup} upvalues,
-which must be previously pushed on the stack
-on top of the library table.
-These values are popped from the stack after the registration.
-
-}
-
-@APIEntry{void luaL_setmetatable (lua_State *L, const char *tname);|
-@apii{0,0,-}
-
-Sets the metatable of the object at the top of the stack
-as the metatable associated with name @id{tname}
-in the registry @seeC{luaL_newmetatable}.
-
-}
-
 @APIEntry{void luaL_openlibs (lua_State *L);|
 @apii{0,0,e}
 
@@ -4844,9 +4860,17 @@ Otherwise, raises an error.
 }
 
 @APIEntry{char *luaL_prepbuffer (luaL_Buffer *B);|
-@apii{0,0,-}
+@apii{?,?,m}
 
-Returns an address to a space of size @defid{LUAL_BUFFERSIZE}
+Equivalent to @Lid{luaL_prepbuffsize}
+with the predefined size @defid{LUAL_BUFFERSIZE}.
+
+}
+
+@APIEntry{char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);|
+@apii{?,?,m}
+
+Returns an address to a space of size @id{sz}
 where you can copy a string to be added to buffer @id{B}
 @seeC{luaL_Buffer}.
 After copying the string into this space you must call
@@ -4860,6 +4884,13 @@ it to the buffer.
 
 Finishes the use of buffer @id{B} leaving the final string on
 the top of the stack.
+
+}
+
+@APIEntry{void luaL_pushresultsize (luaL_Buffer *B, size_t sz);|
+@apii{?,1,m}
+
+Equivalent to the sequence @Lid{luaL_addsize}, @Lid{luaL_pushresult}.
 
 }
 
@@ -4912,6 +4943,32 @@ If @id{glb} is true,
 also stores the result into global @id{modname}.
 
 Leaves a copy of that result on the stack.
+
+}
+
+@APIEntry{void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);|
+@apii{nup,0,e}
+
+Registers all functions in the array @id{l}
+@seeC{luaL_Reg} into the table on the top of the stack
+(below optional upvalues, see next).
+The pointer @id{l} may be @id{NULL},
+representing an empty list.
+
+When @id{nup} is not zero,
+all functions are created sharing @id{nup} upvalues,
+which must be previously pushed on the stack
+on top of the library table.
+These values are popped from the stack after the registration.
+
+}
+
+@APIEntry{void luaL_setmetatable (lua_State *L, const char *tname);|
+@apii{0,0,-}
+
+Sets the metatable of the object at the top of the stack
+as the metatable associated with name @id{tname}
+in the registry @seeC{luaL_newmetatable}.
 
 }
 
@@ -7151,7 +7208,9 @@ within any function, and so have no direct access to local variables.
 
 @LibEntry{debug.getuservalue (u)|
 
-Returns the Lua value associated to userdata @id{u}.
+Returns the Lua value associated to @id{u}.
+If @id{u} is not a userdata,
+returns @nil.
 
 }
 
@@ -7244,7 +7303,8 @@ The function returns @nil if there is no upvalue with the given index.
 
 Sets the given @id{value} as
 the Lua value associated to the given @id{udata}.
-@id{value} must be a table or @nil.
+@id{value} must be a table or @nil;
+@id{udata} must be a full userdata.
 
 Returns @id{udata}.
 
