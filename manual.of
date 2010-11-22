@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.64 2010/11/22 16:18:23 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.65 2010/11/22 16:40:31 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2981,6 +2981,9 @@ unless you know that the key is actually a string.
 Recall that @Lid{lua_tolstring} @emph{changes}
 the value at the given index;
 this confuses the next call to @Lid{lua_next}.
+
+See function @Lid{next} for the caveats of modifying
+the table during its traversal.
 
 }
 
@@ -6626,6 +6629,13 @@ Returns the bitwise @x{or} of its operands.
 
 }
 
+@LibEntry{bit32.btest (@Cdots)|
+
+Returns a boolean signaling 
+whether the @x{bitwise and} of its operands is different from zero.
+
+}
+
 @LibEntry{bit32.bxor (@Cdots)|
 
 Returns the bitwise @x{exclusive or} of its operands.
@@ -6697,13 +6707,6 @@ assert(bit32.rshift(b, disp) == math.floor(b % 2^32 / 2^disp))
 }
 
 This shift operation is what is called @x{logical shift}.
-
-}
-
-@LibEntry{bit32.test (@Cdots)|
-
-Returns a boolean signaling 
-whether the @x{bitwise and} of its operands is different from zero.
 
 }
 
