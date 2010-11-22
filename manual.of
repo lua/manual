@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.62 2010/11/16 11:38:25 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.63 2010/11/17 15:35:05 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -11,20 +11,21 @@ It also offers good support for object-oriented programming,
 functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, light-weight
 scripting language for any program that needs one.
-Lua is implemented as a library, written in @emph{clean} C
-(that is, in the common subset of @N{ANSI C} and C++).
+Lua is implemented as a library, written in @emph{clean} C,
+the common subset of @N{ANSI C} and C++.
 
 Being an extension language, Lua has no notion of a @Q{main} program:
 it only works @emph{embedded} in a host client,
 called the @emph{embedding program} or simply the @emph{host}.
-This host program can invoke functions to execute a piece of Lua code,
+The host program can invoke functions to execute a piece of Lua code,
 can write and read Lua variables,
 and can register @N{C functions} to be called by Lua code.
 Through the use of @N{C functions}, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
 The Lua distribution includes a sample host program called @id{lua},
-which uses the Lua library to offer a complete, standalone Lua interpreter.
+which uses the Lua library to offer a complete, standalone Lua interpreter,
+for interactive or batch use.
 
 Lua is free software,
 and is provided as usual with no guarantees,
@@ -37,7 +38,7 @@ this document is dry in places.
 For a discussion of the decisions behind the design of Lua,
 see the technical papers available at Lua's web site.
 For a detailed introduction to programming in Lua,
-see Roberto's book, @emph{Programming in Lua (Second Edition)}.
+see Roberto's book, @emph{Programming in Lua} (second edition).
 
 }
 
@@ -72,7 +73,7 @@ any other value makes it true.
 @emph{Number} represents real (double-precision floating-point) numbers.
 (It is easy to build Lua interpreters that use other
 internal representations for numbers,
-such as single-precision float or long integers;
+such as single-precision floats or long integers;
 see file @id{luaconf.h}.)
 @emph{String} represents arrays of characters.
 @index{eight-bit clean}
@@ -140,7 +141,7 @@ of a given value.
 As discussed in @refsec{variables} and @refsec{assignment},
 any reference to a global name @id{var} is syntactically translated 
 to @T{_ENV.var}.
-Moreover, any chunk is compiled in the scope of an external
+Moreover, every chunk is compiled in the scope of an external
 variable called @id{_ENV} @see{chunks},
 so @id{_ENV} itself is never a global name in a chunk.
 
@@ -175,7 +176,7 @@ If you change the global environment in the registry
 (through C code or the debug library),
 all chunks loaded after the change will get the new environment.
 Previously loaded chunks are not affected, however,
-as each has its own copy of the environment in its @id{_ENV} variable.
+as each has its own reference to the environment in its @id{_ENV} variable.
 Moreover, the variable @Lid{_G}
 (which is stored in the original global environment)
 is never updated by Lua.
@@ -187,15 +188,16 @@ is never updated by Lua.
 Because Lua is an embedded extension language,
 all Lua actions start from @N{C code} in the host program
 calling a function from the Lua library @seeC{lua_pcall}.
-Whenever an error occurs during Lua compilation or execution,
-control returns to C,
+Whenever an error occurs during
+the compilation or execution of a Lua chunk,
+control returns to the host,
 which can take appropriate measures
 (such as printing an error message).
 
 Lua code can explicitly generate an error by calling the
 @Lid{error} function.
 If you need to catch errors in Lua,
-you can use the @Lid{pcall} function.
+you can use the @Lid{pcall} or the @Lid{xpcall} function.
 
 }
 
@@ -208,21 +210,20 @@ under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
 For instance, when a non-numeric value is the operand of an addition,
-Lua checks for a function in the field @St{__add} in its metatable.
+Lua checks for a function in the field @St{__add} of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
 
-We call the keys in a metatable @def{events}
-and the values @def{metamethods}.
-In the previous example, the event is @T{"__add"} 
+The keys in a metatable are derived from the @def{event} names;
+the corresponding values are called @def{metamethods}.
+In the previous example, the event is @T{"add"} 
 and the metamethod is the function that performs the addition.
 
 You can query the metatable of any value
-through the @Lid{getmetatable} function.
+using the @Lid{getmetatable} function.
 
 You can replace the metatable of tables
-through the @Lid{setmetatable}
-function.
+using the @Lid{setmetatable} function.
 You cannot change the metatable of other types from Lua
 (except by using the debug library);
 you must use the @N{C API} for that.
@@ -239,8 +240,6 @@ A metatable controls how an object behaves in arithmetic operations,
 order comparisons, concatenation, length operation, and indexing.
 A metatable also can define a function to be called when a userdata
 is garbage collected.
-For each of these operations Lua associates a specific key
-called an @emph{event}.
 When Lua performs one of these operations over a value,
 it checks whether this value has a metatable with the corresponding event.
 If so, the value associated with that key (the metamethod)
@@ -252,9 +251,9 @@ The key for each operation is a string with its name prefixed by
 two underscores, @Char{__};
 for instance, the key for operation @Q{add} is the
 string @St{__add}.
+
 The semantics of these operations is better explained by a Lua function
 describing how the interpreter executes the operation.
-
 The code shown here in Lua is only illustrative;
 the real behavior is hard coded in the interpreter
 and it is much more efficient than this simulation.
@@ -595,7 +594,7 @@ It uses two numbers to control its garbage-collection cycles:
 the @def{garbage-collector pause} and
 the @def{garbage-collector step multiplier}.
 Both use percentage points as units
-(so that a value of 100 means an internal value of 1).
+(e.g., a value of 100 means an internal value of 1).
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
@@ -605,14 +604,15 @@ start a new cycle.
 A value of 200 means that the collector waits for the total memory in use
 to double before starting a new cycle.
 
-The step multiplier
+The garbage-collector step multiplier
 controls the relative speed of the collector relative to
 memory allocation.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
 Values smaller than 100 make the collector too slow and
 can result in the collector never finishing a cycle.
-The default, 200, means that the collector runs at @Q{twice}
+The default is 200,
+which means that the collector runs at @Q{twice}
 the speed of memory allocation.
 
 If you set the step multiplier to a very large number
@@ -633,7 +633,7 @@ the collector directly (e.g., stop and restart it).
 @sect3{finalizers| @title{Garbage-Collection Metamethods}
 
 Using the @N{C API},
-you can set garbage-collector metamethods for userdata @see{metatable}.
+you can set garbage-collector metamethods for full userdata @see{metatable}.
 These metamethods are also called @def{finalizers}.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
@@ -641,12 +641,12 @@ with external resource management
 or freeing your own memory).
 
 For a userdata to be finalized when collected,
-you must @emph{mark} it first.
+you must @emph{mark} it for finalization.
 @index{mark (for finalization)}
 You mark a userdata for finalization when you set its metatable
 and the metatable has a field indexed by the string @St{__gc}.
 Note that if you set a metatable without a @idx{__gc} field
-and later create that field,
+and later create that field in the metatable,
 the userdata will not be marked for finalization.
 However, after a userdata is marked,
 you can freely change the @idx{__gc} field of its metatable.
@@ -683,7 +683,7 @@ A @def{weak table} is a table whose elements are
 A weak reference is ignored by the garbage collector.
 In other words,
 if the only references to an object are weak references,
-then the garbage collector will collect this object.
+then the garbage collector will collect that object.
 
 A weak table can have weak keys, weak values, or both.
 A table with weak keys allows the collection of its keys,
@@ -720,11 +720,11 @@ and therefore are not removed from weak tables
 (unless its associated value is collected).
 Lua treats strings and @x{light C functions} as non-object values.
 
-Userdata marked for finalization has a special behavior in weak tables.
+Userdata marked for finalization have a special behavior in weak tables.
 When a marked userdata is a value in a weak table,
 it is removed from the table the first time it is collected,
 before running its finalizer.
-When it is a key, however,
+However, when it is a key,
 it is removed from the table only when it is really freed,
 after running its finalizer.
 This behavior allows the finalizer to access values
@@ -743,13 +743,14 @@ Unlike threads in multithread systems, however,
 a coroutine only suspends its execution by explicitly calling
 a yield function.
 
-You create a coroutine with a call to @Lid{coroutine.create}.
+You create a coroutine by calling @Lid{coroutine.create}.
 Its sole argument is a function
 that is the main function of the coroutine.
 The @id{create} function only creates a new coroutine and
 returns a handle to it (an object of type @emph{thread});
-it does not start the coroutine execution.
+it does not start the coroutine.
 
+You execute a coroutine by calling @Lid{coroutine.resume}.
 When you first call @Lid{coroutine.resume},
 passing as its first argument
 a thread returned by @Lid{coroutine.create},
@@ -794,7 +795,7 @@ Unlike @Lid{coroutine.resume},
 @Lid{coroutine.wrap} does not catch errors;
 any error is propagated to the caller.
 
-As an example,
+As an example of how coroutines work,
 consider the following code:
 @verbatim{
 function foo (a)
@@ -5494,7 +5495,7 @@ and @St{userdata}.
 @LibEntry{_VERSION|
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current contents of this variable is @St{Lua 5.1}.
+The current contents of this variable is @St{Lua 5.2}.
 
 }
 
@@ -6028,9 +6029,9 @@ x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
     end)
 --> x="4+5 = 9"
 
-local t = {name="lua", version="5.1"}
+local t = {name="lua", version="5.2"}
 x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
---> x="lua-5.1.tar.gz"
+--> x="lua-5.2.tar.gz"
 }
 
 }
