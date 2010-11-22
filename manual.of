@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.63 2010/11/17 15:35:05 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.64 2010/11/22 16:18:23 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -6575,8 +6575,6 @@ Returns the hyperbolic tangent of @id{x}.
 
 This library provides bitwise operations.
 It provides all its functions inside the table @defid{bit32}.
-It uses upper case for function names to avoid collision with
-some reserved words (@Rw{and}, @Rw{or}, and @Rw{not}).
 
 Unless otherwise stated,
 all functions accept numeric arguments in the range
@@ -6586,77 +6584,10 @@ the remainder of its division by @M{2@sp{32}}
 and truncated to an integer (in some unspecified way),
 so that its final value falls in the range @M{[0,2@sp{32} - 1]}.
 Similarly, all results are in the range @M{[0,2@sp{32} - 1]}.
-Note that @T{bit32.NOT(0)} is @T{0xFFFFFFFF},
+Note that @T{bit32.bnot(0)} is @T{0xFFFFFFFF},
 which is different from @T{-1}.
 
-@LibEntry{bit32.AND (@Cdots)|
-
-Returns the @x{bitwise and} of its operands.
-
-}
-
-@LibEntry{bit32.NOT (x)|
-
-Returns the @x{bitwise negation} of @id{x}.
-For any integer @id{x},
-the following identity holds:
-@verbatim{
-assert(bit32.NOT(x) == (-1 - x) % 2^32)
-}
-
-}
-
-@LibEntry{bit32.OR (@Cdots)|
-
-Returns the bitwise @x{or} of its operands.
-
-}
-
-@LibEntry{bit32.TEST (@Cdots)|
-
-Returns a boolean signaling 
-whether the @x{bitwise and} of its operands is different from zero.
-
-}
-
-
-@LibEntry{bit32.XOR (@Cdots)|
-
-Returns the bitwise @x{exclusive or} of its operands.
-
-}
-
-@LibEntry{bit32.ROL (x, disp)|
-
-Returns the number @id{x} rotated @id{disp} bits to the left.
-The number @id{disp} may be any representable integer.
-
-For any valid displacement,
-the following identity holds:
-@verbatim{
-assert(bit32.ROL(x, disp) == bit32.ROL(x, disp % 32))
-}
-In particular,
-negative displacements rotate to the right.
-
-}
-
-@LibEntry{bit32.ROR (x, disp)|
-
-Returns the number @id{x} rotated @id{disp} bits to the right.
-The number @id{disp} may be any representable integer.
-
-For any valid displacement,
-the following identity holds:
-@verbatim{
-assert(bit32.ROR(x, disp) == bit32.ROR(x, disp % 32))
-}
-In particular,
-negative displacements rotate to the left.
-
-}
-
-@LibEntry{bit32.SAR (x, disp)|
+@LibEntry{bit32.arshift (x, disp)|
 
 Returns the number @id{x} shifted @id{disp} bits to the right.
 The number @id{disp} may be any representable integer.
@@ -6668,11 +6599,55 @@ with copies of the higher bit of @id{x};
 vacant bits on the right are filled with zeros.
 In particular,
 displacements with absolute values higher than 31
-result in zero or @T{0xFFFFFFFF} (all bits are shifted out).
+result in zero or @T{0xFFFFFFFF} (all original bits are shifted out).
 
 }
 
-@LibEntry{bit32.SHL (x, disp)|
+@LibEntry{bit32.band (@Cdots)|
+
+Returns the @x{bitwise and} of its operands.
+
+}
+
+@LibEntry{bit32.bnot (x)|
+
+Returns the @x{bitwise negation} of @id{x}.
+For any integer @id{x},
+the following identity holds:
+@verbatim{
+assert(bit32.bnot(x) == (-1 - x) % 2^32)
+}
+
+}
+
+@LibEntry{bit32.bor (@Cdots)|
+
+Returns the bitwise @x{or} of its operands.
+
+}
+
+@LibEntry{bit32.bxor (@Cdots)|
+
+Returns the bitwise @x{exclusive or} of its operands.
+
+}
+
+@LibEntry{bit32.lrotate (x, disp)|
+
+Returns the number @id{x} rotated @id{disp} bits to the left.
+The number @id{disp} may be any representable integer.
+
+For any valid displacement,
+the following identity holds:
+@verbatim{
+assert(bit32.lrotate(x, disp) == bit32.lrotate(x, disp % 32))
+}
+In particular,
+negative displacements rotate to the right.
+
+}
+
+@LibEntry{bit32.lshift (x, disp)|
 
 Returns the number @id{x} shifted @id{disp} bits to the left.
 The number @id{disp} may be any representable integer.
@@ -6685,12 +6660,27 @@ result in zero (all bits are shifted out).
 For positive displacements,
 the following equality holds:
 @verbatim{
-assert(bit32.SHL(b, disp) == (b * 2^disp) % 2^32)
+assert(bit32.lshift(b, disp) == (b * 2^disp) % 2^32)
 }
 
 }
 
-@LibEntry{bit32.SHR (x, disp)|
+@LibEntry{bit32.rrotate (x, disp)|
+
+Returns the number @id{x} rotated @id{disp} bits to the right.
+The number @id{disp} may be any representable integer.
+
+For any valid displacement,
+the following identity holds:
+@verbatim{
+assert(bit32.rrotate(x, disp) == bit32.rrotate(x, disp % 32))
+}
+In particular,
+negative displacements rotate to the left.
+
+}
+
+@LibEntry{bit32.rshift (x, disp)|
 
 Returns the number @id{x} shifted @id{disp} bits to the right.
 The number @id{disp} may be any representable integer.
@@ -6703,10 +6693,17 @@ result in zero (all bits are shifted out).
 For positive displacements,
 the following equality holds:
 @verbatim{
-assert(bit32.SHR(b, disp) == math.floor(b % 2^32 / 2^disp))
+assert(bit32.rshift(b, disp) == math.floor(b % 2^32 / 2^disp))
 }
 
 This shift operation is what is called @x{logical shift}.
+
+}
+
+@LibEntry{bit32.test (@Cdots)|
+
+Returns a boolean signaling 
+whether the @x{bitwise and} of its operands is different from zero.
 
 }
 
