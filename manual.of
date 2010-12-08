@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.65 2010/11/22 16:40:31 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.66 2010/11/22 18:07:40 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -632,47 +632,48 @@ the collector directly (e.g., stop and restart it).
 
 @sect3{finalizers| @title{Garbage-Collection Metamethods}
 
-Using the @N{C API},
-you can set garbage-collector metamethods for full userdata @see{metatable}.
+You can set garbage-collector metamethods for tables
+and, using the @N{C API},
+for full userdata @see{metatable}.
 These metamethods are also called @def{finalizers}.
 Finalizers allow you to coordinate Lua's garbage collection
 with external resource management
 (such as closing files, network or database connections,
 or freeing your own memory).
 
-For a userdata to be finalized when collected,
+For an object (table or userdata) to be finalized when collected,
 you must @emph{mark} it for finalization.
 @index{mark (for finalization)}
-You mark a userdata for finalization when you set its metatable
+You mark an object for finalization when you set its metatable
 and the metatable has a field indexed by the string @St{__gc}.
 Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
-the userdata will not be marked for finalization.
+the object will not be marked for finalization.
 However, after a userdata is marked,
 you can freely change the @idx{__gc} field of its metatable.
 
-When a marked userdata becomes garbage,
+When a marked object becomes garbage,
 it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
 Lua does the equivalent of the following function
-for each userdata in that list:
+for each object in that list:
 @verbatim{
-function gc_event (udata)
-  local h = metatable(udata).__gc
+function gc_event (obj)
+  local h = metatable(obj).__gc
   if type(h) == "function" then
-    h(udata)
+    h(obj)
   end
 end
 }
 
 At the end of each garbage-collection cycle,
-the finalizers for userdata are called in
+the finalizers for objects are called in
 the reverse order that they were marked for collection,
 among those collected in that cycle;
 that is, the first finalizer to be called is the one associated
-with the userdata marked last in the program.
-The userdata memory is freed only in the next garbage-collection cycle.
+with the object marked last in the program.
+The object memory is freed only in the next garbage-collection cycle.
 
 }
 
@@ -720,15 +721,15 @@ and therefore are not removed from weak tables
 (unless its associated value is collected).
 Lua treats strings and @x{light C functions} as non-object values.
 
-Userdata marked for finalization have a special behavior in weak tables.
-When a marked userdata is a value in a weak table,
+Objects marked for finalization have a special behavior in weak tables.
+When a marked object is a value in a weak table,
 it is removed from the table the first time it is collected,
 before running its finalizer.
 However, when it is a key,
 it is removed from the table only when it is really freed,
 after running its finalizer.
 This behavior allows the finalizer to access values
-associated with the userdata through weak tables.
+associated with the object through weak tables.
 
 }
 
@@ -1482,7 +1483,9 @@ the quotient towards minus infinity.
 Lua provides automatic conversion between
 string and number values at run time.
 Any arithmetic operation applied to a string tries to convert
-this string to a number, following the usual conversion rules.
+this string to a number, following the rules of the Lua lexer.
+(The string may have leading and trailing spaces,
+plus an optional sign.)
 Conversely, whenever a number is used where a string is expected,
 the number is converted to a string, in a reasonable format.
 For complete control over how numbers are converted to strings,
@@ -4022,15 +4025,12 @@ In the first case,
 the parameter @id{ar} must be a valid activation record that was
 filled by a previous call to @Lid{lua_getstack} or
 given as argument to a hook @seeC{lua_Hook}.
-The index @id{n} selects which local variable to inspect
-(1 is the first parameter or active local variable, and so on,
-until the last active local variable).
+The index @id{n} selects which local variable to inspect;
+see @Lid{debug.getlocal} for details about variable indices
+and names.
+
 @Lid{lua_getlocal} pushes the variable's value onto the stack
 and returns its name.
-
-Variable names starting with @Char{(} (open parentheses)
-represent internal variables
-(loop control variables, temporaries, and @N{C function} locals).
 
 In the second case, @id{ar} should be @id{NULL} and the function
 to be inspected must be at the top of the stack.
@@ -5164,6 +5164,8 @@ so the following equality is always true:
 k, b = collectgarbage("count")
 assert(k*1024 == math.floor(k)*1024 + b)
 }
+(The second result is useful when Lua is compiled
+with a non floating-point type for numbers.)
 }
 
 @item{@Q{step}|
@@ -5275,7 +5277,7 @@ If there are no errors,
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
 If the resulting function has upvalues,
-the first upvalue is set to the value of the @x{global environment}
+the first upvalue is set to the value of the @x{global environment}.
 (When loading main chunks,
 this upvalue will be the @id{_ENV} variable @see{globalenv}.)
 
@@ -5299,7 +5301,11 @@ but sets @id{env} as the value of the first upvalue
 of the created function in case of success.
 (When loading main chunks,
 this upvalue will be the @id{_ENV} variable @see{globalenv}.)
+
 The parameters after @id{env} are similar to those of @Lid{load}, too.
+
+It raises an error if the function does not have any upvalue.
+(Main chunks always have one.)
 
 }
 
@@ -5462,9 +5468,9 @@ The base may be any integer between 2 and 36, inclusive.
 In bases @N{above 10}, the letter @Char{A} (in either upper or lower case)
 @N{represents 10}, @Char{B} @N{represents 11}, and so forth,
 with @Char{Z} representing 35.
-In base 10 (the default), the number can have a decimal part,
-as well as an optional exponent part @see{lexical}.
-In other bases, only unsigned integers are accepted.
+In base 10 (the default),
+the numeral is converted following the coercion rules @see{coercion}.
+In other bases, only integers are accepted.
 
 }
 
@@ -6574,7 +6580,7 @@ Returns the hyperbolic tangent of @id{x}.
 
 }
 
-@sect2{bitlib| @title{Bitwise operations}
+@sect2{bitlib| @title{Bitwise Operations}
 
 This library provides bitwise operations.
 It provides all its functions inside the table @defid{bit32}.
@@ -6639,6 +6645,24 @@ whether the @x{bitwise and} of its operands is different from zero.
 @LibEntry{bit32.bxor (@Cdots)|
 
 Returns the bitwise @x{exclusive or} of its operands.
+
+}
+
+@LibEntry{bit32.extract (n, field, width)|
+
+Returns the unsigned number formed by the bits
+@id{field} to @id{field + width - 1} from @id{n}.
+Bits are numbered from 0 (least significant) to 31 (most significant).
+All accessed bits must be in the range @M{[0, 31]}.
+
+}
+
+@LibEntry{bit32.insert (n, v, field, width)|
+
+Returns a copy of @id{n} with
+the bits @id{field} to @id{field + width - 1}
+replaced by the value @id{v}.
+See @Lid{bit32.extract} for details about @id{field} and @id{width}.
 
 }
 
@@ -7263,16 +7287,20 @@ about the @Lid{print} function.
 
 This function returns the name and the value of the local variable
 with index @id{local} of the function at level @id{f} of the stack.
-(The first parameter or local variable has @N{index 1}, and so on,
-until the last active local variable.)
-The function returns @nil if there is no local
-variable with the given index,
+This function accesses not only explicit local variables,
+but also parameters, temporaries, etc.
+
+The first parameter or local variable has @N{index 1}, and so on,
+until the last active variable.
+Negative indices refer to vararg parameters;
+-1 is the first vararg parameter. 
+The function returns @nil if there is no variable with the given index,
 and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
 
 Variable names starting with @Char{(} (open parentheses)
 represent internal variables
-(loop control variables, temporaries, and @N{C function} locals).
+(loop control variables, temporaries, varargs, and @N{C function} locals).
 
 The parameter @id{f} may also be a function.
 In that case, @id{getlocal} returns only the name of function parameters.
@@ -7353,6 +7381,9 @@ variable with the given index,
 and raises an error when called with a @id{level} out of range.
 (You can call @id{getinfo} to check whether the level is valid.)
 Otherwise, it returns the name of the local variable.
+
+See @Lid{debug.getlocal} for more information about
+variable indices and names.
 
 }
 
