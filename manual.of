@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.66 2010/11/22 18:07:40 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.67 2010/12/08 12:15:05 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -168,7 +168,7 @@ Therefore, by default,
 global variables in Lua code refer to entries in the global environment.
 Moreover, all standard libraries are loaded in the global environment,
 and several functions there operate on that environment.
-You can use @Lid{loadin} to load a chunk with a different environment.
+You can use @Lid{load} to load a chunk with a different environment.
 (In C, you have to load the chunk and then change the value
 of its first upvalue.)
 
@@ -975,13 +975,18 @@ alo
 123"]==]
 }
 
-A @def{numerical constant} can be written with an optional decimal part
-and an optional decimal exponent.
-Lua also accepts integer @x{hexadecimal constants},
-by prefixing them with @T{0x}.
+A @def{numerical constant} can be written with an optional fractional part
+and an optional decimal exponent,
+marked by a letter @Char{e} or @Char{E}.
+Lua also accepts @x{hexadecimal constants},
+which start with @T{0x} or @T{0X}.
+Hexadecimal constants also accept an optional fractional part
+plus an optional binary exponent,
+marked by a letter @Char{e} or @Char{E}.
 Examples of valid numerical constants are
 @verbatim{
-3   3.0   3.1416   314.16e-2   0.31416E1   0xff   0x56
+3     3.0     3.1416     314.16e-2     0.31416E1
+0xff  0x0.1E  0xA23p-4   0X1.921FB54442D18P+1
 }
 
 A @def{comment} starts with a double hyphen (@T{--})
@@ -5261,30 +5266,33 @@ up to the first integer key absent from the table.
 
 }
 
-@LibEntry{load (ld [, source [, mode]])|
+@LibEntry{load (ld [, source [, mode [, env]]])|
 
 Loads a chunk.
 
+If @id{ld} is a string, the chunk is this string.
 If @id{ld} is a function,
-calls it repeatedly to get the chunk pieces.
+@id{load} calls it repeatedly to get the chunk pieces.
 Each call to @id{ld} must return a string that concatenates
 with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
 
-If @id{ld} is a string, the chunk is this string.
-
 If there are no errors, 
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
+
 If the resulting function has upvalues,
-the first upvalue is set to the value of the @x{global environment}.
+the first upvalue is set to the value of the
+@x{global environment} or to @id{env},
+if that parameter is given.
 (When loading main chunks,
-this upvalue will be the @id{_ENV} variable @see{globalenv}.)
+the first upvalue will be the @id{_ENV} variable @see{globalenv}.)
 
 @id{source} is used as the source of the chunk for error messages
 and debug information @see{debugI}.
 When absent,
-it defaults to @St{=(load)}.
+it defaults to @{ld}, if @id{ld} is a string,
+or to @St{=(load)}.
 
 The string @id{mode} controls whether the chunk can be text or binary
 (that is, a precompiled chunk).
@@ -5294,42 +5302,12 @@ The default is @St{bt}.
 
 }
 
-@LibEntry{loadin (env, ...)|
-
-This function is similar to @Lid{load},
-but sets @id{env} as the value of the first upvalue
-of the created function in case of success.
-(When loading main chunks,
-this upvalue will be the @id{_ENV} variable @see{globalenv}.)
-
-The parameters after @id{env} are similar to those of @Lid{load}, too.
-
-It raises an error if the function does not have any upvalue.
-(Main chunks always have one.)
-
-}
-
 @LibEntry{loadfile ([filename])|
 
 Similar to @Lid{load},
 but gets the chunk from file @id{filename}
 or from the standard input,
 if no file name is given.
-
-}
-
-@LibEntry{loadstring (string [, chunkname])|
-
-Similar to @Lid{load},
-but gets the chunk from the given string.
-
-To load and run a given string, use the idiom
-@verbatim{
-assert(loadstring(s))()
-}
-
-When absent,
-@id{chunkname} defaults to the given string.
 
 }
 
@@ -5887,9 +5865,8 @@ Note that numerical codes are not necessarily portable across platforms.
 @LibEntry{string.dump (function)|
 
 Returns a string containing a binary representation of the given function,
-so that a later @Lid{loadstring} on this string returns
-a copy of the function.
-@id{function} must be a Lua function without upvalues.
+so that a later @Lid{load} on this string returns
+a copy of the function (but with new upvalues).
 
 }
 
@@ -5941,14 +5918,13 @@ will produce the string:
  new line"
 }
 
-The options @id{c}, @id{d}, @id{E}, @id{e}, @id{f},
-@id{g}, @id{G}, @id{i}, @id{o}, @id{u}, @id{X}, and @id{x} all
-expect a number as argument,
-whereas @id{q} and @id{s} expect a string.
-
-This function does not accept string values
-containing embedded zeros,
-except as arguments to the @id{q} option.
+Options @id{c}, @id{d}, @id{E}, @id{e}, @id{f},
+@id{a}, @id{A},
+@id{g}, @id{G}, @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
+all expect a number as argument;
+@id{q} expects a string;
+and @id{s} expects a string without embedded zeros.
+(Options @id{a} and @id{A} may not be available in some systems.)
 
 }
 
@@ -5960,14 +5936,14 @@ If @id{pattern} specifies no captures,
 then the whole match is produced in each call.
 
 As an example, the following loop
+will iterate over all the words from string @id{s},
+printing one per line:
 @verbatim{
 s = "hello world from Lua"
 for w in string.gmatch(s, "%a+") do
   print(w)
 end
 }
-will iterate over all the words from string @id{s},
-printing one per line.
 The next example collects all pairs @T{key=value} from the
 given string into a table:
 @verbatim{
@@ -6034,7 +6010,7 @@ x = string.gsub("home = $HOME, user = $USER", "%$(%w+)", os.getenv)
 --> x="home = /home/roberto, user = roberto"
 
 x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
-      return loadstring(s)()
+      return load(s)()
     end)
 --> x="4+5 = 9"
 
@@ -7632,6 +7608,12 @@ Use @Lid{math.log} with 10 as its second argument, instead.
 }
 
 @item{
+Function @id{loadstring} is deprecated.
+Use @id{load} instead; it now accepts string arguments
+and are exactly equivalent to @id{loadstring}.
+}
+
+@item{
 Function @id{table.maxn} is deprecated.
 Write it in Lua if you really need it.
 }
@@ -7649,7 +7631,7 @@ as now patterns may contain @Char{\0} as a regular character.
 @item{
 Lua does not have bytecode verification anymore.
 So, all functions that load code
-(@Lid{load}, @Lid{loadfile}, @Lid{loadstring})
+(@Lid{load} and @Lid{loadfile})
 are potentially insecure when loading untrusted binary data.
 (Actually, those functions were already insecure because
 of bugs in the verification algorithm.)
