@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.67 2010/12/08 12:15:05 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.68 2010/12/13 16:39:16 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -75,7 +75,7 @@ any other value makes it true.
 internal representations for numbers,
 such as single-precision floats or long integers;
 see file @id{luaconf.h}.)
-@emph{String} represents arrays of characters.
+@emph{String} represents immutable sequences of characters.
 @index{eight-bit clean}
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
@@ -2519,10 +2519,13 @@ without shifting any element
 @apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
-The new table has space pre-allocated
-for @id{narr} array elements and @id{nrec} non-array elements.
-This pre-allocation is useful when you know exactly how many elements
+Parameter @id{narr} is a hint for how many elements the table
+will have as an array;
+parameter @id{nrec} is a hint for how many other elements
 the table will have.
+Lua may use these hints to preallocate memory for the new table.
+This pre-allocation is useful for performance when you know in advance
+how many elements the table will have.
 Otherwise you can use the function @Lid{lua_newtable}.
 
 }
@@ -7599,7 +7602,7 @@ and it is easy to set up a module with regular Lua code.
 @item{
 Functions @id{setfenv} and @id{getfenv} are deprecated.
 To set the environment of a Lua function,
-use the variable @id{_ENV} or the new function @Lid{loadin}.
+use the variable @id{_ENV} or the function @Lid{load}.
 }
 
 @item{
