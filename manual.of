@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.68 2010/12/13 16:39:16 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.69 2010/12/15 15:44:00 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -75,7 +75,7 @@ any other value makes it true.
 internal representations for numbers,
 such as single-precision floats or long integers;
 see file @id{luaconf.h}.)
-@emph{String} represents immutable sequences of characters.
+@emph{String} represents immutable sequences of bytes.
 @index{eight-bit clean}
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
@@ -108,14 +108,32 @@ that is, @x{arrays} that can be indexed not only with numbers,
 but with any value (except @nil).
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
+Any key with value @nil is not considered part of the table.
+Conversely, any key that is not part of a table has
+an associated value @nil.
+
 Tables are the sole data structuring mechanism in Lua;
-they can be used to represent ordinary arrays,
+they can be used to represent ordinary arrays, sequences,
 symbol tables, sets, records, graphs, trees, etc.
 To represent @x{records}, Lua uses the field name as an index.
 The language supports this representation by
 providing @id{a.name} as syntactic sugar for @T{a["name"]}.
 There are several convenient ways to create tables in Lua
 @see{tableconstructor}.
+
+We use the term @def{sequence} to denote a table where all
+integer keys comprise the set @M{{1..n}} for some integer @M{n},
+which is called the @x{length} of the sequence @see{len-op}.
+Note that a table like
+@verbatim{
+{10, 20, nil, 40}
+}
+is not a sequence, because it has the key @T{4}
+but does not have the key @T{3}.
+(So, there is no @M{n} such that the set @M{{1..n}} is equal
+to the set of numeric keys of that table.)
+Note, however, that non-numeric keys do not interfere
+with whether a table is a sequence.
 
 Like indices,
 the value of a table field can be of any type (except @nil).
@@ -1591,20 +1609,11 @@ The length of a string is its number of bytes
 (that is, the usual meaning of string length when each
 character is one byte).
 
-The length of a table @id{t} can be any integer index @id{n}
-such that @T{t[n]} is not @nil and @T{t[n+1]} is @nil;
-moreover, if @T{t[1]} is @nil, @id{n} can be zero.
-(All accesses are assumed to be raw for this description.)
-For a regular array, where all non-nil values
-have keys from 1 to a given @id{n},
-its length is exactly that @id{n},
-the index of its last value.
-If the array has @Q{holes}
-(that is, @nil values between other non-nil values),
-then @T{#t} can be any of the indices that
-directly precedes a @nil value
-(that is, it may consider any such @nil value as the end of
-the array). 
+The length of a table @id{t} is only defined if the
+table is a @x{sequence},
+that is,
+all its numeric keys comprise the set @M{{1..n}} for some integer @M{n}.
+In that case, @M{n} is its length.
 
 A program can modify the behavior of the length operator for
 any value but strings through metamethods @see{metatable}.
@@ -2520,7 +2529,7 @@ without shifting any element
 
 Creates a new empty table and pushes it onto the stack.
 Parameter @id{narr} is a hint for how many elements the table
-will have as an array;
+will have as a sequence;
 parameter @id{nrec} is a hint for how many other elements
 the table will have.
 Lua may use these hints to preallocate memory for the new table.
@@ -5597,8 +5606,8 @@ at @T{package.loaded[modname]}.
 Otherwise, it tries to find a @emph{loader} for the module.
 
 To find a loader,
-@id{require} is guided by the @Lid{package.loaders} array.
-By changing this array,
+@id{require} is guided by the @Lid{package.loaders} sequence.
+By changing this sequence,
 we can change how @id{require} looks for a module.
 The following explanation is based on the default configuration
 for @Lid{package.loaders}.
@@ -6265,62 +6274,69 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 }
 
 @sect2{@title{Table Manipulation}
+
 This library provides generic functions for table manipulation.
 It provides all its functions inside the table @defid{table}.
 
 Most functions in the table library assume that the table
-represents an array or a list.
+represents a sequence.
 For these functions, when we talk about the @Q{length} of a table
-we mean the result of the length operator.
+we mean the result of the length operator @see{op-len}.
+
+For performance reasons,
+all table accesses performed by these functions are raw.
 
 
-@LibEntry{table.concat (table [, sep [, i [, j]]])|
-Given an array where all elements are strings or numbers,
-returns @T{table[i]..sep..table[i+1] @Cdots sep..table[j]}.
+@LibEntry{table.concat (seq [, sep [, i [, j]]])|
+
+Given a sequence where all elements are strings or numbers,
+returns @T{seq[i]..sep..seq[i+1] @Cdots sep..seq[j]}.
 The default value for @id{sep} is the empty string,
 the default for @id{i} is 1,
-and the default for @id{j} is the length of the table.
+and the default for @id{j} is the length of the sequence.
 If @id{i} is greater than @id{j}, returns the empty string.
 
 }
 
-@LibEntry{table.insert (table, [pos,] value)|
+@LibEntry{table.insert (seq, [pos,] value)|
 
-Inserts element @id{value} at position @id{pos} in @id{table},
+Inserts element @id{value} at position @id{pos} in @id{seq},
 shifting up other elements to open space, if necessary.
 The default value for @id{pos} is @T{n+1},
-where @id{n} is the length of the table @see{len-op},
+where @id{n} is the length of the sequence @see{len-op},
 so that a call @T{table.insert(t,x)} inserts @id{x} at the end
-of table @id{t}.
+of sequence @id{t}.
 
 }
 
 @LibEntry{table.pack (@Cdots)|
 
-Returns a new table with all parameters stored into
-keys 1, 2, etc.
+Returns a new table with all parameters stored into keys 1, 2, etc.
 and with a field @St{n} with the total number of parameters.
+Note that the result may not be a sequence,
+if any parameter is @nil.
 
 }
 
-@LibEntry{table.remove (table [, pos])|
+@LibEntry{table.remove (seq [, pos])|
 
-Removes from @id{table} the element at position @id{pos},
+Removes from @id{seq} the element at position @id{pos},
 shifting down other elements to close the space, if necessary.
 Returns the value of the removed element.
 The default value for @id{pos} is @id{n},
-where @id{n} is the length of the table,
+where @id{n} is the length of the sequence,
 so that a call @T{table.remove(t)} removes the last element
-of table @id{t}.
+of sequence @id{t}.
 
 }
 
-@LibEntry{table.sort (table [, comp])|
-Sorts table elements in a given order, @emph{in-place},
+@LibEntry{table.sort (seq [, comp])|
+
+Sorts sequence elements in a given order, @emph{in-place},
 from @T{table[1]} to @T{table[n]},
-where @id{n} is the length of the table.
+where @id{n} is the length of the sequence.
 If @id{comp} is given,
-then it must be a function that receives two table elements
+then it must be a function that receives two sequence elements
 and returns true when the first element must come
 before the second in the final order
 (so that @T{not comp(a[i+1],a[i])} will be true after the sort).
@@ -6334,6 +6350,7 @@ may have their relative positions changed by the sort.
 }
 
 @LibEntry{table.unpack (list [, i [, j]])|
+
 Returns the elements from the given table.
 This function is equivalent to
 @verbatim{
@@ -6342,7 +6359,8 @@ return list[i], list[i+1], @Cdots, list[j]
 except that the above code can be written only for a fixed number
 of elements.
 By default, @id{i} @N{is 1} and @id{j} is the length of the list,
-as defined by the length operator @see{len-op}.
+as defined by the length operator @see{len-op};
+in that case, the table must be a sequence.
 
 }
 
