@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.69 2010/12/15 15:44:00 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.70 2010/12/17 12:17:06 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -741,12 +741,10 @@ Lua treats strings and @x{light C functions} as non-object values.
 
 Objects marked for finalization have a special behavior in weak tables.
 When a marked object is a value in a weak table,
-it is removed from the table the first time it is collected,
-before running its finalizer.
+it is removed from the table before running its finalizer.
 However, when it is a key,
-it is removed from the table only when it is really freed,
-after running its finalizer.
-This behavior allows the finalizer to access values
+it is removed from the table only after running its finalizer.
+This behavior allows the finalizer to access properties
 associated with the object through weak tables.
 
 }
@@ -970,9 +968,16 @@ Any kind of end-of-line sequence
 (carriage return, newline, carriage return followed by newline,
 or newline followed by carriage return)
 is converted to a simple newline.
-You should not use long strings for non-text data;
-Use instead a regular quoted literal with explicit escape sequences
-for control characters.
+
+When parsing a from a string source,
+any byte in a literal string not
+explicitly affected by the previous rules represents itself.
+However, Lua opens files for parsing in text mode,
+and the system file functions may have problems with
+some control characters.
+So, it is safer to represent
+non-text data as a quoted literal with
+explicit escape sequences for non-text characters.
 
 
 For convenience,
@@ -1338,8 +1343,8 @@ do
   local @rep{f}, @rep{s}, @rep{var} = @rep{explist}
   while true do
     local @rep{var_1}, @Cdots, @rep{var_n} = @rep{f}(@rep{s}, @rep{var})
+    if @rep{var_1} == nil then break end
     @rep{var} = @rep{var_1}
-    if @rep{var} == nil then break end
     @rep{block}
   end
 end
@@ -1413,7 +1418,7 @@ The basic expressions in Lua are the following:
 @producname{exp}@producbody{@Rw{nil} @Or @Rw{false} @Or @Rw{true}}
 @producname{exp}@producbody{@bnfNter{Number}}
 @producname{exp}@producbody{@bnfNter{String}}
-@producname{exp}@producbody{function}
+@producname{exp}@producbody{functiondef}
 @producname{exp}@producbody{tableconstructor}
 @producname{exp}@producbody{@bnfter{...}}
 @producname{exp}@producbody{exp binop exp}
@@ -1763,7 +1768,7 @@ return x or f(x)     -- results adjusted to 1
 
 The syntax for function definition is
 @Produc{
-@producname{function}@producbody{@Rw{function} funcbody}
+@producname{functiondef}@producbody{@Rw{function} funcbody}
 @producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
 }
 
@@ -2631,6 +2636,9 @@ returns a boolean that tells whether the collector is running
 
 }
 
+For more details about some options,
+see @Lid{collectgarbage}.
+
 }
 
 @APIEntry{lua_Alloc lua_getallocf (lua_State *L, void **ud);|
@@ -3217,7 +3225,8 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
-The string can contain embedded zeros.
+The string can contain any binary data,
+including embedded zeros.
 
 Returns a pointer to the internal copy of the string.
 
@@ -3245,8 +3254,6 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
-The string should not contain embedded zeros;
-it is assumed to end at the first zero.
 
 Returns a pointer to the internal copy of the string.
 
@@ -3471,7 +3478,7 @@ It is defined as a macro.
 
 }
 
-@APIEntry{int lua_setmetatable (lua_State *L, int index);|
+@APIEntry{void lua_setmetatable (lua_State *L, int index);|
 @apii{1,0,-}
 
 Pops a table from the stack and
@@ -4624,13 +4631,15 @@ as @T{return luaL_error(@rep{args})}.
 
 }
 
-@APIEntry{void luaL_findtable (lua_State *L, int idx, const char *fname);|
+@APIEntry{int luaL_findtable (lua_State *L, int idx, const char *fname);|
 @apii{0,1,m}
 
 Ensures that the value @T{t[fname]},
 where @id{t} is the value at the valid index @id{idx},
 is a table,
 and pushes that table onto the stack.
+Returns true when it finds a previous table there
+and false when it creates a new table.
 
 }
 
@@ -5165,11 +5174,13 @@ This is the default option.
 }
 
 @item{@Q{stop}|
-stops the garbage collector.
+stops automatic invocation of the garbage collector.
+The collector will run only when explcitly invoked,
+until a call to restart it.
 }
 
 @item{@Q{restart}|
-restarts the garbage collector.
+restarts automatic invocation the garbage collector.
 }
 
 @item{@Q{count}|
@@ -5410,6 +5421,14 @@ Gets the real value of @T{table[index]},
 without invoking any metamethod.
 @id{table} must be a table;
 @id{index} may be any value.
+
+}
+
+@LibEntry{rawlen (v)|
+Returns the length of the object @id{v},
+which must be a table or a string,
+without invoking any metamethod.
+Returns an integer number.
 
 }
 
@@ -5804,7 +5823,7 @@ A table to store loaders for specific modules
 
 }
 
-@LibEntry{package.searchpath (name, path)|
+@LibEntry{package.searchpath (name, path [, sep])|
 
 Searches for the given @id{name} in the given @id{path}.
 
@@ -5813,8 +5832,13 @@ A path is string containing a sequence of
 For each template,
 the function changes each interrogation
 mark in the template by a copy of @id{name}
-wherein all dots were replaced by the system's directory separator,
+wherein all occurrences of @id{sep}
+(a dot, by default)
+were replaced by the system's directory separator,
 and then tries to open the resulting file name.
+If @id{sep} is the empty string,
+the replacement is not done.
+
 For instance, if the path is the string
 @verbatim{
 "./?.lua;./?.lc;/usr/local/?/init.lua"
@@ -6063,9 +6087,11 @@ its default value @N{is 1} and can be negative.
 
 }
 
-@LibEntry{string.rep (s, n)|
+@LibEntry{string.rep (s, n [, sep])|
 Returns a string that is the concatenation of @id{n} copies of
-the string @id{s}.
+the string @id{s} separated by the string @id{sep}.
+The default value for @id{sep} is the empty string
+(that is, no separator).
 
 }
 
@@ -6281,7 +6307,7 @@ It provides all its functions inside the table @defid{table}.
 Most functions in the table library assume that the table
 represents a sequence.
 For these functions, when we talk about the @Q{length} of a table
-we mean the result of the length operator @see{op-len}.
+we mean the result of the length operator @see{len-op}.
 
 For performance reasons,
 all table accesses performed by these functions are raw.
@@ -7388,6 +7414,7 @@ variable indices and names.
 
 Sets the metatable for the given @id{object} to the given @id{table}
 (which can be @nil).
+Returns @id{object}.
 
 }
 
@@ -7580,12 +7607,30 @@ all these compatibility options will be removed in the next version of Lua.
 @itemize{
 
 @item{
+The concept of @emph{environment} changed.
+Only Lua functions have environments.
+To set the environment of a Lua function,
+use the variable @id{_ENV} or the function @Lid{load}.
+
+C functions do not have environments any more.
+Use an upvalue with a shared table if you need to keep
+shared state among several C functions.
+(You may use @Lid{luaL_setfuncs} to open a C library
+with all functions sharing a common upvalue.)
+
+To manipulate the @Q{environment} of a userdata
+(which is now called @x{user value}),
+use the new functions
+@Lid{lua_getuservalue} and @Lid{lua_setuservalue}.
+}
+
+@item{
 Lua identifiers cannot use locale-dependent letters.
 }
 
 @item{
-Doing a step in the garbage collector does not restart the collector
-if it has been stopped.
+Doing a step or a full collection in the garbage collector
+does not restart the collector if it has been stopped.
 }
 
 @item{
@@ -7593,15 +7638,17 @@ Weak tables with weak keys now perform like @emph{ephemeron tables}.
 }
 
 @item{
-Threads do not have individual environments.
-All threads share a single fixed environment.
-}
-
-@item{
 The event @emph{tail return} in debug hooks was removed.
 Instead, tail calls generate a special new event,
 @emph{tail call}, so that the debugger can know there will
 not be a corresponding return event.
+}
+
+@item{
+Equality between function values has changed.
+Now, a function definition may not create a new value;
+it may reuse some previous value if there is no
+observable difference to the new function.
 }
 
 }
@@ -7618,9 +7665,8 @@ and it is easy to set up a module with regular Lua code.
 }
 
 @item{
-Functions @id{setfenv} and @id{getfenv} are deprecated.
-To set the environment of a Lua function,
-use the variable @id{_ENV} or the function @Lid{load}.
+Functions @id{setfenv} and @id{getfenv} are deprecated,
+because of the changes in environments.
 }
 
 @item{
@@ -7677,17 +7723,8 @@ You must get the global environment from the registry
 @item{
 Pseudoindex @id{LUA_ENVIRONINDEX}
 and functions @id{lua_getfenv}/@id{lua_setfenv}
-were removed.
-C functions do not have environments any more.
-Use an upvalue with a shared table if you need to keep
-shared state among several C functions.
-(You may use @Lid{luaL_setfuncs} to open a C library
-with all functions sharing a common upvalue.)
-
-To manipulate the @Q{environment} of a userdata
-(which is not called @Q{environment} anymore),
-use the new functions
-@Lid{lua_getuservalue} and @Lid{lua_setuservalue}.
+were removed,
+as @N{C functions} do not have environments any more.
 }
 
 @item{
@@ -7784,7 +7821,7 @@ Here is the complete syntax of Lua in extended BNF.
 @producname{namelist}@producbody{@bnfNter{Name} @bnfrep{@bnfter{,} @bnfNter{Name}}}
 
 
-@producname{explist}@producbody{@bnfrep{exp @bnfter{,}} exp}
+@producname{explist}@producbody{exp @bnfrep{@bnfter{,} exp}}
 
 @producname{exp}@producbody{
 	@Rw{nil}
@@ -7813,7 +7850,7 @@ Here is the complete syntax of Lua in extended BNF.
 @Or	@bnfNter{String}
 }
 
-@producname{function}@producbody{@Rw{function} funcbody}
+@producname{functiondef}@producbody{@Rw{function} funcbody}
 
 @producname{funcbody}@producbody{@bnfter{(} @bnfopt{parlist} @bnfter{)} block @Rw{end}}
 
