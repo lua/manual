@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.70 2010/12/17 12:17:06 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.71 2011/02/09 14:58:08 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -157,7 +157,7 @@ of a given value.
 @sect2{globalenv| @title{Environments and the Global Environment}
 
 As discussed in @refsec{variables} and @refsec{assignment},
-any reference to a global name @id{var} is syntactically translated 
+any reference to a global name @id{var} is syntactically translated
 to @T{_ENV.var}.
 Moreover, every chunk is compiled in the scope of an external
 variable called @id{_ENV} @see{chunks},
@@ -180,7 +180,7 @@ This value is kept at a special index in the C registry @see{registry}.
 In Lua, the variable @Lid{_G} is initialized with this same value.
 
 When Lua compiles a chunk,
-it initializes the value of its @id{_ENV} variable 
+it initializes the value of its @id{_ENV} variable
 with the global environment @seeF{load}.
 Therefore, by default,
 global variables in Lua code refer to entries in the global environment.
@@ -234,7 +234,7 @@ Lua calls this function to perform the addition.
 
 The keys in a metatable are derived from the @def{event} names;
 the corresponding values are called @def{metamethods}.
-In the previous example, the event is @T{"add"} 
+In the previous example, the event is @T{"add"}
 and the metamethod is the function that performs the addition.
 
 You can query the metatable of any value
@@ -644,7 +644,7 @@ memory usage.
 
 You can change these numbers by calling @Lid{lua_gc} in C
 or @Lid{collectgarbage} in Lua.
-With these functions you can also control 
+With these functions you can also control
 the collector directly (e.g., stop and restart it).
 
 
@@ -828,7 +828,7 @@ co = coroutine.create(function (a,b)
       print("co-body", r, s)
       return b, "end"
 end)
-       
+
 print("main", coroutine.resume(co, 1, 10))
 print("main", coroutine.resume(co, "r"))
 print("main", coroutine.resume(co, "x", "y"))
@@ -888,17 +888,16 @@ except as delimiters between @x{names} and @x{keywords}.
 in Lua can be any string of letters,
 digits, and underscores,
 not beginning with a digit.
-This coincides with the definition of names in most languages.
-Identifiers are used to name variables and table fields.
+Identifiers are used to name variables, table fields, and labels.
 
 The following @def{keywords} are reserved
 and cannot be used as names:
 @index{reserved words}
 @verbatim{
-and       break     do        else      elseif
-end       false     for       function  if
-in        local     nil       not       or
-repeat    return    then      true      until     while
+and       break     do        else      elseif    end
+false     for       function  goto      if        in
+local     nil       not       or        repeat    return
+then      true      until     while
 }
 
 Lua is a case-sensitive language:
@@ -934,7 +933,7 @@ results in a newline in the string.
 The escape sequence @Char{\*} skips the following span
 of white-space characters,
 including line breaks;
-it is particularly useful to break and indent a long string 
+it is particularly useful to break and indent a long string
 into multiple lines without adding the newlines and spaces
 into the string contents.
 
@@ -1026,7 +1025,6 @@ Long comments are frequently used to disable code temporarily.
 @sect2{variables| @title{Variables}
 
 Variables are places that store values.
-@C{In Lua, variables are given by simple identifiers or by table fields.}
 There are three kinds of variables in Lua:
 global variables, local variables, and table fields.
 
@@ -1115,7 +1113,7 @@ a chunk is simply a block:
 @producname{chunk}@producbody{block}
 }
 
-Lua handles a chunk as the body of an anonymous function 
+Lua handles a chunk as the body of an anonymous function
 with a variable number of arguments
 @see{func-def}.
 As such, chunks can define local variables,
@@ -1228,6 +1226,22 @@ the inner block does not end at the @Rw{until} keyword,
 but only after the condition.
 So, the condition can refer to local variables
 declared inside the loop block.
+
+The @Rw{goto} statement transfers the program control to a label.
+For syntactical reasons,
+labels in Lua are considered statements too:
+@index{goto statement}
+@index{label}
+@Produc{
+@producname{stat}@producbody{@Rw{goto} Name}
+@producname{stat}@producbody{label}
+@producname{label}@producbody{@bnfter{@} Name @bnfter{:}}
+}
+
+A label is visible in the entire block where it is defined
+(including nested blocks, but not nested functions).
+A goto may jump to any visible label as long as it does not
+enter into the scope of a local variable.
 
 The @Rw{return} statement is used to return values
 from a function or a chunk (which is just a function).
@@ -1543,7 +1557,7 @@ Closures with the same reference are always equal.
 Closures with any detectable difference
 (different behavior, different definition) are always different.
 
-You can change the way that Lua compares tables and userdata 
+You can change the way that Lua compares tables and userdata
 by using the @Q{eq} metamethod @see{metatable}.
 
 The conversion rules of @See{coercion}
@@ -2185,7 +2199,7 @@ because its frame in the C stack was destroyed by the yield.
 Instead, Lua calls a @def{continuation function},
 which was given as an argument to the callee function.
 As the name implies,
-the continuation function should continue the task 
+the continuation function should continue the task
 of the original function.
 
 Lua treats the continuation function as if it was the original function.
@@ -4241,7 +4255,7 @@ refer to the @id{n2}-th upvalue of the Lua closure at index @id{fidx2}.
 @index{lauxlib.h}
 The @def{auxiliary library} provides several convenient functions
 to interface C with Lua.
-While the basic API provides the primitive functions for all 
+While the basic API provides the primitive functions for all
 interactions between C and Lua,
 the auxiliary library provides higher-level functions for some
 common tasks.
@@ -4745,7 +4759,7 @@ it does not run it.
 
 Equivalent to @Lid{luaL_setfuncs} with no upvalues,
 but first creates a new table wherein to register the functions
-in list @id{l}. 
+in list @id{l}.
 
 Leaves the new table on the stack.
 
@@ -4904,7 +4918,7 @@ Returns an address to a space of size @id{sz}
 where you can copy a string to be added to buffer @id{B}
 @seeC{luaL_Buffer}.
 After copying the string into this space you must call
-@Lid{luaL_addsize} with the size of the string to actually add 
+@Lid{luaL_addsize} with the size of the string to actually add
 it to the buffer.
 
 }
@@ -5149,7 +5163,7 @@ e.g., by using @Lid{lua_call}.
 
 The basic library provides some core functions to Lua.
 If you do not include this library in your application,
-you should check carefully whether you need to provide 
+you should check carefully whether you need to provide
 implementations for some of its facilities.
 
 
@@ -5300,7 +5314,7 @@ Each call to @id{ld} must return a string that concatenates
 with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
 
-If there are no errors, 
+If there are no errors,
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
 
@@ -5653,7 +5667,7 @@ final value of @T{package.loaded[modname]}.
 
 If there is any error loading or running the module,
 or if it cannot find any loader for the module,
-then @id{require} signals an error. 
+then @id{require} signals an error.
 
 }
 
@@ -6660,7 +6674,7 @@ Returns the bitwise @x{or} of its operands.
 
 @LibEntry{bit32.btest (@Cdots)|
 
-Returns a boolean signaling 
+Returns a boolean signaling
 whether the @x{bitwise and} of its operands is different from zero.
 
 }
@@ -7316,7 +7330,7 @@ but also parameters, temporaries, etc.
 The first parameter or local variable has @N{index 1}, and so on,
 until the last active variable.
 Negative indices refer to vararg parameters;
--1 is the first vararg parameter. 
+-1 is the first vararg parameter.
 The function returns @nil if there is no variable with the given index,
 and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
@@ -7585,11 +7599,11 @@ as in
 (Of course,
 the location of the Lua interpreter can be different in your machine.
 If @id{lua} is in your @id{PATH},
-then 
+then
 @verbatim{
 #!/usr/bin/env lua
 }
-is a more portable solution.) 
+is a more portable solution.)
 
 }
 
@@ -7791,6 +7805,8 @@ Here is the complete syntax of Lua in extended BNF.
 	@bnfter{;}
 @OrNL	varlist @bnfter{=} explist
 @OrNL	functioncall
+@OrNL	label
+@OrNL   @Rw{goto} Name
 @OrNL	@Rw{do} block @Rw{end}
 @OrNL	@Rw{while} exp @Rw{do} block @Rw{end}
 @OrNL	@Rw{repeat} block @Rw{until} exp
@@ -7806,6 +7822,8 @@ Here is the complete syntax of Lua in extended BNF.
 }
 
 @producname{laststat}@producbody{@Rw{return} @bnfopt{explist} @Or @Rw{break}}
+
+@producname{label}@producbody{@bnfter{@} Name @bnfter{:}}
 
 @producname{funcname}@producbody{@bnfNter{Name} @bnfrep{@bnfter{.} @bnfNter{Name}}
                               @bnfopt{@bnfter{:} @bnfNter{Name}}}
