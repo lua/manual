@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.71 2011/02/09 14:58:08 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.72 2011/02/10 15:51:10 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1099,7 +1099,7 @@ A block can be explicitly delimited to produce a single statement:
 Explicit blocks are useful
 to control the scope of variable declarations.
 Explicit blocks are also sometimes used to
-add a @Rw{return} or @Rw{break} statement in the middle
+add a @Rw{return} statement in the middle
 of another block @see{control}.
 
 }
@@ -1243,8 +1243,17 @@ A label is visible in the entire block where it is defined
 A goto may jump to any visible label as long as it does not
 enter into the scope of a local variable.
 
+The @Rw{break} statement terminates the execution of a
+@Rw{while}, @Rw{repeat}, or @Rw{for} loop,
+skipping to the next statement after the loop:
+@index{break statement}
+@Produc{
+@producname{stat}@producbody{@Rw{break}}
+}
+A @Rw{break} ends the innermost enclosing loop.
+
 The @Rw{return} statement is used to return values
-from a function or a chunk (which is just a function).
+from a function or a chunk (which is a function in disguise).
 @index{return statement}
 Functions can return more than one value,
 so the syntax for the @Rw{return} statement is
@@ -1252,24 +1261,12 @@ so the syntax for the @Rw{return} statement is
 @producname{stat}@producbody{@Rw{return} @bnfopt{explist} @bnfopt{@bnfter{;}}}
 }
 
-The @Rw{break} statement is used to terminate the execution of a
-@Rw{while}, @Rw{repeat}, or @Rw{for} loop,
-skipping to the next statement after the loop:
-@index{break statement}
-@Produc{
-@producname{stat}@producbody{@Rw{break} @bnfopt{@bnfter{;}}}
-}
-A @Rw{break} ends the innermost enclosing loop.
-
-The @Rw{return} and @Rw{break}
-statements can only be written as the @emph{last} statement of a block.
-If it is really necessary to @Rw{return} or @Rw{break} in the
-middle of a block,
+The @Rw{return} statement can only be written
+as the last statement of a block.
+If it is really necessary to @Rw{return} in the middle of a block,
 then an explicit inner block can be used,
-as in the idioms
-@T{do return end} and @T{do break end},
-because now @Rw{return} and @Rw{break} are the last statements in
-their (inner) blocks.
+as in the idiom @T{do return end},
+because now @Rw{return} is the last statement in its (inner) block.
 
 }
 
@@ -7798,14 +7795,14 @@ Here is the complete syntax of Lua in extended BNF.
 
 @producname{chunk}@producbody{block}
 
-@producname{block}@producbody{@bnfrep{stat}
-                              @bnfopt{laststat @bnfopt{@bnfter{;}}}}
+@producname{block}@producbody{@bnfrep{stat} @bnfopt{retstat}}
 
 @producname{stat}@producbody{
 	@bnfter{;}
 @OrNL	varlist @bnfter{=} explist
 @OrNL	functioncall
 @OrNL	label
+@OrNL   @Rw{break}
 @OrNL   @Rw{goto} Name
 @OrNL	@Rw{do} block @Rw{end}
 @OrNL	@Rw{while} exp @Rw{do} block @Rw{end}
@@ -7821,7 +7818,8 @@ Here is the complete syntax of Lua in extended BNF.
 @OrNL	@Rw{local} namelist @bnfopt{@bnfter{=} explist}
 }
 
-@producname{laststat}@producbody{@Rw{return} @bnfopt{explist} @Or @Rw{break}}
+@producname{retstat}@producbody{@Rw{return}
+                                   @bnfopt{explist} @bnfopt{@bnfter{;}}}
 
 @producname{label}@producbody{@bnfter{@} Name @bnfter{:}}
 
