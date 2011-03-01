@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.72 2011/02/10 15:51:10 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.73 2011/02/14 14:53:44 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1243,6 +1243,9 @@ A label is visible in the entire block where it is defined
 A goto may jump to any visible label as long as it does not
 enter into the scope of a local variable.
 
+Both labels and empty statements are called @def{void statements},
+as they perform no actions.
+
 The @Rw{break} statement terminates the execution of a
 @Rw{while}, @Rw{repeat}, or @Rw{for} loop,
 skipping to the next statement after the loop:
@@ -1413,7 +1416,6 @@ Otherwise, all variables are initialized with @nil.
 
 A chunk is also a block @see{chunks},
 and so local variables can be declared in a chunk outside any explicit block.
-The scope of such local variables extends until the end of the chunk.
 
 The visibility rules for local variables are explained in @See{visibility}.
 
@@ -1910,9 +1912,9 @@ t.a.b.c.f = function (self, @rep{params}) @rep{body} end
 
 @index{visibility}
 Lua is a lexically scoped language.
-The scope of variables begins at the first statement @emph{after}
-their declaration and lasts until the end of the innermost block that
-includes the declaration.
+The scope of a local variable begins at the first statement after
+its declaration and lasts until the last non-void statement
+of the innermost block that includes the declaration.
 Consider the following example:
 @verbatim{
 x = 10                -- global variable
@@ -5325,7 +5327,7 @@ the first upvalue will be the @id{_ENV} variable @see{globalenv}.)
 @id{source} is used as the source of the chunk for error messages
 and debug information @see{debugI}.
 When absent,
-it defaults to @{ld}, if @id{ld} is a string,
+it defaults to @id{ld}, if @id{ld} is a string,
 or to @St{=(load)}.
 
 The string @id{mode} controls whether the chunk can be text or binary
@@ -6869,14 +6871,33 @@ Similar to @Lid{io.input}, but operates over the default output file.
 
 @LibEntry{io.popen (prog [, mode])|
 
+This function is system dependent and is not available
+on all platforms.
+
 Starts program @id{prog} in a separated process and returns
 a file handle that you can use to read data from this program
 (if @id{mode} is @T{"r"}, the default)
 or to write data to this program
 (if @id{mode} is @T{"w"}).
 
-This function is system dependent and is not available
-on all platforms.
+When closing a file handle created with @id{popen},
+@Lid{io.close} (or @T{file:close}) returns @true
+if the process terminated successfully.
+Otherwise, it returns @nil plus a string and a number,
+as follows:
+@description{
+
+@item{@St{exit}|
+the process terminated normally;
+the following number is the exit status of the process.
+}
+
+@item{@St{signal}|
+the process was terminated by a signal;
+the following number is the signal that terminated the process.
+}
+
+}
 
 }
 
@@ -6917,8 +6938,8 @@ Note that files are automatically closed when
 their handles are garbage collected,
 but that takes an unpredictable amount of time to happen.
 
-If @id{file} was created with @Lid{io.popen},
-a successful close returns the exit status of the process.
+See @Lid{io.popen} for a better description of the return values
+when @id{file} was created with @Lid{io.popen}.
 
 }
 
