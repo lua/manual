@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.73 2011/02/14 14:53:44 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.74 2011/03/01 16:44:08 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -215,7 +215,28 @@ which can take appropriate measures
 Lua code can explicitly generate an error by calling the
 @Lid{error} function.
 If you need to catch errors in Lua,
-you can use the @Lid{pcall} or the @Lid{xpcall} function.
+you can use @Lid{pcall} or @Lid{xpcall}
+to call a given function in @emph{protected mode}.
+
+Whenever there is an error,
+an @def{error object} (also called an @def{error message})
+is propagated with information about the error.
+Lua itself only generates errors where the error object is a string,
+but programs may generate errors with
+any value for the error object.
+
+When you use @Lid{xpcall} or @Lid{lua_pcall},
+you may give an @def{error-handler function}
+to be called in case of errors.
+This function is called with the original error message
+and returns a new error message.
+It is called before the error unwonds the stack,
+so that it can gather more information about the error,
+for instance by inspecting the stack and creating a stack traceback.
+This error function is still protected by the protected call;
+so, an error inside the error function
+will call the error function again.
+If this loop goes on, Lua breaks it and returns an appropriate message.
 
 }
 
@@ -3082,11 +3103,11 @@ a runtime error.
 
 @item{@defid{LUA_ERRMEM}|
 @x{memory allocation error}.
-For such errors, Lua does not call the error handler function.
+For such errors, Lua does not call the error-handler function.
 }
 
 @item{@defid{LUA_ERRERR}|
-error while running the error handler function.
+error while running the error-handler function.
 }
 
 @item{@defid{LUA_ERRGCMM}|
@@ -4644,6 +4665,25 @@ as @T{return luaL_error(@rep{args})}.
 
 }
 
+@APIEntry{int luaL_execresult (lua_State *L, int stat);|
+@apii{0,1/3,m}
+
+This function produces the return values for
+process-related functions in the standard library
+(@Lid{os.execute} and @Lid{io.close}).
+
+}
+
+@APIEntry{int luaL_fileresult (lua_State *L, int stat,
+                                             const char *fname)|
+@apii{0,1/3,m}
+
+This function produces the return values for
+file-related functions in the standard library
+(@Lid{io.open}, @Lid{os.rename}, @Lid{file:seek}, etc.).
+
+}
+
 @APIEntry{int luaL_findtable (lua_State *L, int idx, const char *fname);|
 @apii{0,1,m}
 
@@ -5399,7 +5439,7 @@ the table during its traversal.
 @LibEntry{pcall (f [, arg1, @Cdots])|
 
 Calls function @id{f} with
-the given arguments in @emph{protected mode}.
+the given arguments in @def{protected mode}.
 This means that any error @N{inside @T{f}} is not propagated;
 instead, @id{pcall} catches the error
 and returns a status code.
@@ -5655,7 +5695,10 @@ If that also fails,
 it tries an @emph{all-in-one} loader @see{pdf-package.loaders}.
 
 Once a loader is found,
-@id{require} calls the loader with a single argument, @id{modname}.
+@id{require} calls the loader with two arguments:
+@id{modname} and an extra value dependent on how it got the loader.
+(If the loader came from a file,
+this extra value is the file name.)
 If the loader returns any non-nil value,
 @id{require} assigns the returned value to @T{package.loaded[modname]}.
 If the loader does not return a non-nil value and
@@ -5735,9 +5778,11 @@ When looking for a module,
 with the module name (the argument given to @Lid{require}) as its
 sole parameter.
 The function can return another function (the module @def{loader})
+plus an extra value that will be passed to that loader,
 or a string explaining why it did not find that module
 (or @nil if it has nothing to say).
-Lua initializes this table with four functions.
+
+Lua initializes this table with four searcher functions.
 
 The first searcher simply looks for a loader in the
 @Lid{package.preload} table.
@@ -5782,6 +5827,11 @@ in our example, that would be @id{luaopen_a_b_c}.
 With this facility, a package can pack several @N{C submodules}
 into one single library,
 with each submodule keeping its original open function.
+
+All searchers except the first (preload) return as the extra value
+the file name where the module was found,
+as returned by @Lid{package.searchpath}.
+The first searcher returns no extra value.
 
 }
 
@@ -5833,6 +5883,10 @@ is replaced by the default path.
 
 A table to store loaders for specific modules
 @seeF{require}.
+
+This variable is only a reference to the real table;
+assignments to this variable do not change the
+table used by @Lid{require}.
 
 }
 
@@ -5973,6 +6027,8 @@ Options @id{c}, @id{d}, @id{E}, @id{e}, @id{f},
 all expect a number as argument;
 @id{q} expects a string;
 and @id{s} expects a string without embedded zeros.
+If the argument to option @id{s} is not a string,
+it is converted to one following the same rules of @Lid{tostring}.
 (Options @id{a} and @id{A} may not be available in some systems.)
 
 }
@@ -6693,7 +6749,7 @@ All accessed bits must be in the range @M{[0, 31]}.
 
 }
 
-@LibEntry{bit32.insert (n, v, field, width)|
+@LibEntry{bit32.replace (n, v, field, width)|
 
 Returns a copy of @id{n} with
 the bits @id{field} to @id{field + width - 1}
@@ -6880,25 +6936,6 @@ a file handle that you can use to read data from this program
 or to write data to this program
 (if @id{mode} is @T{"w"}).
 
-When closing a file handle created with @id{popen},
-@Lid{io.close} (or @T{file:close}) returns @true
-if the process terminated successfully.
-Otherwise, it returns @nil plus a string and a number,
-as follows:
-@description{
-
-@item{@St{exit}|
-the process terminated normally;
-the following number is the exit status of the process.
-}
-
-@item{@St{signal}|
-the process was terminated by a signal;
-the following number is the signal that terminated the process.
-}
-
-}
-
 }
 
 @LibEntry{io.read (@Cdots)|
@@ -6938,8 +6975,9 @@ Note that files are automatically closed when
 their handles are garbage collected,
 but that takes an unpredictable amount of time to happen.
 
-See @Lid{io.popen} for a better description of the return values
-when @id{file} was created with @Lid{io.popen}.
+When closing a file handle created with @id{popen},
+@Lid{file:close} returns the same values
+returned by @Lid{os.execute}.
 
 }
 
@@ -7141,9 +7179,26 @@ this value is exactly @id{t2}@M{-}@id{t1}.
 
 This function is equivalent to the @ANSI{system}.
 It passes @id{command} to be executed by an operating system shell.
-It returns a status code, which is system-dependent.
-If @id{command} is absent, then it returns nonzero if a shell is available
-and zero otherwise.
+It returns @true
+if the command terminated successfully.
+Otherwise, it returns @nil plus a string and a number,
+as follows:
+@description{
+
+@item{@St{exit}|
+the command terminated normally;
+the following number is the exit status of the command.
+}
+
+@item{@St{signal}|
+the command was terminated by a signal;
+the following number is the signal that terminated the command.
+}
+
+}
+
+When called without a @id{command},
+@id{os.execute} returns a boolean that is true if a shell is available.
 
 }
 
@@ -7153,10 +7208,10 @@ Calls the @ANSI{exit} to terminate the host program.
 If @id{code} is @Rw{true},
 the returned status is @idx{EXIT_SUCCESS};
 if @id{code} is @Rw{false},
-the returned status is @idx{EXIT_FAILURE}.
+the returned status is @idx{EXIT_FAILURE};
 if @id{code} is a number,
 the returned status is this number.
-The default value for @id{code} is the success code.
+The default value for @id{code} is @Rw{true}.
 
 If the optional second argument @id{close} is true,
 closes the Lua state before exiting.
@@ -7715,6 +7770,12 @@ and are exactly equivalent to @id{loadstring}.
 @item{
 Function @id{table.maxn} is deprecated.
 Write it in Lua if you really need it.
+}
+
+@item{
+Function @id{os.execute} now returns @true when command
+terminates successfully and @nil plus error information
+otherwise.
 }
 
 @item{
