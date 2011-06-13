@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.75 2011/03/23 15:34:52 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.76 2011/06/13 14:29:40 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1745,9 +1745,6 @@ If the last field in the list has the form @id{exp}
 and the expression is a function call or a vararg expression,
 then all values returned by this expression enter the list consecutively
 @see{functioncall}.
-To avoid this,
-enclose the function call or the vararg expression
-in parentheses @see{expressions}.
 
 The field list can have an optional trailing separator,
 as a convenience for machine-generated code.
@@ -1871,8 +1868,6 @@ Then, whenever Lua executes the function definition,
 the function is @emph{instantiated} (or @emph{closed}).
 This function instance (or @emphx{closure})
 is the final value of the expression.
-Different instances of the same function
-can refer to different  external local variables.
 
 Parameters act as local variables that are
 initialized with the argument values:
@@ -7546,12 +7541,12 @@ Otherwise, it returns the name of the upvalue.
 
 }
 
-@LibEntry{debug.traceback ([thread,] [message] [, level])|
+@LibEntry{debug.traceback ([thread,] [message [, level]])|
 
-If @id{message} is present but is not a string,
+If @id{message} is present but is neither a string nor @nil,
 this function returns @id{message} without further processing.
 Otherwise,
-returns a string with a traceback of the call stack.
+it returns a string with a traceback of the call stack.
 An optional @id{message} string is appended
 at the beginning of the traceback.
 An optional @id{level} number tells at which level
