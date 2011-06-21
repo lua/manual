@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.77 2011/06/13 16:27:54 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.78 2011/06/21 13:56:39 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -12,7 +12,7 @@ functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, light-weight
 scripting language for any program that needs one.
 Lua is implemented as a library, written in @emphx{clean C},
-the common subset of @N{ANSI C} and C++.
+the common subset of @N{Standard C} and C++.
 
 Being an extension language, Lua has no notion of a @Q{main} program:
 it only works @emph{embedded} in a host client,
@@ -2352,11 +2352,11 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
     return realloc(ptr, nsize);
 }
 }
-Note that @N{ANSI C} ensures
+Note that @N{Standard C} ensures
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
 This code assumes that @id{realloc} does not fail when shrinking a block.
-@N{ANSI C} does not ensure this behavior,
+@N{Standard C} does not ensure this behavior,
 but it seems a safe assumption.
 
 }
@@ -5880,7 +5880,7 @@ including if necessary a path and an extension.
 @id{funcname} must be the exact name exported by the @N{C library}
 (which may depend on the @N{C compiler} and linker used).
 
-This function is not supported by @N{ANSI C}.
+This function is not supported by @N{Standard C}.
 As such, it is only available on some platforms
 (Windows, Linux, Mac OS X, Solaris, BSD,
 plus other Unix systems that support the @id{dlfcn} standard).
@@ -6641,7 +6641,7 @@ Returns the angle @id{x} (given in degrees) in radians.
 @LibEntry{math.random ([m [, n]])|
 
 This function is an interface to the simple
-pseudo-random generator function @id{rand} provided by @N{ANSI C}.
+pseudo-random generator function @id{rand} provided by @N{Standard C}.
 (No guarantees can be given for its statistical properties.)
 
 When called without arguments,
