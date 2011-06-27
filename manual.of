@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.78 2011/06/21 13:56:39 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.79 2011/06/21 14:35:46 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -139,10 +139,11 @@ table fields can contain functions.
 Thus tables can also carry @emph{methods} @see{func-def}.
 
 The indexing of tables follows
-the definition of equality in the language.
+the definition of raw equality in the language.
 The expressions @T{a[i]} and @T{a[j]}
 denote the same table element
-if and only if @T{i == j}.
+if and only if @id{i} and @id{j} are raw equal
+(that is, equal without metamethods).
 
 Tables, functions, threads, and (full) userdata values are @emph{objects}:
 variables do not actually @emph{contain} these values,
@@ -232,7 +233,7 @@ you may give an @def{message handler}
 to be called in case of errors.
 This function is called with the original error message
 and returns a new error message.
-It is called before the error unwonds the stack,
+It is called before the error unwinds the stack,
 so that it can gather more information about the error,
 for instance by inspecting the stack and creating a stack traceback.
 This message handler is still protected by the protected call;
@@ -699,7 +700,7 @@ and the metatable has a field indexed by the string @St{__gc}.
 Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
 the object will not be marked for finalization.
-However, after a userdata is marked,
+However, after an object is marked,
 you can freely change the @idx{__gc} field of its metatable.
 
 When a marked object becomes garbage,
@@ -723,7 +724,14 @@ the reverse order that they were marked for collection,
 among those collected in that cycle;
 that is, the first finalizer to be called is the one associated
 with the object marked last in the program.
-The object memory is freed only in the next garbage-collection cycle.
+The execution of each finalizer may occur at any point during
+the execution of the regular code.
+
+Because the object being collected must still be used by the finalizer 
+and even @emph{resurrected}@x{resurrection}
+(e.g., stored by the finalizer in a global variable),
+the object memory is freed only when it becomes completely inaccessible
+(that is, in the next garbage-collection cycle unless it was resurrected).
 
 }
 
@@ -1270,9 +1278,10 @@ labels in Lua are considered statements too:
 @producname{label}@producbody{@bnfter{::} Name @bnfter{::}}
 }
 
-A label is visible in the entire block where it is defined
-(including nested blocks, but not nested functions).
-A function cannot have more than one label with a given name.
+A label is visible in the entire block where it is defined,
+except
+inside nested blocks where a label with the same name is defined and
+inside nested functions.
 A goto may jump to any visible label as long as it does not
 enter into the scope of a local variable.
 
@@ -2298,8 +2307,7 @@ Converts the @x{acceptable index} @id{idx} into an @x{absolute index}
 typedef void * (*lua_Alloc) (void *ud,
                              void *ptr,
                              size_t osize,
-                             size_t nsize);
-|
+                             size_t nsize);|
 
 The type of the @x{memory-allocation function} used by Lua states.
 The allocator function must provide a
@@ -2362,7 +2370,7 @@ but it seems a safe assumption.
 }
 
 @APIEntry{int lua_arith (lua_State *L, int op);|
-@apii{2/1,1,e}
+@apii{2|1,1,e}
 
 Performs an arithmetic operation over the two values
 (or one, in the case of negation)
@@ -2375,13 +2383,13 @@ The function follows the semantics of the corresponding Lua operator
 The value of @id{op} must be one of the following constants:
 @description{
 
-@item{@defid{LUA_OPADD}|performs addition (@T{+})}
-@item{@defid{LUA_OPSUB}|performs subtraction (@T{-})}
-@item{@defid{LUA_OPMUL}|performs multiplication (@T{*})}
-@item{@defid{LUA_OPDIV}|performs division (@T{/})}
-@item{@defid{LUA_OPMOD}|performs modulo (@T{%})}
-@item{@defid{LUA_OPPOW}|performs exponentiation (@T{^})}
-@item{@defid{LUA_OPUNM}|performs mathematical negation (unary @T{-})}
+@item{@defid{LUA_OPADD}| performs addition (@T{+})}
+@item{@defid{LUA_OPSUB}| performs subtraction (@T{-})}
+@item{@defid{LUA_OPMUL}| performs multiplication (@T{*})}
+@item{@defid{LUA_OPDIV}| performs division (@T{/})}
+@item{@defid{LUA_OPMOD}| performs modulo (@T{%})}
+@item{@defid{LUA_OPPOW}| performs exponentiation (@T{^})}
+@item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
 
 }
 
@@ -2545,9 +2553,9 @@ Also @N{returns 0} if any of the indices is non valid.
 The value of @id{op} must be one of the following constants:
 @description{
 
-@item{@defid{LUA_OPEQ}|compares for equality (@T{==})}
-@item{@defid{LUA_OPLT}|compares for less than (@T{<})}
-@item{@defid{LUA_OPLE}|compares for less or equal (@T{<=})}
+@item{@defid{LUA_OPEQ}| compares for equality (@T{==})}
+@item{@defid{LUA_OPLT}| compares for less than (@T{<})}
+@item{@defid{LUA_OPLE}| compares for less or equal (@T{<=})}
 
 }
 
@@ -2725,15 +2733,6 @@ as in the case of an yield.
 
 }
 
-@APIEntry{void lua_getuservalue (lua_State *L, int index);|
-@apii{0,1,-}
-
-Pushes onto the stack the Lua value associated with the userdata
-at the given index.
-This Lua value must be a table or @nil.
-
-}
-
 @APIEntry{void lua_getfield (lua_State *L, int index, const char *k);|
 @apii{0,1,e}
 
@@ -2784,6 +2783,15 @@ Returns the index of the top element in the stack.
 Because indices start @N{at 1},
 this result is equal to the number of elements in the stack
 (and so @N{0 means} an empty stack).
+
+}
+
+@APIEntry{void lua_getuservalue (lua_State *L, int index);|
+@apii{0,1,-}
+
+Pushes onto the stack the Lua value associated with the userdata
+at the given index.
+This Lua value must be a table or @nil.
 
 }
 
@@ -2921,8 +2929,7 @@ The result is pushed on the stack.
 int lua_load (lua_State *L,
               lua_Reader reader,
               void *data,
-              const char *source);
-|
+              const char *source);|
 @apii{0,1,-}
 
 Loads a Lua chunk.
@@ -3019,11 +3026,6 @@ It is an object (like a table):
 you must create it, it can have its own metatable,
 and you can detect when it is being collected.
 A full userdata is only equal to itself (under raw equality).
-
-When Lua collects a full userdata with a @id{gc} metamethod,
-Lua calls the metamethod and marks the userdata as finalized.
-When this userdata is collected again then
-Lua frees its corresponding memory.
 
 }
 
@@ -3256,7 +3258,7 @@ light userdata with the same @N{C address}.
 
 }
 
-@APIEntry{void lua_pushliteral (lua_State *L, const char *s);|
+@APIEntry{const char *lua_pushliteral (lua_State *L, const char *s);|
 @apii{0,1,m}
 
 This macro is equivalent to @Lid{lua_pushlstring},
@@ -3328,8 +3330,7 @@ onto the stack.
 @APIEntry{
 const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
-                              va_list argp);
-|
+                              va_list argp);|
 @apii{0,1,m}
 
 Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
@@ -3403,8 +3404,7 @@ that is, it does not invoke metamethods.
 @APIEntry{
 typedef const char * (*lua_Reader) (lua_State *L,
                                     void *data,
-                                    size_t *size);
-|
+                                    size_t *size);|
 
 The reader function used by @Lid{lua_load}.
 Every time it needs another piece of the chunk,
@@ -3423,8 +3423,7 @@ The reader function may return pieces of any size greater than zero.
 @APIEntry{
 void lua_register (lua_State *L,
                    const char *name,
-                   lua_CFunction f);
-|
+                   lua_CFunction f);|
 @apii{0,0,e}
 
 Sets the C function @id{f} as the new value of global @id{name}.
@@ -3493,14 +3492,6 @@ with user data @id{ud}.
 
 }
 
-@APIEntry{void lua_setuservalue (lua_State *L, int index);|
-@apii{1,0,-}
-
-Pops a table or @nil from the stack and sets it as
-the new value associated to the userdata at the given index.
-
-}
-
 @APIEntry{void lua_setfield (lua_State *L, int index, const char *k);|
 @apii{1,0,e}
 
@@ -3554,6 +3545,14 @@ and sets the stack top to this index.
 If the new top is larger than the old one,
 then the new elements are filled with @nil.
 If @id{index} @N{is 0}, then all stack elements are removed.
+
+}
+
+@APIEntry{void lua_setuservalue (lua_State *L, int index);|
+@apii{1,0,-}
+
+Pops a table or @nil from the stack and sets it as
+the new value associated to the userdata at the given index.
 
 }
 
@@ -3807,8 +3806,7 @@ returns the address of the version running the call.
 typedef int (*lua_Writer) (lua_State *L,
                            const void* p,
                            size_t sz,
-                           void* ud);
-|
+                           void* ud);|
 
 The type of the writer function used by @Lid{lua_dump}.
 Every time it produces another piece of chunk,
@@ -4061,7 +4059,8 @@ fills in the fields @id{source}, @id{short_src},
 @item{@Char{t}| fills in the field @id{istailcall};
 }
 
-@item{@Char{u}| fills in the field @id{nups};
+@item{@Char{u}| fills in the fields
+@id{nups}, @id{nparams}, and @id{isvararg};
 }
 
 @item{@Char{f}|
@@ -4122,7 +4121,8 @@ This function fills parts of a @Lid{lua_Debug} structure with
 an identification of the @emph{activation record}
 of the function executing at a given level.
 @N{Level 0} is the current running function,
-whereas level @M{n+1} is the function that has called level @M{n}.
+whereas level @M{n+1} is the function that has called level @M{n}
+(except for tail calls, which do not count on the stack).
 When there are no errors, @Lid{lua_getstack} returns 1;
 when called with a level greater than the stack depth,
 it returns 0.
@@ -4251,7 +4251,7 @@ when the index is greater than the number of upvalues.
 
 }
 
-@APIEntry{void *(lua_upvalueid) (lua_State *L, int funcindex, int n);|
+@APIEntry{void *lua_upvalueid (lua_State *L, int funcindex, int n);|
 @apii{0,0,-}
 
 Returns an unique identifier for the upvalue numbered @id{n}
@@ -4377,8 +4377,7 @@ which is the value to be added to the buffer.
 void luaL_argcheck (lua_State *L,
                     int cond,
                     int narg,
-                    const char *extramsg);
-|
+                    const char *extramsg);|
 @apii{0,0,v}
 
 Checks whether @id{cond} is true.
@@ -4555,8 +4554,7 @@ and returns this number.
 int luaL_checkoption (lua_State *L,
                       int narg,
                       const char *def,
-                      const char *const lst[]);
-|
+                      const char *const lst[]);|
 @apii{0,0,v}
 
 Checks whether the function argument @id{narg} is a string and
@@ -4622,7 +4620,7 @@ and returns this number cast to a @Lid{lua_Unsigned}.
 
 }
 
-@APIEntry{void *luaL_checkversion (lua_State *L);|
+@APIEntry{void luaL_checkversion (lua_State *L);|
 @apii{0,0,-}
 
 Checks whether the core running the call,
@@ -4687,8 +4685,8 @@ process-related functions in the standard library
 }
 
 @APIEntry{int luaL_fileresult (lua_State *L, int stat,
-                                             const char *fname)|
-@apii{0,1/3,m}
+                                             const char *fname);|
+@apii{0,1|3,m}
 
 This function produces the return values for
 file-related functions in the standard library
@@ -4731,8 +4729,7 @@ and false if it creates a new table.
 const char *luaL_gsub (lua_State *L,
                        const char *s,
                        const char *p,
-                       const char *r);
-|
+                       const char *r);|
 @apii{0,1,m}
 
 Creates a copy of string @id{s} by replacing
@@ -4757,8 +4754,7 @@ Raises an error if the result of the operation is not a number.
 int luaL_loadbuffer (lua_State *L,
                      const char *buff,
                      size_t sz,
-                     const char *name);
-|
+                     const char *name);|
 @apii{0,1,-}
 
 Loads a buffer as a Lua chunk.
@@ -4883,8 +4879,7 @@ Otherwise, raises an error.
 @APIEntry{
 lua_Integer luaL_optinteger (lua_State *L,
                              int narg,
-                             lua_Integer d);
-|
+                             lua_Integer d);|
 @apii{0,0,v}
 
 If the function argument @id{narg} is a number,
@@ -4910,8 +4905,7 @@ Otherwise, raises an error.
 const char *luaL_optlstring (lua_State *L,
                              int narg,
                              const char *d,
-                             size_t *l);
-|
+                             size_t *l);|
 @apii{0,0,v}
 
 If the function argument @id{narg} is a string,
@@ -4939,8 +4933,7 @@ Otherwise, raises an error.
 @APIEntry{
 const char *luaL_optstring (lua_State *L,
                             int narg,
-                            const char *d);
-|
+                            const char *d);|
 @apii{0,0,v}
 
 If the function argument @id{narg} is a string,
@@ -4954,8 +4947,7 @@ Otherwise, raises an error.
 @APIEntry{
 lua_Unsigned luaL_optunsigned (lua_State *L,
                                int narg,
-                               lua_Unsigned u);
-|
+                               lua_Unsigned u);|
 @apii{0,0,v}
 
 If the function argument @id{narg} is a number,
@@ -6102,9 +6094,9 @@ The name @id{gsub} comes from @emph{Global SUBstitution}.
 
 If @id{repl} is a string, then its value is used for replacement.
 The @N{character @T{%}} works as an escape character:
-any sequence in @id{repl} of the form @T{%@rep{n}},
-with @rep{n} between 1 and 9,
-stands for the value of the @rep{n}-th captured substring (see below).
+any sequence in @id{repl} of the form @T{%@rep{d}},
+with @rep{d} between 1 and 9,
+stands for the value of the @rep{d}-th captured substring (see below).
 The sequence @T{%0} stands for the whole match.
 The sequence @T{%%} stands for a @N{single @T{%}}.
 
@@ -6399,13 +6391,11 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 This library provides generic functions for table manipulation.
 It provides all its functions inside the table @defid{table}.
 
-Currently, all functions in the table library,
-except @Lid{table.pack},
-work on lists.
-A list here means a proper sequence
-or a table with a @idx{__len} metamethod @see{len-op}.
-In particular, all functions ignore non-numeric keys
-in lists given as arguments.
+Remember that, whenever an operation needs the length of a table,
+the table should be a proper sequence
+or have a @idx{__len} metamethod @see{len-op}.
+All functions ignore non-numeric keys
+in tables given as arguments.
 
 For performance reasons,
 all table accesses (get/set) performed by these functions are raw.
@@ -6765,16 +6755,18 @@ Returns the bitwise @x{exclusive or} of its operands.
 
 }
 
-@LibEntry{bit32.extract (n, field, width)|
+@LibEntry{bit32.extract (n, field [, width])|
 
 Returns the unsigned number formed by the bits
 @id{field} to @id{field + width - 1} from @id{n}.
 Bits are numbered from 0 (least significant) to 31 (most significant).
 All accessed bits must be in the range @M{[0, 31]}.
 
+The default for @id{width} is 1.
+
 }
 
-@LibEntry{bit32.replace (n, v, field, width)|
+@LibEntry{bit32.replace (n, v, field [, width])|
 
 Returns a copy of @id{n} with
 the bits @id{field} to @id{field + width - 1}
@@ -6911,7 +6903,7 @@ instead of returning an error code.
 
 Opens the given file name in read mode
 and returns an iterator function that
-works like @T{file:lines(@Cdots)} over the oppened file.
+works like @T{file:lines(@Cdots)} over the opened file.
 When the iterator function detects the end of file,
 it returns @nil (to finish the loop) and automatically closes the file.
 
@@ -7371,14 +7363,6 @@ within any function, and so have no direct access to local variables.
 
 }
 
-@LibEntry{debug.getuservalue (u)|
-
-Returns the Lua value associated to @id{u}.
-If @id{u} is not a userdata,
-returns @nil.
-
-}
-
 @LibEntry{debug.gethook ([thread])|
 
 Returns the current hook settings of the thread, as three values:
@@ -7468,14 +7452,11 @@ The function returns @nil if there is no upvalue with the given index.
 
 }
 
-@LibEntry{debug.setuservalue (udata, value)|
+@LibEntry{debug.getuservalue (u)|
 
-Sets the given @id{value} as
-the Lua value associated to the given @id{udata}.
-@id{value} must be a table or @nil;
-@id{udata} must be a full userdata.
-
-Returns @id{udata}.
+Returns the Lua value associated to @id{u}.
+If @id{u} is not a userdata,
+returns @nil.
 
 }
 
@@ -7542,6 +7523,17 @@ with index @id{up} of the function @id{func}.
 The function returns @nil if there is no upvalue
 with the given index.
 Otherwise, it returns the name of the upvalue.
+
+}
+
+@LibEntry{debug.setuservalue (udata, value)|
+
+Sets the given @id{value} as
+the Lua value associated to the given @id{udata}.
+@id{value} must be a table or @nil;
+@id{udata} must be a full userdata.
+
+Returns @id{udata}.
 
 }
 
