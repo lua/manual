@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.80 2011/06/27 18:26:28 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.81 2011/06/28 15:41:12 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -5692,11 +5692,11 @@ at @T{package.loaded[modname]}.
 Otherwise, it tries to find a @emph{loader} for the module.
 
 To find a loader,
-@id{require} is guided by the @Lid{package.loaders} sequence.
+@id{require} is guided by the @Lid{package.searchers} sequence.
 By changing this sequence,
 we can change how @id{require} looks for a module.
 The following explanation is based on the default configuration
-for @Lid{package.loaders}.
+for @Lid{package.searchers}.
 
 First @id{require} queries @T{package.preload[modname]}.
 If it has a value,
@@ -5706,7 +5706,7 @@ path stored in @Lid{package.path}.
 If that also fails, it searches for a @N{C loader} using the
 path stored in @Lid{package.cpath}.
 If that also fails,
-it tries an @emph{all-in-one} loader @see{pdf-package.loaders}.
+it tries an @emph{all-in-one} loader @see{pdf-package.searchers}.
 
 Once a loader is found,
 @id{require} calls the loader with two arguments:
@@ -5782,7 +5782,62 @@ table used by @Lid{require}.
 
 }
 
-@LibEntry{package.loaders|
+@LibEntry{package.loadlib (libname, funcname)|
+
+Dynamically links the host program with the @N{C library} @id{libname}.
+
+If @id{funcname} is @St{*},
+then it only links with the library,
+making the symbols exported by the library
+available to other dynamically linked libraries.
+Otherwise,
+it looks for a function @id{funcname} inside the library
+and returns this function as a @N{C function}.
+(So, @id{funcname} must follow the protocol @seeC{lua_CFunction}).
+
+This is a low-level function.
+It completely bypasses the package and module system.
+Unlike @Lid{require},
+it does not perform any path searching and
+does not automatically adds extensions.
+@id{libname} must be the complete file name of the @N{C library},
+including if necessary a path and an extension.
+@id{funcname} must be the exact name exported by the @N{C library}
+(which may depend on the @N{C compiler} and linker used).
+
+This function is not supported by @N{Standard C}.
+As such, it is only available on some platforms
+(Windows, Linux, Mac OS X, Solaris, BSD,
+plus other Unix systems that support the @id{dlfcn} standard).
+
+}
+
+@LibEntry{package.path|
+
+The path used by @Lid{require} to search for a Lua loader.
+
+At start-up, Lua initializes this variable with
+the value of the environment variable @defid{LUA_PATH_5_2} or
+the environment variable @defid{LUA_PATH} or
+with a default path defined in @id{luaconf.h},
+if the environment variable is not defined.
+Any @St{;;} in the value of the environment variable
+is replaced by the default path.
+
+}
+
+@LibEntry{package.preload|
+
+A table to store loaders for specific modules
+@seeF{require}.
+
+This variable is only a reference to the real table;
+assignments to this variable do not change the
+table used by @Lid{require}.
+
+}
+
+@LibEntry{package.searchers|
 
 A table used by @Lid{require} to control how to load modules.
 
@@ -5846,61 +5901,6 @@ All searchers except the first (preload) return as the extra value
 the file name where the module was found,
 as returned by @Lid{package.searchpath}.
 The first searcher returns no extra value.
-
-}
-
-@LibEntry{package.loadlib (libname, funcname)|
-
-Dynamically links the host program with the @N{C library} @id{libname}.
-
-If @id{funcname} is @St{*},
-then it only links with the library,
-making the symbols exported by the library
-available to other dynamically linked libraries.
-Otherwise,
-it looks for a function @id{funcname} inside the library
-and returns this function as a @N{C function}.
-(So, @id{funcname} must follow the protocol @seeC{lua_CFunction}).
-
-This is a low-level function.
-It completely bypasses the package and module system.
-Unlike @Lid{require},
-it does not perform any path searching and
-does not automatically adds extensions.
-@id{libname} must be the complete file name of the @N{C library},
-including if necessary a path and an extension.
-@id{funcname} must be the exact name exported by the @N{C library}
-(which may depend on the @N{C compiler} and linker used).
-
-This function is not supported by @N{Standard C}.
-As such, it is only available on some platforms
-(Windows, Linux, Mac OS X, Solaris, BSD,
-plus other Unix systems that support the @id{dlfcn} standard).
-
-}
-
-@LibEntry{package.path|
-
-The path used by @Lid{require} to search for a Lua loader.
-
-At start-up, Lua initializes this variable with
-the value of the environment variable @defid{LUA_PATH_5_2} or
-the environment variable @defid{LUA_PATH} or
-with a default path defined in @id{luaconf.h},
-if the environment variable is not defined.
-Any @St{;;} in the value of the environment variable
-is replaced by the default path.
-
-}
-
-@LibEntry{package.preload|
-
-A table to store loaders for specific modules
-@seeF{require}.
-
-This variable is only a reference to the real table;
-assignments to this variable do not change the
-table used by @Lid{require}.
 
 }
 
@@ -7814,6 +7814,10 @@ and therefore must be called as @Lid{table.unpack}.
 @item{
 Character class @T{%z} in patterns is deprecated,
 as now patterns may contain @Char{\0} as a regular character.
+}
+
+@item{
+The table @id{package.loaders} was renamed @id{package.searchers}.
 }
 
 @item{
