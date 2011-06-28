@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.79 2011/06/21 14:35:46 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.80 2011/06/27 18:26:28 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -728,7 +728,7 @@ The execution of each finalizer may occur at any point during
 the execution of the regular code.
 
 Because the object being collected must still be used by the finalizer 
-and even @emph{resurrected}@x{resurrection}
+and even @emph{resurrected}@index{resurrection}
 (e.g., stored by the finalizer in a global variable),
 the object memory is freed only when it becomes completely inaccessible
 (that is, in the next garbage-collection cycle unless it was resurrected).
