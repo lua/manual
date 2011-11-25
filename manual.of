@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.87 2011/11/23 17:31:38 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.88 2011/11/24 13:23:53 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -6310,8 +6310,8 @@ and @T{string.sub(s, -i)} returns a suffix of @id{s}
 with length @id{i}.
 
 If, after the translation of negative indices,
-@id{i} is less than zero,
-it is corrected to zero.
+@id{i} is less than 1,
+it is corrected to 1.
 If @id{j} is greater than the string length,
 it is corrected to that length.
 If, after these corrections,
