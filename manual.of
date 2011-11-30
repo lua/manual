@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.89 2011/11/25 12:59:54 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.90 2011/11/29 17:14:45 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1691,7 +1691,7 @@ The string @x{concatenation} operator in Lua is
 denoted by two dots (@Char{..}).
 If both operands are strings or numbers, then they are converted to
 strings according to the rules mentioned in @See{coercion}.
-Otherwise, the @Q{concat} metamethod is called @see{metatable}.
+Otherwise, the @idx{__concat} metamethod is called @see{metatable}.
 
 }
 
@@ -3027,7 +3027,7 @@ The @id{data} argument is an opaque value passed to the reader function.
 The @id{source} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
 
-id{lua_load} automatically detects whether the chunk is text or binary
+@id{lua_load} automatically detects whether the chunk is text or binary
 and loads it accordingly (see program @idx{luac}).
 The string @id{mode} works as in function @Lid{load},
 with the addition that
@@ -5489,7 +5489,7 @@ Each call to @id{ld} must return a string that concatenates
 with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
 
-If there are no errors,
+If there are no syntactic errors,
 returns the compiled chunk as a function;
 otherwise, returns @nil plus the error message.
 
@@ -6167,9 +6167,11 @@ Options
 @id{G}, and @id{g} all expect a number as argument.
 Options @id{c}, @id{d},
 @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
-expect an integer as argument;
-the range of that integer may be limited by
+also expect a number,
+but the range of that number may be limited by
 the underlying @N{C implementation}.
+For options @id{o}, @id{u}, @id{X}, and @id{x},
+the number cannot be negative.
 Option @id{q} expects a string;
 option @id{s} expects a string without embedded zeros.
 If the argument to option @id{s} is not a string,
@@ -7209,7 +7211,7 @@ or @nil on end of file.
 
 }
 
-@LibEntry{file:seek ([whence] [, offset])|
+@LibEntry{file:seek ([whence [, offset]])|
 
 Sets and gets the file position,
 measured from the beginning of the file,
