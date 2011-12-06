@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.90 2011/11/29 17:14:45 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.91 2011/11/30 18:26:32 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2099,7 +2099,7 @@ and index @M{-n} represents the first element.
 
 }
 
-@sect2{@title{Stack Size}
+@sect2{stacksize| @title{Stack Size}
 
 When you interact with the Lua API,
 you are responsible for ensuring consistency.
@@ -2256,6 +2256,12 @@ thus exiting the host application.
 Your panic function can avoid this exit by
 never returning
 (e.g., doing a long jump to your own recovery point outside Lua).
+
+The panic function runs as if it were a @x{message handler} @see{error};
+in particular, the error message is at the top of the stack.
+However, there is no guarantees about stack space.
+To push anything on the stack,
+the panic function should first check the available space @see{stacksize}.
 
 Most functions in the API can throw an error,
 for instance due to a @x{memory allocation error}.
@@ -2452,11 +2458,6 @@ The value of @id{op} must be one of the following constants:
 @apii{0,0,-}
 
 Sets a new panic function and returns the old one @see{C-error}.
-
-The panic function should not try to run anything on the failed Lua state.
-However, it can still use the debug API @see{debugI}
-to gather information about the state.
-In particular, the error message is at the top of the stack.
 
 }
 
@@ -3177,11 +3178,11 @@ a runtime error.
 
 @item{@defid{LUA_ERRMEM}|
 @x{memory allocation error}.
-For such errors, Lua does not call the message handler.
+For such errors, Lua does not call the @x{message handler}.
 }
 
 @item{@defid{LUA_ERRERR}|
-error while running the message handler.
+error while running the @x{message handler}.
 }
 
 @item{@defid{LUA_ERRGCMM}|
@@ -5715,7 +5716,7 @@ The current contents of this variable is @St{Lua 5.2}.
 @LibEntry{xpcall (f, msgh [, arg1, @Cdots])|
 
 This function is similar to @Lid{pcall},
-except that it sets a new message handler @id{msgh}.
+except that it sets a new @x{message handler} @id{msgh}.
 
 }
 
