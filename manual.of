@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.92 2011/12/06 17:58:43 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.93 2011/12/08 12:12:34 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2286,7 +2286,7 @@ Lua raises an error whenever it tries to yield across an API call,
 except for three functions:
 @Lid{lua_yieldk}, @Lid{lua_callk}, and @Lid{lua_pcallk}.
 All those functions receive a @def{continuation function}
-(as a parameter called @id{k}) to continue execution after an yield.
+(as a parameter called @id{k}) to continue execution after a yield.
 
 We need to set some terminology to explain continuations.
 We have a C function called from Lua which we will call
@@ -2794,7 +2794,7 @@ but instead may call the continuation function.
 In that case, a call to @Lid{lua_getctx} will return the error code
 (the value that would be returned by @Lid{lua_pcallk});
 the value of @id{ctx} will be set to the context information,
-as in the case of an yield.
+as in the case of a yield.
 
 }
 
@@ -5309,7 +5309,8 @@ To have access to these libraries,
 the @N{C host} program should call the @Lid{luaL_openlibs} function,
 which opens all standard libraries.
 Alternatively,
-it can open them individually by calling
+the host program can open them individually by using
+@Lid{luaL_requiref} to call
 @defid{luaopen_base} (for the basic library),
 @defid{luaopen_package} (for the package library),
 @defid{luaopen_coroutine} (for the coroutine library),
@@ -5320,10 +5321,7 @@ it can open them individually by calling
 @defid{luaopen_io} (for the I/O library),
 @defid{luaopen_os} (for the Operating System library),
 and @defid{luaopen_debug} (for the debug library).
-These functions are declared in @defid{lualib.h}
-and should not be called directly:
-you must call them like any other Lua @N{C function},
-e.g., by using @Lid{lua_call}.
+These functions are declared in @defid{lualib.h}.
 
 @sect2{predefined| @title{Basic Functions}
 
@@ -7766,10 +7764,11 @@ Otherwise, @id{lua} executes the string itself.
 
 When called with option @T{-E},
 besides ignoring @id{LUA_INIT},
-the interpreter also resets the values of
+Lua also ignores
+the values of @id{LUA_PATH} and @id{LUA_CPATH},
+setting the values of
 @Lid{package.path} and @Lid{package.cpath}
-with the default paths defined in @id{luaconf.h},
-in effect ignoring the values of @id{LUA_PATH} and @id{LUA_CPATH}.
+with the default paths defined in @id{luaconf.h}.
 
 All options are handled in order, except @T{-i} and @T{-E}.
 For instance, an invocation like
@@ -8044,6 +8043,11 @@ Function @id{lua_objlen} was renamed @Lid{lua_rawlen}.
 @item{
 Function @Lid{lua_load} has an extra parameter, @id{mode}.
 Pass @id{NULL} to simulate the old behavior.
+}
+
+@item{
+Function @Lid{lua_resume} has an extra parameter, @id{from}.
+Pass @id{NULL} or the thread doing the call.
 }
 
 }
