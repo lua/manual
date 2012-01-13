@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.93 2011/12/08 12:12:34 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.94 2011/12/12 15:26:26 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -4109,7 +4109,7 @@ Returns the current hook mask.
 @APIEntry{int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);|
 @apii{0|1,0|1|2,m}
 
-Returns information about a specific function or function invocation.
+Gets information about a specific function or function invocation.
 
 To get information about a function invocation,
 the parameter @id{ar} must be a valid activation record that was
@@ -4204,7 +4204,7 @@ the number of active local variables.
 @APIEntry{int lua_getstack (lua_State *L, int level, lua_Debug *ar);|
 @apii{0,0,-}
 
-Get information about the interpreter runtime stack.
+Gets information about the interpreter runtime stack.
 
 This function fills parts of a @Lid{lua_Debug} structure with
 an identification of the @emph{activation record}
@@ -5317,7 +5317,7 @@ the host program can open them individually by using
 @defid{luaopen_string} (for the string library),
 @defid{luaopen_table} (for the table library),
 @defid{luaopen_math} (for the mathematical library),
-@defid{luaopen_bitlib} (for the bit library),
+@defid{luaopen_bit32} (for the bit library),
 @defid{luaopen_io} (for the I/O library),
 @defid{luaopen_os} (for the Operating System library),
 and @defid{luaopen_debug} (for the debug library).
@@ -7854,6 +7854,9 @@ You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
 all these compatibility options will be removed in the next version of Lua.
+Similarly,
+all features marked as deprecated in @N{Lua 5.1}
+have been removed in @N{Lua 5.2}.
 
 @sect2{@title{Changes in the Language}
 @itemize{
