@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.49 2009/02/16 19:58:58 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.49.1.1 2012/01/13 20:19:34 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -6594,7 +6594,7 @@ Otherwise, it returns the name of the upvalue.
 
 }
 
-@LibEntry{debug.traceback ([thread,] [message] [, level])|
+@LibEntry{debug.traceback ([thread,] [message [, level]])|
 
 Returns a string with a traceback of the call stack.
 An optional @id{message} string is appended
