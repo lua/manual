@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.94 2011/12/12 15:26:26 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.95 2012/01/13 20:17:16 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1008,7 +1008,7 @@ results in a newline in the string.
 The escape sequence @Char{\z} skips the following span
 of white-space characters,
 including line breaks;
-it is particularly useful to break and indent a long string
+it is particularly useful to break and indent a long literal string
 into multiple lines without adding the newlines and spaces
 into the string contents.
 
@@ -1032,7 +1032,7 @@ an opening long bracket of @N{level 1} is written as @T{[=[},
 and so on.
 A @emph{closing long bracket} is defined similarly;
 for instance, a closing long bracket of @N{level 4} is written as @T{]====]}.
-A long string starts with an opening long bracket of any level and
+A @def{long literal} starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
 It can contain any text except a closing bracket of the proper level.
 Literals in this bracketed form can run for several lines,
@@ -4344,7 +4344,7 @@ when the index is greater than the number of upvalues.
 @apii{0,0,-}
 
 Returns an unique identifier for the upvalue numbered @id{n}
-from the closure at index @id{fidx}.
+from the closure at index @id{funcindex}.
 Parameters @id{funcindex} and @id{n} are as in the @Lid{lua_getupvalue}
 @seeC{lua_getupvalue}
 (but @id{n} cannot be greater than the number of upvalues).
@@ -4358,11 +4358,12 @@ will return identical ids for those upvalue indices.
 }
 
 @APIEntry{
-void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
-                                    int fidx2, int n2);|
+void lua_upvaluejoin (lua_State *L, int funcindex1, int n1,
+                                    int funcindex2, int n2);|
+@apii{0,0,-}
 
-Make the @id{n1}-th upvalue of the Lua closure at index @id{fidx1}
-refer to the @id{n2}-th upvalue of the Lua closure at index @id{fidx2}.
+Make the @id{n1}-th upvalue of the Lua closure at index @id{funcindex1}
+refer to the @id{n2}-th upvalue of the Lua closure at index @id{funcindex2}.
 
 }
 
@@ -4526,7 +4527,7 @@ size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
 @item{Then copy the string into that space.}
 
 @item{
-Finish by calling @T{luaL_pushresult(&b, sz)},
+Finish by calling @T{luaL_pushresultsize(&b, sz)},
 where @id{sz} is the total size of the resulting string
 copied into that space.
 }
