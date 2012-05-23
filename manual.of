@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.95 2012/01/13 20:17:16 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.96 2012/02/03 01:57:47 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -760,6 +760,12 @@ then there is a permanent resurrection.
 In any case,
 the object memory is freed only when it becomes completely inaccessible;
 its finalizer will never be called twice.
+
+When you close a state @see{lua_close},
+Lua calls the finalizers of all objects marked for collection,
+following the reverse order that they were marked.
+If any finalizer marks new objects for collection during that phase,
+these new objects will not be finalized.
 
 }
 
@@ -2428,7 +2434,7 @@ it seems to be a safe assumption.)
 
 }
 
-@APIEntry{int lua_arith (lua_State *L, int op);|
+@APIEntry{void lua_arith (lua_State *L, int op);|
 @apii{2|1,1,e}
 
 Performs an arithmetic operation over the two values
@@ -3542,7 +3548,7 @@ and then pops the top element.
 
 }
 
-@APIEntry{int lua_resume (lua_State *L, lua_State *from, int narg);|
+@APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs);|
 @apii{?,?,-}
 
 Starts and resumes a coroutine in a given thread.
@@ -3550,7 +3556,7 @@ Starts and resumes a coroutine in a given thread.
 To start a coroutine,
 you push onto the thread stack the main function plus any arguments;
 then you call @Lid{lua_resume},
-with @id{narg} being the number of arguments.
+with @id{nargs} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
 When it returns, the stack contains all values passed to @Lid{lua_yield},
 or all values returned by the body function.
@@ -3648,12 +3654,13 @@ the new value associated to the userdata at the given index.
 
 @APIEntry{typedef struct lua_State lua_State;|
 
-An opaque structure that keeps the whole state of a Lua interpreter.
+An opaque structure that points to a thread and indirectly
+(through the thread) to the whole state of a Lua interpreter.
 The Lua library is fully reentrant:
 it has no global variables.
-All information about a state is kept in this structure.
+All information about a state is accessible through this structure.
 
-A pointer to this state must be passed as the first argument to
+A pointer to this structure must be passed as the first argument to
 every function in the library, except to @Lid{lua_newstate},
 which creates a Lua state from scratch.
 
@@ -4262,6 +4269,9 @@ While Lua is running a hook, it disables other calls to hooks.
 Therefore, if a hook calls back Lua to execute a function or a chunk,
 this execution occurs without any calls to hooks.
 
+Hook functions cannot yield
+(that is, call @Lid{lua_yieldk} or @Lid{lua_yield}).
+
 }
 
 @APIEntry{int lua_sethook (lua_State *L, lua_Hook f, int mask, int count);|
@@ -4470,7 +4480,7 @@ which is the value to be added to the buffer.
 @APIEntry{
 void luaL_argcheck (lua_State *L,
                     int cond,
-                    int narg,
+                    int arg,
                     const char *extramsg);|
 @apii{0,0,v}
 
@@ -4479,7 +4489,7 @@ If not, raises an error with a standard message.
 
 }
 
-@APIEntry{int luaL_argerror (lua_State *L, int narg, const char *extramsg);|
+@APIEntry{int luaL_argerror (lua_State *L, int arg, const char *extramsg);|
 @apii{0,0,v}
 
 Raises an error with a standard message
@@ -4584,42 +4594,42 @@ this function returns false (without pushing any value on the stack).
 
 }
 
-@APIEntry{void luaL_checkany (lua_State *L, int narg);|
+@APIEntry{void luaL_checkany (lua_State *L, int arg);|
 @apii{0,0,v}
 
 Checks whether the function has an argument
-of any type (including @nil) at position @id{narg}.
+of any type (including @nil) at position @id{arg}.
 
 }
 
-@APIEntry{int luaL_checkint (lua_State *L, int narg);|
+@APIEntry{int luaL_checkint (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a number
+Checks whether the function argument @id{arg} is a number
 and returns this number cast to an @id{int}.
 
 }
 
-@APIEntry{lua_Integer luaL_checkinteger (lua_State *L, int narg);|
+@APIEntry{lua_Integer luaL_checkinteger (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a number
+Checks whether the function argument @id{arg} is a number
 and returns this number cast to a @Lid{lua_Integer}.
 
 }
 
-@APIEntry{long luaL_checklong (lua_State *L, int narg);|
+@APIEntry{long luaL_checklong (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a number
+Checks whether the function argument @id{arg} is a number
 and returns this number cast to a @id{long}.
 
 }
 
-@APIEntry{const char *luaL_checklstring (lua_State *L, int narg, size_t *l);|
+@APIEntry{const char *luaL_checklstring (lua_State *L, int arg, size_t *l);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a string
+Checks whether the function argument @id{arg} is a string
 and returns this string;
 if @id{l} is not @id{NULL} fills @T{*l}
 with the string's length.
@@ -4629,22 +4639,22 @@ so all conversions and caveats of that function apply here.
 
 }
 
-@APIEntry{lua_Number luaL_checknumber (lua_State *L, int narg);|
+@APIEntry{lua_Number luaL_checknumber (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a number
+Checks whether the function argument @id{arg} is a number
 and returns this number.
 
 }
 
 @APIEntry{
 int luaL_checkoption (lua_State *L,
-                      int narg,
+                      int arg,
                       const char *def,
                       const char *const lst[]);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a string and
+Checks whether the function argument @id{arg} is a string and
 searches for this string in the array @id{lst}
 (which must be NULL-terminated).
 Returns the index in the array where the string was found.
@@ -4653,7 +4663,7 @@ if the string cannot be found.
 
 If @id{def} is not @id{NULL},
 the function uses @id{def} as a default value when
-there is no argument @id{narg} or when this argument is @nil.
+there is no argument @id{arg} or when this argument is @nil.
 
 This is a useful function for mapping strings to @N{C enums}.
 (The usual convention in Lua libraries is
@@ -4671,10 +4681,10 @@ raising an error if the stack cannot grow to that size.
 
 }
 
-@APIEntry{const char *luaL_checkstring (lua_State *L, int narg);|
+@APIEntry{const char *luaL_checkstring (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a string
+Checks whether the function argument @id{arg} is a string
 and returns this string.
 
 This function uses @Lid{lua_tolstring} to get its result,
@@ -4682,27 +4692,27 @@ so all conversions and caveats of that function apply here.
 
 }
 
-@APIEntry{void luaL_checktype (lua_State *L, int narg, int t);|
+@APIEntry{void luaL_checktype (lua_State *L, int arg, int t);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} has type @id{t}.
+Checks whether the function argument @id{arg} has type @id{t}.
 See @Lid{lua_type} for the encoding of types for @id{t}.
 
 }
 
-@APIEntry{void *luaL_checkudata (lua_State *L, int narg, const char *tname);|
+@APIEntry{void *luaL_checkudata (lua_State *L, int arg, const char *tname);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a userdata
+Checks whether the function argument @id{arg} is a userdata
 of the type @id{tname} @seeC{luaL_newmetatable} and
 returns the userdata address @seeC{lua_touserdata}.
 
 }
 
-@APIEntry{lua_Unsigned luaL_checkunsigned (lua_State *L, int narg);|
+@APIEntry{lua_Unsigned luaL_checkunsigned (lua_State *L, int arg);|
 @apii{0,0,v}
 
-Checks whether the function argument @id{narg} is a number
+Checks whether the function argument @id{arg} is a number
 and returns this number cast to a @Lid{lua_Unsigned}.
 
 }
@@ -4827,13 +4837,13 @@ Pushes the resulting string on the stack and returns it.
 }
 
 @APIEntry{int luaL_len (lua_State *L, int index);|
-@apii{0,1,e}
+@apii{0,0,e}
 
 Returns the @Q{length} of the value at the given acceptable index
 as a number;
 it is equivalent to the @Char{#} operator in Lua @see{len-op}.
 Raises an error if the result of the operation is not a number.
-(This only can happen through metamethods.)
+(This case only can happen through metamethods.)
 
 }
 
@@ -4977,10 +4987,10 @@ Opens all standard Lua libraries into the given state.
 
 }
 
-@APIEntry{int luaL_optint (lua_State *L, int narg, int d);|
+@APIEntry{int luaL_optint (lua_State *L, int arg, int d);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a number,
+If the function argument @id{arg} is a number,
 returns this number cast to an @id{int}.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -4990,11 +5000,11 @@ Otherwise, raises an error.
 
 @APIEntry{
 lua_Integer luaL_optinteger (lua_State *L,
-                             int narg,
+                             int arg,
                              lua_Integer d);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a number,
+If the function argument @id{arg} is a number,
 returns this number cast to a @Lid{lua_Integer}.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -5002,10 +5012,10 @@ Otherwise, raises an error.
 
 }
 
-@APIEntry{long luaL_optlong (lua_State *L, int narg, long d);|
+@APIEntry{long luaL_optlong (lua_State *L, int arg, long d);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a number,
+If the function argument @id{arg} is a number,
 returns this number cast to a @id{long}.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -5015,12 +5025,12 @@ Otherwise, raises an error.
 
 @APIEntry{
 const char *luaL_optlstring (lua_State *L,
-                             int narg,
+                             int arg,
                              const char *d,
                              size_t *l);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a string,
+If the function argument @id{arg} is a string,
 returns this string.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -5031,10 +5041,10 @@ fills the position @T{*l} with the result's length.
 
 }
 
-@APIEntry{lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number d);|
+@APIEntry{lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number d);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a number,
+If the function argument @id{arg} is a number,
 returns this number.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -5044,11 +5054,11 @@ Otherwise, raises an error.
 
 @APIEntry{
 const char *luaL_optstring (lua_State *L,
-                            int narg,
+                            int arg,
                             const char *d);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a string,
+If the function argument @id{arg} is a string,
 returns this string.
 If this argument is absent or is @nil,
 returns @id{d}.
@@ -5058,11 +5068,11 @@ Otherwise, raises an error.
 
 @APIEntry{
 lua_Unsigned luaL_optunsigned (lua_State *L,
-                               int narg,
+                               int arg,
                                lua_Unsigned u);|
 @apii{0,0,v}
 
-If the function argument @id{narg} is a number,
+If the function argument @id{arg} is a number,
 returns this number cast to a @Lid{lua_Unsigned}.
 If this argument is absent or is @nil,
 returns @id{u}.
@@ -5182,7 +5192,7 @@ in the registry @seeC{luaL_newmetatable}.
 
 }
 
-@APIEntry{void *luaL_testudata (lua_State *L, int narg, const char *tname);|
+@APIEntry{void *luaL_testudata (lua_State *L, int arg, const char *tname);|
 @apii{0,0,m}
 
 This function works like @Lid{luaL_checkudata},
@@ -6224,20 +6234,20 @@ If @id{repl} is a string, then its value is used for replacement.
 The @N{character @T{%}} works as an escape character:
 any sequence in @id{repl} of the form @T{%@rep{d}},
 with @rep{d} between 1 and 9,
-stands for the value of the @rep{d}-th captured substring (see below).
+stands for the value of the @rep{d}-th captured substring.
 The sequence @T{%0} stands for the whole match.
 The sequence @T{%%} stands for a @N{single @T{%}}.
 
 If @id{repl} is a table, then the table is queried for every match,
-using the first capture as the key;
-if the pattern specifies no captures,
-then the whole match is used as the key.
+using the first capture as the key.
 
 If @id{repl} is a function, then this function is called every time a
 match occurs, with all captured substrings passed as arguments,
-in order;
+in order.
+
+In any case,
 if the pattern specifies no captures,
-then the whole match is passed as a sole argument.
+then it behaves as if the whole pattern was inside a capture.
 
 If the value returned by the table query or by the function call
 is a string or a number,
