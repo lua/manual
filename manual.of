@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.96 2012/02/03 01:57:47 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.97 2012/05/23 15:50:01 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2354,8 +2354,7 @@ by looking only at its arguments
 The third field, @T{x},
 tells whether the function may throw errors:
 @Char{-} means the function never throws any error;
-@Char{m} means the function may throw only memory allocation errors;
-@Char{e} means the function may throw other kinds of errors;
+@Char{e} means the function may throw errors;
 @Char{v} means the function may throw an error on purpose.
 
 
@@ -2646,7 +2645,7 @@ without shifting any element
 }
 
 @APIEntry{void lua_createtable (lua_State *L, int narr, int nrec);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a new empty table and pushes it onto the stack.
 Parameter @id{narr} is a hint for how many elements the table
@@ -2661,7 +2660,7 @@ Otherwise you can use the function @Lid{lua_newtable}.
 }
 
 @APIEntry{int lua_dump (lua_State *L, lua_Writer writer, void *data);|
-@apii{0,0,m}
+@apii{0,0,e}
 
 Dumps a function as a binary chunk.
 Receives a Lua function on the top of the stack
@@ -3062,7 +3061,7 @@ passes to the allocator in every call.
 }
 
 @APIEntry{void lua_newtable (lua_State *L);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a new empty table and pushes it onto the stack.
 It is equivalent to @T{lua_createtable(L, 0, 0)}.
@@ -3070,7 +3069,7 @@ It is equivalent to @T{lua_createtable(L, 0, 0)}.
 }
 
 @APIEntry{lua_State *lua_newthread (lua_State *L);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a new thread, pushes it on the stack,
 and returns a pointer to a @Lid{lua_State} that represents this new thread.
@@ -3085,7 +3084,7 @@ like any Lua object.
 }
 
 @APIEntry{void *lua_newuserdata (lua_State *L, size_t size);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 This function allocates a new block of memory with the given size,
 pushes onto the stack a new full userdata with the block address,
@@ -3230,7 +3229,7 @@ Pushes a boolean value with value @id{b} onto the stack.
 }
 
 @APIEntry{void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);|
-@apii{n,1,m}
+@apii{n,1,e}
 
 Pushes a new @N{C closure} onto the stack.
 
@@ -3277,7 +3276,7 @@ Note that @id{f} is used twice.
 }
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
@@ -3330,7 +3329,7 @@ light userdata with the same @N{C address}.
 }
 
 @APIEntry{const char *lua_pushliteral (lua_State *L, const char *s);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 This macro is equivalent to @Lid{lua_pushlstring},
 but can be used only when @id{s} is a literal string.
@@ -3339,7 +3338,7 @@ It automatically provides the string length.
 }
 
 @APIEntry{const char *lua_pushlstring (lua_State *L, const char *s, size_t len);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Pushes the string pointed to by @id{s} with size @id{len}
 onto the stack.
@@ -3368,7 +3367,7 @@ Pushes a number with value @id{n} onto the stack.
 }
 
 @APIEntry{const char *lua_pushstring (lua_State *L, const char *s);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Pushes the zero-terminated string pointed to by @id{s}
 onto the stack.
@@ -3402,7 +3401,7 @@ onto the stack.
 const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
 instead of a variable number of arguments.
@@ -3463,7 +3462,7 @@ for other values, it @N{is 0}.
 }
 
 @APIEntry{void lua_rawset (lua_State *L, int index);|
-@apii{2,0,m}
+@apii{2,0,e}
 
 Similar to @Lid{lua_settable}, but does a raw assignment
 (i.e., without metamethods).
@@ -3471,7 +3470,7 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 }
 
 @APIEntry{void lua_rawseti (lua_State *L, int index, int n);|
-@apii{1,0,m}
+@apii{1,0,e}
 
 Does the equivalent of @T{t[n] = v},
 where @id{t} is the table at the given valid index
@@ -3484,7 +3483,7 @@ that is, it does not invoke metamethods.
 }
 
 @APIEntry{void lua_rawsetp (lua_State *L, int index, const void *p);|
-@apii{1,0,m}
+@apii{1,0,e}
 
 Does the equivalent of @T{t[k] = v},
 where @id{t} is the table at the given valid index,
@@ -3733,7 +3732,7 @@ indicates whether the operation succeeded.
 }
 
 @APIEntry{const char *lua_tolstring (lua_State *L, int index, size_t *len);|
-@apii{0,0,m}
+@apii{0,0,e}
 
 Converts the Lua value at the given acceptable index to a @N{C string}.
 If @id{len} is not @id{NULL},
@@ -3794,7 +3793,7 @@ Typically this function is used only for debug information.
 }
 
 @APIEntry{const char *lua_tostring (lua_State *L, int index);|
-@apii{0,0,m}
+@apii{0,0,e}
 
 Equivalent to @Lid{lua_tolstring} with @id{len} equal to @id{NULL}.
 
@@ -4114,7 +4113,7 @@ Returns the current hook mask.
 }
 
 @APIEntry{int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);|
-@apii{0|1,0|1|2,m}
+@apii{0|1,0|1|2,e}
 
 Gets information about a specific function or function invocation.
 
@@ -4427,7 +4426,7 @@ in alphabetical order.
 
 
 @APIEntry{void luaL_addchar (luaL_Buffer *B, char c);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Adds the byte @id{c} to the buffer @id{B}
 @seeC{luaL_Buffer}.
@@ -4435,7 +4434,7 @@ Adds the byte @id{c} to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
@@ -4445,7 +4444,7 @@ The string can contain embedded zeros.
 }
 
 @APIEntry{void luaL_addsize (luaL_Buffer *B, size_t n);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Adds to the buffer @id{B} @seeC{luaL_Buffer}
 a string of length @id{n} previously copied to the
@@ -4454,7 +4453,7 @@ buffer area @seeC{luaL_prepbuffer}.
 }
 
 @APIEntry{void luaL_addstring (luaL_Buffer *B, const char *s);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
@@ -4464,7 +4463,7 @@ The string cannot contain embedded zeros.
 }
 
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
-@apii{1,?,m}
+@apii{1,?,e}
 
 Adds the value at the top of the stack
 to the buffer @id{B}
@@ -4572,7 +4571,7 @@ the buffer must be declared as a variable
 }
 
 @APIEntry{char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Equivalent to the sequence
 @Lid{luaL_buffinit}, @Lid{luaL_prepbuffsize}.
@@ -4730,7 +4729,7 @@ are using the same address space.
 }
 
 @APIEntry{int luaL_dofile (lua_State *L, const char *filename);|
-@apii{0,?,m}
+@apii{0,?,e}
 
 Loads and runs the given file.
 It is defined as the following macro:
@@ -4773,7 +4772,7 @@ as @T{return luaL_error(@rep{args})}.
 }
 
 @APIEntry{int luaL_execresult (lua_State *L, int stat);|
-@apii{0,3,m}
+@apii{0,3,e}
 
 This function produces the return values for
 process-related functions in the standard library
@@ -4783,7 +4782,7 @@ process-related functions in the standard library
 
 @APIEntry{
 int luaL_fileresult (lua_State *L, int stat, const char *fname);|
-@apii{0,1|3,m}
+@apii{0,1|3,e}
 
 This function produces the return values for
 file-related functions in the standard library
@@ -4792,7 +4791,7 @@ file-related functions in the standard library
 }
 
 @APIEntry{int luaL_getmetafield (lua_State *L, int obj, const char *e);|
-@apii{0,0|1,m}
+@apii{0,0|1,e}
 
 Pushes onto the stack the field @id{e} from the metatable
 of the object at index @id{obj}.
@@ -4811,7 +4810,7 @@ in the registry @seeC{luaL_newmetatable}.
 }
 
 @APIEntry{int luaL_getsubtable (lua_State *L, int idx, const char *fname);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Ensures that the value @T{t[fname]},
 where @id{t} is the value at the valid index @id{idx},
@@ -4827,7 +4826,7 @@ const char *luaL_gsub (lua_State *L,
                        const char *s,
                        const char *p,
                        const char *r);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a copy of string @id{s} by replacing
 any occurrence of the string @id{p}
@@ -4880,7 +4879,7 @@ The string @id{mode} works as in function @Lid{lua_load}.
 
 
 @APIEntry{int luaL_loadfile (lua_State *L, const char *filename);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Equivalent to @Lid{luaL_loadfilex} with @id{mode} equal to @id{NULL}.
 
@@ -4888,7 +4887,7 @@ Equivalent to @Lid{luaL_loadfilex} with @id{mode} equal to @id{NULL}.
 
 @APIEntry{int luaL_loadfilex (lua_State *L, const char *filename,
                                             const char *mode);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Loads a file as a Lua chunk.
 This function uses @Lid{lua_load} to load the chunk in the file
@@ -4924,7 +4923,7 @@ it does not run it.
 
 
 @APIEntry{int luaL_newlib (lua_State *L, const luaL_Reg *l);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a new table and registers there
 the functions in list @id{l}.
@@ -4936,7 +4935,7 @@ It is implemented as the following macro:
 }
 
 @APIEntry{int luaL_newlibtable (lua_State *L, const luaL_Reg l[]);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates a new table with a size optimized
 to store all entries in the array @id{l}
@@ -4951,7 +4950,7 @@ not a pointer to it.
 }
 
 @APIEntry{int luaL_newmetatable (lua_State *L, const char *tname);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 If the registry already has the key @id{tname},
 returns 0.
@@ -5081,7 +5080,7 @@ Otherwise, raises an error.
 }
 
 @APIEntry{char *luaL_prepbuffer (luaL_Buffer *B);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Equivalent to @Lid{luaL_prepbuffsize}
 with the predefined size @defid{LUAL_BUFFERSIZE}.
@@ -5089,7 +5088,7 @@ with the predefined size @defid{LUAL_BUFFERSIZE}.
 }
 
 @APIEntry{char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);|
-@apii{?,?,m}
+@apii{?,?,e}
 
 Returns an address to a space of size @id{sz}
 where you can copy a string to be added to buffer @id{B}
@@ -5101,7 +5100,7 @@ it to the buffer.
 }
 
 @APIEntry{void luaL_pushresult (luaL_Buffer *B);|
-@apii{?,1,m}
+@apii{?,1,e}
 
 Finishes the use of buffer @id{B} leaving the final string on
 the top of the stack.
@@ -5109,14 +5108,14 @@ the top of the stack.
 }
 
 @APIEntry{void luaL_pushresultsize (luaL_Buffer *B, size_t sz);|
-@apii{?,1,m}
+@apii{?,1,e}
 
 Equivalent to the sequence @Lid{luaL_addsize}, @Lid{luaL_pushresult}.
 
 }
 
 @APIEntry{int luaL_ref (lua_State *L, int t);|
-@apii{1,0,m}
+@apii{1,0,e}
 
 Creates and returns a @def{reference},
 in the table at index @id{t},
@@ -5193,7 +5192,7 @@ in the registry @seeC{luaL_newmetatable}.
 }
 
 @APIEntry{void *luaL_testudata (lua_State *L, int arg, const char *tname);|
-@apii{0,0,m}
+@apii{0,0,e}
 
 This function works like @Lid{luaL_checkudata},
 except that, when the test fails,
@@ -5221,7 +5220,7 @@ and uses the result of the call as its result.
 @APIEntry{
 void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
                      int level);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Creates and pushes a traceback of the stack @id{L1}.
 If @id{msg} is not @id{NULL} it is appended
@@ -5253,7 +5252,7 @@ If @id{ref} is @Lid{LUA_NOREF} or @Lid{LUA_REFNIL},
 }
 
 @APIEntry{void luaL_where (lua_State *L, int lvl);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Pushes onto the stack a string identifying the current position
 of the control at level @id{lvl} in the call stack.
