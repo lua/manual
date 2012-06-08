@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.97 2012/05/23 15:50:01 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.98 2012/05/31 13:01:09 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2775,7 +2775,7 @@ opaque pointer passed to @Lid{lua_newstate}.
 
 }
 
-@APIEntry{int lua_getctx  (lua_State *L, int *ctx);|
+@APIEntry{int lua_getctx (lua_State *L, int *ctx);|
 @apii{0,0,-}
 
 This function is called by a continuation function @see{continuations}
@@ -3868,7 +3868,7 @@ and
 
 }
 
-@APIEntry{const char *lua_typename  (lua_State *L, int tp);|
+@APIEntry{const char *lua_typename (lua_State *L, int tp);|
 @apii{0,0,-}
 
 Returns the name of the type encoded by the value @id{tp},
@@ -3927,7 +3927,7 @@ and pushes them onto the stack @id{to}.
 
 }
 
-@APIEntry{int lua_yield  (lua_State *L, int nresults);|
+@APIEntry{int lua_yield (lua_State *L, int nresults);|
 @apii{?,?,-}
 
 This function is equivalent to @Lid{lua_yieldk},
@@ -3940,7 +3940,7 @@ the function calling @id{lua_yield}.
 
 
 @APIEntry{
-int lua_yieldk  (lua_State *L, int nresults, int ctx, lua_CFunction k);|
+int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k);|
 @apii{?,?,-}
 
 Yields a coroutine.
@@ -4268,8 +4268,15 @@ While Lua is running a hook, it disables other calls to hooks.
 Therefore, if a hook calls back Lua to execute a function or a chunk,
 this execution occurs without any calls to hooks.
 
-Hook functions cannot yield
-(that is, call @Lid{lua_yieldk} or @Lid{lua_yield}).
+Hook functions cannot have continuations,
+that is, they cannot call @Lid{lua_yieldk},
+@Lid{lua_pcallk}, or @Lid{lua_callk} with a non-null @id{k}.
+
+Hook functions can yield under the following conditions:
+Only count and line events can yield
+and they cannot yield any value;
+to yield a hook function must finish its execution
+calling @Lid{lua_yield} with @id{nresults} equal to zero.
 
 }
 
