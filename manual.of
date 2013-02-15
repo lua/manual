@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.99 2012/06/08 15:30:20 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.100 2013/02/07 18:45:05 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -3606,7 +3606,9 @@ the stack is not unwound,
 so you can use the debug API over it.
 The error message is on the top of the stack.
 
-To resume a coroutine, you put on its stack only the values to
+To resume a coroutine,
+you remove any results from the last @Lid{lua_yield},
+put on its stack only the values to
 be passed as results from @id{yield},
 and then call @Lid{lua_resume}.
 
