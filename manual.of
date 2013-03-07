@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.100 2013/02/07 18:45:05 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.101 2013/02/15 12:33:36 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -6634,10 +6634,15 @@ Note that the resulting table may not be a sequence.
 @LibEntry{table.remove (list [, pos])|
 
 Removes from @id{list} the element at position @id{pos},
-shifting down the elements
+returning the value of the removed element.
+When @id{pos} is an integer between 1 and @T{#list},
+it shifts down the elements
 @T{list[pos+1], list[pos+2], @Cdots, list[#list]}
-and erasing element @T{list[#list]}.
-Returns the value of the removed element.
+and erases element @T{list[#list]};
+The index @id{pos} can also be 0, when @T{#list} is 0,
+or @T{#list + 1};
+in those cases, the function erases the element @T{list[pos]}.
+
 The default value for @id{pos} is @T{#list},
 so that a call @T{table.remove(t)} removes the last element
 of list @id{t}.
