@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.102 2013/03/07 18:25:28 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.103 2013/03/14 18:51:56 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1740,7 +1740,7 @@ the length of a table @id{t} is only defined if the
 table is a @def{sequence},
 that is,
 the set of its positive numeric keys is equal to @M{{1..n}}
-for some integer @M{n}.
+for some non-negative integer @M{n}.
 In that case, @M{n} is its length.
 Note that a table like
 @verbatim{
@@ -7687,15 +7687,16 @@ returns @nil.
 Sets the given function as a hook.
 The string @id{mask} and the number @id{count} describe
 when the hook will be called.
-The string mask may have the following characters,
+The string mask may have any combination of the following characters,
 with the given meaning:
 @description{
 @item{@Char{c}| the hook is called every time Lua calls a function;}
 @item{@Char{r}| the hook is called every time Lua returns from a function;}
 @item{@Char{l}| the hook is called every time Lua enters a new line of code.}
 }
-With a @id{count} different from zero,
-the hook is called after every @id{count} instructions.
+Moreover,
+with a @id{count} different from zero,
+the hook is called also after every @id{count} instructions.
 
 When called without arguments,
 @Lid{debug.sethook} turns off the hook.
