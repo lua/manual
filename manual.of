@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.105 2013/07/05 18:48:52 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.106 2014/01/06 12:24:36 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -79,7 +79,7 @@ uses 32-bit integers and single-precision floats.
 @index{eight-bit clean}
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
-including embedded zeros (@Char{\0}).
+including @x{embedded zeros} (@Char{\0}).
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C
@@ -145,12 +145,13 @@ denote the same table element
 if and only if @id{i} and @id{j} are raw equal
 (that is, equal without metamethods).
 
-In particular, because float numbers with integer values
+In particular, float numbers with integer values
 are equal to their respective integer numbers
-(e.g., @T{1.0 == 1}),
+(e.g., @T{1.0 == 1}).
+To avoid ambiguities,
 any float number with integer value used as a key
 is converted to its respective integer number.
-For instance, if you write @T{a[-2.0] = true},
+For instance, if you write @T{a[2.0] = true},
 the actual key inserted into the table will be the
 integer number @T{2}.
 
@@ -674,7 +675,8 @@ controls the relative speed of the collector relative to
 memory allocation.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
-Values smaller than 100 make the collector too slow and
+You should not use values smaller than 100,
+as they make the collector too slow and
 can result in the collector never finishing a cycle.
 The default is 200,
 which means that the collector runs at @Q{twice}
@@ -693,19 +695,6 @@ You can change these numbers by calling @Lid{lua_gc} in C
 or @Lid{collectgarbage} in Lua.
 You can also use these functions to control
 the collector directly (e.g., stop and restart it).
-
-As an experimental feature in Lua 5.2,
-you can change the collector's operation mode
-from incremental to @emph{generational}.
-A @def{generational collector} assumes that most objects die young,
-and therefore it traverses only young (recently created) objects.
-This behavior can reduce the time used by the collector,
-but also increases memory usage (as old dead objects may accumulate).
-To mitigate this second problem,
-from time to time the generational collector performs a full collection.
-Remember that this is an experimental feature;
-you are welcome to try it,
-but check your gains.
 
 
 @sect3{finalizers| @title{Garbage-Collection Metamethods}
@@ -1030,8 +1019,15 @@ or with the escape sequence @T{\@rep{ddd}},
 where @rep{ddd} is a sequence of up to three decimal digits.
 (Note that if a decimal escape is to be followed by a digit,
 it must be expressed using exactly three digits.)
-Strings in Lua can contain any 8-bit value, including embedded zeros,
+Strings in Lua can contain any 8-bit value, including @x{embedded zeros},
 which can be specified as @Char{\0}.
+
+The @x{UTF-8} encoding of a @x{Unicode} character
+can be inserted in a literal string with
+the escape sequence @T{\u{@rep{XXX}}}
+(note the mandatory enclosing brackets),
+where @rep{XXX} is a sequence of one or more hexadecimal digits
+representing the character code point.
 
 Literal strings can also be defined using a long format
 enclosed by @def{long brackets}.
@@ -1570,10 +1566,12 @@ directly inside a vararg function;
 they are explained in @See{func-def}.
 
 Binary operators comprise arithmetic operators @see{arith},
+bitwise operators @see{bitwise},
 relational operators @see{rel-ops}, logical operators @see{logic},
 and the concatenation operator @see{concat}.
 Unary operators comprise the unary minus @see{arith},
-the unary @Rw{not} @see{logic},
+the unary bitwise not @see{bitwise},
+the unary logic @Rw{not} @see{logic},
 and the unary @def{length operator} @see{len-op}.
 
 Both function calls and vararg expressions can result in multiple values.
@@ -1655,14 +1653,34 @@ according to the usual rules of two-complement arithmetic.
 
 }
 
-@sect3{coercion| @title{Coercions and Conversions}
+@sect3{bitwise| @title{Bitwise Operators}
+Lua supports the following @x{bitwise operators}:
+the binary @T{&} (bitwise and),
+@T{|} (bitwise or), @T{~} (bitwise exclusive or),
+@T{>>} (right shift), @T{<<} (left shift),
+and unary @T{~} (bitwise not).
 
+All bitwise operations convert its operands to integer numbers
+@see{coercion},
+operate on all bits of those integers,
+and result in an integer number.
+
+Both right and left shifts fill with zeros the vacant bits.
+Negative displacements shift to the other direction;
+displacements with absolute values equal to or higher than
+the number of bits in an integer
+result in zero (all bits are shifted out).
+
+}
+
+@sect3{coercion| @title{Coercions and Conversions}
 Lua provides some automatic conversions between types at run time.
-Most binary operations applied to mixed numbers
+Most arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the @def{usual rule}.
-Division always convert integer operands to floats,
-and integer division always convert floating operands to integers.
+Division always convert integer operands to floats;
+integer division and bitwise operators
+always convert floating operands to integers.
 The C API also converts both integers to floats and
 floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
@@ -1695,8 +1713,6 @@ Lua converts the string to a float an then the float to an integer.
 
 The conversion from numbers to strings use a human-readable,
 non-specified format.
-Floating-point numbers always produce strings with some
-floating-point indication (either a decimal dot or an exponent).
 For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
 @seeF{string.format}.
@@ -2528,8 +2544,8 @@ it seems to be a safe assumption.)
 @APIEntry{void lua_arith (lua_State *L, int op);|
 @apii{2|1,1,e}
 
-Performs an arithmetic operation over the two values
-(or one, in the case of negation)
+Performs an arithmetic or bitwise operation over the two values
+(or one, in the case of negations)
 at the top of the stack,
 with the value at the top being the second operand,
 pops these values, and pushes the result of the operation.
@@ -2543,9 +2559,16 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPSUB}| performs subtraction (@T{-})}
 @item{@defid{LUA_OPMUL}| performs multiplication (@T{*})}
 @item{@defid{LUA_OPDIV}| performs division (@T{/})}
+@item{@defid{LUA_OPIDIV}| performs integer division (@T{//})}
 @item{@defid{LUA_OPMOD}| performs modulo (@T{%})}
 @item{@defid{LUA_OPPOW}| performs exponentiation (@T{^})}
 @item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
+@item{@defid{LUA_OPBNOT}| performs bitwise negation (@T{~})}
+@item{@defid{LUA_OPBAND}| performs bitwise and (@T{&})}
+@item{@defid{LUA_OPBOR}| performs bitwise or (@T{|})}
+@item{@defid{LUA_OPBXOR}| performs bitwise exclusive or (@T{~})}
+@item{@defid{LUA_OPSHL}| performs left shift (@T{<<})}
+@item{@defid{LUA_OPSHR}| performs right shift (@T{>>})}
 
 }
 
@@ -2816,39 +2839,23 @@ memory in use by Lua by 1024.
 
 @item{@id{LUA_GCSTEP}|
 performs an incremental step of garbage collection.
-The step @Q{size} is controlled by @id{data}
-(larger values mean more steps) in a non-specified way.
-If you want to control the step size
-you must experimentally tune the value of @id{data}.
-The function returns 1 if the step finished a
-garbage-collection cycle.
 }
 
 @item{@id{LUA_GCSETPAUSE}|
 sets @id{data} as the new value
-for the @emph{pause} of the collector @see{GC}.
-The function returns the previous value of the pause.
+for the @emph{pause} of the collector @see{GC}
+and returns the previous value of the pause.
 }
 
 @item{@id{LUA_GCSETSTEPMUL}|
 sets @id{data} as the new value for the @emph{step multiplier} of
-the collector @see{GC}.
-The function returns the previous value of the step multiplier.
+the collector @see{GC}
+and returns the previous value of the step multiplier.
 }
 
 @item{@id{LUA_GCISRUNNING}|
 returns a boolean that tells whether the collector is running
 (i.e., not stopped).
-}
-
-@item{@id{LUA_GCGEN}|
-changes the collector to @x{generational mode}
-@see{GC}.
-}
-
-@item{@id{LUA_GCINC}|
-changes the collector to @x{incremental mode}.
-This is the default mode.
 }
 
 }
@@ -2950,7 +2957,6 @@ this result is equal to the number of elements in the stack
 
 Pushes onto the stack the Lua value associated with the userdata
 at the given index.
-This Lua value must be a table or @nil.
 
 }
 
@@ -3398,12 +3404,14 @@ the result is a Lua string and Lua takes care of memory allocation
 The conversion specifiers are quite restricted.
 There are no flags, widths, or precisions.
 The conversion specifiers can only be
-@Char{%%} (inserts a @Char{%} in the string),
+@Char{%%} (inserts the character @Char{%}),
 @Char{%s} (inserts a zero-terminated string, with no size restrictions),
 @Char{%f} (inserts a @Lid{lua_Number}),
+@Char{%L} (inserts a @Lid{lua_Integer}),
 @Char{%p} (inserts a pointer as a hexadecimal numeral),
-@Char{%d} (inserts an @T{int}), and
-@Char{%c} (inserts an @T{int} as a byte).
+@Char{%d} (inserts an @T{int}),
+@Char{%c} (inserts an @T{int} as a one-byte character), and
+@Char{%U} (inserts an @T{int} as a @x{UTF-8} byte sequence).
 }
 
 }
@@ -3457,7 +3465,7 @@ Lua makes (or reuses) an internal copy of the given string,
 so the memory at @id{s} can be freed or reused immediately after
 the function returns.
 The string can contain any binary data,
-including embedded zeros.
+including @x{embedded zeros}.
 
 Returns a pointer to the internal copy of the string.
 
@@ -3765,7 +3773,7 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 @APIEntry{void lua_setuservalue (lua_State *L, int index);|
 @apii{1,0,-}
 
-Pops a table or @nil from the stack and sets it as
+Pops a value from the stack and sets it as
 the new value associated to the userdata at the given index.
 
 }
@@ -4559,7 +4567,6 @@ you should not use these functions for other stack values.
 Functions called @id{luaL_check*}
 always throw an error if the check is not satisfied.
 
-
 @sect2{@title{Functions and Types}
 
 Here we list all functions and types from the auxiliary library
@@ -4580,7 +4587,7 @@ Adds the byte @id{c} to the buffer @id{B}
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
 @seeC{luaL_Buffer}.
-The string can contain embedded zeros.
+The string can contain @x{embedded zeros}.
 
 }
 
@@ -4599,7 +4606,6 @@ buffer area @seeC{luaL_prepbuffer}.
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
 @seeC{luaL_Buffer}.
-The string cannot contain embedded zeros.
 
 }
 
@@ -5102,7 +5108,8 @@ If the registry already has the key @id{tname},
 returns 0.
 Otherwise,
 creates a new table to be used as a metatable for userdata,
-adds it to the registry with key @id{tname},
+adds to this new table the pair @T{__name = tname},
+adds to the registry the pair @T[tname] = new table},
 and returns 1.
 
 In both cases pushes onto the stack the final value associated
@@ -5339,6 +5346,37 @@ in the registry @seeC{luaL_newmetatable}.
 
 }
 
+@APIEntry{
+typedef struct luaL_Stream {
+  FILE *f;
+  lua_CFunction closef;
+} luaL_Stream;
+|
+
+The standard representation for @x{file handles},
+which is used by the standard I/O library.
+
+A file handle is implemented as a full userdata,
+with a metatable called @id{LUA_FILEHANDLE}.
+@id{LUA_FILEHANDLE} is a macro with the actual metatable's name.
+The metatable is created by the I/O library
+@see{luaL_newmetatable}.
+
+This userdata must start with the structure @id{luaL_Stream};
+it can contain other data after this initial structure.
+Field @id{f} points to the corresponding C stream
+(or it can be @id{NULL} to indicate an incompletely created handle).
+Field @id{closef} points to a Lua function
+that will be called to close the stream
+when the handle is closed or collected;
+this function receives the file handle as its sole argument and
+must return either @Rw{true} (in case of success)
+or @nil plus an error message (in case of error).
+Once Lua calls this field,
+the field value is changed to @nil to signal that the handle is closed.
+
+}
+
 @APIEntry{void *luaL_testudata (lua_State *L, int arg, const char *tname);|
 @apii{0,0,e}
 
@@ -5446,6 +5484,8 @@ Currently, Lua has the following standard libraries:
 
 @item{@link{strlib|string manipulation};}
 
+@item{@link{utf8|basic UTF-8 support};}
+
 @item{@link{tablib|table manipulation};}
 
 @item{@link{mathlib|mathematical functions} (sin, log, etc.);}
@@ -5520,24 +5560,21 @@ restarts automatic execution of the garbage collector.
 }
 
 @item{@St{count}|
-returns the total memory in use by Lua (in Kbytes) and
-a second value with the total memory in bytes modulo 1024.
-The first value has a fractional part,
-so the following equality is always true:
-@verbatim{
-k, b = collectgarbage("count")
-assert(k*1024 == math.floor(k)*1024 + b)
-}
-(The second result is useful when Lua is compiled
-with a non floating-point type for numbers.)
+returns the total memory in use by Lua in Kbytes.
+The value has a fractional part,
+so that it multiplied by 1024
+gives the exact number of bytes in use by Lua
+(except for overflows).
 }
 
 @item{@St{step}|
 performs a garbage-collection step.
-The step @Q{size} is controlled by @id{arg}
-(larger values mean more steps) in a non-specified way.
-If you want to control the step size
-you must experimentally tune the value of @id{arg}.
+The step @Q{size} is controlled by @id{arg}.
+With a zero value,
+the collector will perform one basic (indivisible) step.
+For non-zero values,
+the collector will perform as if that amount of memory
+(in KBytes) had been allocated by Lua.
 Returns @Rw{true} if the step finished a collection cycle.
 }
 
@@ -5845,6 +5882,8 @@ the function returns @nil.
 @LibEntry{tostring (v)|
 Receives a value of any type and
 converts it to a string in a human-readable format.
+Floating-point numbers always produce strings with some
+floating-point indication (either a decimal dot or an exponent).
 (For complete control of how numbers are converted,
 use @Lid{string.format}.)
 
@@ -5872,7 +5911,7 @@ and @St{userdata}.
 @LibEntry{_VERSION|
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current contents of this variable is @St{Lua 5.2}.
+The current contents of this variable is @St{Lua 5.3}.
 
 }
 
@@ -6272,11 +6311,15 @@ Numerical codes are not necessarily portable across platforms.
 
 }
 
-@LibEntry{string.dump (function)|
+@LibEntry{string.dump (function [, strip])|
 
 Returns a string containing a binary representation of the given function,
 so that a later @Lid{load} on this string returns
 a copy of the function (but with new upvalues).
+If @id{strip} is a true value,
+the binary representation is created without debug information
+about the function
+(local variable names, lines, etc.).
 
 }
 
@@ -6337,7 +6380,7 @@ the underlying @N{C implementation}.
 For options @id{o}, @id{u}, @id{X}, and @id{x},
 the number cannot be negative.
 Option @id{q} expects a string;
-option @id{s} expects a string without embedded zeros.
+option @id{s} expects a string without @x{embedded zeros}.
 If the argument to option @id{s} is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
 
@@ -6429,9 +6472,9 @@ x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
     end)
 --> x="4+5 = 9"
 
-local t = {name="lua", version="5.2"}
+local t = {name="lua", version="5.3"}
 x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
---> x="lua-5.2.tar.gz"
+--> x="lua-5.3.tar.gz"
 }
 
 }
@@ -6463,6 +6506,31 @@ then the whole match is returned.
 A third, optional numerical argument @id{init} specifies
 where to start the search;
 its default value @N{is 1} and can be negative.
+
+}
+
+@LibEntry{string.packfloat (n [, size [, endianess]])|
+Returns a string with the machine representation of float @id{n},
+with given size and endianess.
+The @id{size} is the string @St{f} (single precision),
+@St{d} (double precision), or @St{n},
+which means the size of a @Lid{lua_Number};
+its default is St{n}.
+The endianess is the string @St{l} (little endian), @St{b} (big endian),
+or @St{n} (native);
+the default is the native endianess.
+
+}
+
+@LibEntry{string.packint (n [, size [, endianess]])|
+Returns a string with the machine representation of integer @id{n},
+with @id{size} bytes and given endianess.
+The @id{size} can be any value from 1 to 8 or 0,
+which means the size of a @Lid{lua_Integer};
+its default is zero.
+The endianess is the string @St{l} (little endian), @St{b} (big endian),
+or @St{n} (native);
+the default is the native endianess.
 
 }
 
@@ -6499,6 +6567,22 @@ it is corrected to that length.
 If, after these corrections,
 @id{i} is greater than @id{j},
 the function returns the empty string.
+
+}
+
+@LibEntry{string.unpackfloat (s [, pos [, size [, endianess]]])|
+Reads the machine representation of a float starting at position
+@id{pos} in string @id{s} and returns that number.
+See @Lid{string.packfloat} for details about @id{size} and @id{endianess}.
+
+}
+
+@LibEntry{string.unpackint (s [, pos [, size [, endianess]]])|
+Reads the machine representation of an integer starting at position
+@id{pos} in string @id{s} and returns that integer.
+See @Lid{string.packint} for details about @id{size} and @id{endianess}.
+
+Integers are always read as signed.
 
 }
 
@@ -6682,6 +6766,86 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 }
 
 }
+
+}
+
+}
+
+@sect2{utf8| @title{UTF-8 Support}
+
+This library provides basic support for @x{UTF-8} encoding.
+It provides all its functions inside the table @defid{utf8}.
+This library does not provide any support for @x{Unicode} other
+than the handling of the encoding.
+Any operation that needs the meaning of a character,
+such as character classification, is outside its scope.
+
+Unless stated otherwise,
+all functions that expect a byte index as a parameter
+assume that the given position is either the start of a byte sequence
+or one plus the length of the subject string.
+As in the string library,
+negative indices count from the end of the string.
+
+
+@LibEntry{utf8.char (@Cdots)|
+Receives zero or more integers,
+converts each one to its corresponding UTF-8 byte sequence
+and returns a string with the concatenation of all these sequences.
+
+}
+
+@LibEntry{utf8.charpatt|
+The pattern (a string, not a function) @St{[\0-\x7F\xC2-\xF4][\x80-\xBF]*}
+@see{pm},
+which matches exactly one UTF-8 byte sequence,
+assuming that the subject is a valid UTF-8 string.
+
+}
+
+@LibEntry{utf8.codes (s)|
+
+Returns values so that the construction
+@verbatim{
+for p, c in utf8.codes(s) do @rep{body} end
+}
+will iterate over all characters in string @id{s},
+with @id{p} being the position (in bytes) and @id{c} the code point
+of each character.
+It raises an error if it meets any invalid byte sequence.
+
+}
+
+@LibEntry{utf8.codepoint (s [, i [, j]])|
+Returns the codepoints (as integer numbers) from all characters in @id{s}
+that start between byte position @id{i} and @id{j} (both included).
+The default for @id{i} is 1 and for @id{j} is @id{i}.
+It raises an error if it meets any invalid byte sequence.
+
+}
+
+@LibEntry{utf8.len (s [, i])|
+Returns the number of UTF-8 characters in string @id{s},
+starting from position @id{i}.
+The default for @id{i} is 1.
+Returns @nil if the sufix of @id{s} starting at @id{i}
+contains any invalid byte sequence.
+
+}
+
+@LibEntry{utf8.offset (s, n [, i])|
+Returns the byte index where the encoding of the
+@id{n}-th character of @id{s} starts,
+counting from position @id{i}.
+A negative @id{n} gets characters before position @id{i}.
+The default for @id{i} is 1.
+Returns @nil if the subject does not have such character.
+
+As a special case,
+when @id{n} is 0 the function returns the start of the encoding
+of the character that contains the @id{i}-th byte of @id{s}.
+
+This function assumes that @id{s} is a valid UTF-8 string.
 
 }
 
@@ -7170,20 +7334,20 @@ This shift operation is what is called @x{logical shift}.
 @sect2{iolib| @title{Input and Output Facilities}
 
 The I/O library provides two different styles for file manipulation.
-The first one uses implicit file descriptors;
+The first one uses implicit file handles;
 that is, there are operations to set a default input file and a
 default output file,
 and all input/output operations are over these default files.
-The second style uses explicit file descriptors.
+The second style uses explicit file handles.
 
-When using implicit file descriptors,
+When using implicit file handles,
 all operations are supplied by table @defid{io}.
-When using explicit file descriptors,
-the operation @Lid{io.open} returns a file descriptor
-and then all operations are supplied as methods of the file descriptor.
+When using explicit file handles,
+the operation @Lid{io.open} returns a file handle
+and then all operations are supplied as methods of the file handle.
 
 The table @id{io} also provides
-three predefined file descriptors with their usual meanings from C:
+three predefined file handles with their usual meanings from C:
 @defid{io.stdin}, @defid{io.stdout}, and @defid{io.stderr}.
 The I/O library never closes these files.
 
@@ -7234,7 +7398,7 @@ When the iterator function detects the end of file,
 it returns no values (to finish the loop) and automatically closes the file.
 
 The call @T{io.lines()} (with no file name) is equivalent
-to @T{io.input():lines()};
+to @T{io.input():lines("*l")};
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
 
@@ -7402,6 +7566,7 @@ or @nil on end of file.
 }
 
 }
+The formats @St{*l} and @St{*L} should be used only for text files.
 
 }
 
@@ -7767,8 +7932,9 @@ and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
 
 Variable names starting with @Char{(} (open parenthesis)
-represent internal variables
-(loop control variables, temporaries, varargs, and @N{C function} locals).
+represent variables with no known names
+(internal variables like loop control variables,
+and variables from chunks saved without debug information).
 
 The parameter @id{f} may also be a function.
 In that case, @id{getlocal} returns only the name of function parameters.
@@ -7793,6 +7959,10 @@ Returns the registry table @see{registry}.
 This function returns the name and the value of the upvalue
 with index @id{up} of the function @id{f}.
 The function returns @nil if there is no upvalue with the given index.
+
+Variable names starting with @Char{(} (open parenthesis)
+represent variables with no known names
+(variables from chunks saved without debug information).
 
 }
 
@@ -7883,7 +8053,6 @@ Otherwise, it returns the name of the upvalue.
 
 Sets the given @id{value} as
 the Lua value associated to the given @id{udata}.
-@id{value} must be a table or @nil;
 @id{udata} must be a full userdata.
 
 Returns @id{udata}.
@@ -8057,61 +8226,32 @@ is a more portable solution.)
 @sect1{incompat| @title{Incompatibilities with the Previous Version}
 
 Here we list the incompatibilities that you may find when moving a program
-from @N{Lua 5.1} to @N{Lua 5.2}.
+from @N{Lua 5.2} to @N{Lua 5.3}.
 You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
 all these compatibility options will be removed in the next version of Lua.
-Similarly,
-all features marked as deprecated in @N{Lua 5.1}
-have been removed in @N{Lua 5.2}.
 
 @sect2{@title{Changes in the Language}
 @itemize{
 
 @item{
-The concept of @emph{environment} changed.
-Only Lua functions have environments.
-To set the environment of a Lua function,
-use the variable @id{_ENV} or the function @Lid{load}.
-
-C functions no longer have environments.
-Use an upvalue with a shared table if you need to keep
-shared state among several C functions.
-(You may use @Lid{luaL_setfuncs} to open a C library
-with all functions sharing a common upvalue.)
-
-To manipulate the @Q{environment} of a userdata
-(which is now called @x{user value}),
-use the new functions
-@Lid{lua_getuservalue} and @Lid{lua_setuservalue}.
+The main difference between @N{Lua 5.2} and @N{Lua 5.3} is the
+introduction of an integer subtype for numbers.
+Although this change should not affect @Q{normal} computations,
+some computations
+(mainly those that involve some kind of overflow)
+can give different results.
+You can fix these differences by forcing a number to be a float
+(in Lua 5.2 all numbers were float),
+in particular writing constants with an ending @T{.0}
+or using @T{x = x + 0.0} to convert a variable.
 }
 
 @item{
-Lua identifiers cannot use locale-dependent letters.
-}
-
-@item{
-Doing a step or a full collection in the garbage collector
-does not restart the collector if it has been stopped.
-}
-
-@item{
-Weak tables with weak keys now perform like @emph{ephemeron tables}.
-}
-
-@item{
-The event @emph{tail return} in debug hooks was removed.
-Instead, tail calls generate a special new event,
-@emph{tail call}, so that the debugger can know that
-there will not be a corresponding return event.
-}
-
-@item{
-Equality between function values has changed.
-Now, a function definition may not create a new value;
-it may reuse some previous value if there is no
-observable difference to the new function.
+Although not formally an incompatibility,
+the proper differentiation between floats and integers
+can sometimes have a big impact on performance.
 }
 
 }
@@ -8122,67 +8262,18 @@ observable difference to the new function.
 @itemize{
 
 @item{
-Function @id{module} is deprecated.
-It is easy to set up a module with regular Lua code.
-Modules are not expected to set global variables.
-}
-
-@item{
-Functions @id{setfenv} and @id{getfenv} were removed,
-because of the changes in environments.
-}
-
-@item{
-Function @id{math.log10} is deprecated.
-Use @Lid{math.log} with 10 as its second argument, instead.
-}
-
-@item{
-Function @id{loadstring} is deprecated.
-Use @id{load} instead; it now accepts string arguments
-and is exactly equivalent to @id{loadstring}.
-}
-
-@item{
-Function @id{table.maxn} is deprecated.
-Write it in Lua if you really need it.
-}
-
-@item{
-Function @id{os.execute} now returns @true when command
-terminates successfully and @nil plus error information
-otherwise.
-}
-
-@item{
-Function @id{unpack} was moved into the table library
-and therefore must be called as @Lid{table.unpack}.
-}
-
-@item{
-Character class @T{%z} in patterns is deprecated,
-as now patterns may contain @Char{\0} as a regular character.
-}
-
-@item{
-The table @id{package.loaders} was renamed @id{package.searchers}.
-}
-
-@item{
-Lua does not have bytecode verification anymore.
-So, all functions that load code
-(@Lid{load} and @Lid{loadfile})
-are potentially insecure when loading untrusted binary data.
-(Actually, those functions were already insecure because
-of flaws in the verification algorithm.)
-When in doubt,
-use the @id{mode} argument of those functions
-to restrict them to loading textual chunks.
-}
-
-@item{
 The standard paths in the official distribution may
 change between versions.
+}
+
+@item{
+The conversion of a float number to a string through @Lid{tostring}
+(which is used by @Lid{print}) now adds a @T{.0} suffix if the
+number is an integer.
+(For instance, the floating-point number 2 will be printed as @T{2.0},
+not as @T{2}.)
+You should always use an explicit format
+when you need a specific format for numbers.
 }
 
 }
@@ -8191,75 +8282,6 @@ change between versions.
 
 @sect2{@title{Changes in the API}
 @itemize{
-
-@item{
-Pseudoindex @id{LUA_GLOBALSINDEX} was removed.
-You must get the global environment from the registry
-@see{registry}.
-}
-
-@item{
-Pseudoindex @id{LUA_ENVIRONINDEX}
-and functions @id{lua_getfenv}/@id{lua_setfenv}
-were removed,
-as @N{C functions} no longer have environments.
-}
-
-@item{
-Function @id{luaL_register} is deprecated.
-Use @Lid{luaL_setfuncs} so that your module does not create globals.
-(Modules are not expected to set global variables anymore.)
-}
-
-@item{
-The @id{osize} argument to the allocation function
-may not be zero when creating a new block,
-that is, when @id{ptr} is @id{NULL}
-@see{lua_Alloc}.
-Use only the test @T{ptr == NULL} to check whether
-the block is new.
-}
-
-@item{
-Finalizers (@idx{__gc} metamethods) for userdata are called in the
-reverse order that they were marked for finalization,
-not that they were created @see{finalizers}.
-(Most userdata are marked immediately after they are created.)
-Moreover,
-if the metatable does not have a @idx{__gc} field when set,
-the finalizer will not be called,
-even if it is set later.
-}
-
-@item{
-@id{luaL_typerror} was removed.
-Write your own version if you need it.
-}
-
-@item{
-Function @id{lua_cpcall} is deprecated.
-You can simply push the function with @Lid{lua_pushcfunction}
-and call it with @Lid{lua_pcall}.
-}
-
-@item{
-Functions @id{lua_equal} and @id{lua_lessthan} are deprecated.
-Use the new @Lid{lua_compare} with appropriate options instead.
-}
-
-@item{
-Function @id{lua_objlen} was renamed @Lid{lua_rawlen}.
-}
-
-@item{
-Function @Lid{lua_load} has an extra parameter, @id{mode}.
-Pass @id{NULL} to simulate the old behavior.
-}
-
-@item{
-Function @Lid{lua_resume} has an extra parameter, @id{from}.
-Pass @id{NULL} or the thread doing the call.
-}
 
 }
 
