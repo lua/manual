@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.106 2014/01/06 12:24:36 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.107 2014/03/06 17:22:59 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -288,84 +288,52 @@ one for all strings, etc.
 By default, a value has no metatable,
 but the string library sets a metatable for the string type @see{strlib}.
 
-A metatable controls how an object behaves in arithmetic operations,
-order comparisons, concatenation, length operation, and indexing.
+A metatable controls how an object behaves in
+arithmetic and bitwise operations,
+order comparisons, concatenation, length operation, calls, and indexing.
 A metatable also can define a function to be called
 when a userdata or a table is garbage collected.
-When Lua performs one of these operations over a value,
-it checks whether this value has a metatable with the corresponding event.
-If so, the value associated with that key (the metamethod)
-controls how Lua will perform the operation.
 
-Metatables control the operations listed next.
-Each operation is identified by its corresponding name.
-The key for each operation is a string with its name prefixed by
+A detailed list of events controlled by metatables is given next.
+Each operation is identified by its corresponding event name.
+The key for each event is a string with its name prefixed by
 two underscores, @Char{__};
 for instance, the key for operation @Q{add} is the
 string @St{__add}.
-
-The semantics of these operations is better explained by a Lua function
-describing how the interpreter executes the operation.
-The code shown here in Lua is only illustrative;
-the real behavior is hard coded in the interpreter
-and it is much more efficient than this simulation.
-All functions used in these descriptions
-(@Lid{rawget}, @Lid{tonumber}, etc.)
-are described in @See{predefined}.
-In particular, to retrieve the metamethod of a given object,
-we use the expression
+Note that queries for metamethods are always raw;
+the access to a metamethod does not invoke other metamethods.
+You can emulate how Lua queries a metamethod for an object @id{obj}
+with the following code:
 @verbatim{
-metatable(obj)[event]
+rawget(getmetatable(obj) or {}, event_name)
 }
-This should be read as
-@verbatim{
-rawget(getmetatable(obj) or {}, event)
-}
-This means that the access to a metamethod does not invoke other metamethods,
-and access to objects with no metatables does not fail
-(it simply results in @nil).
 
-For the unary @T{-} and @T{#} operators,
-the metamethod is called with a dummy second argument.
-This extra argument is only to simplify Lua's internals;
-it may be removed in future versions and therefore it is not present
-in the following code.
-(For most uses this extra argument is irrelevant.)
+For the unary minus and the bitwise not operators,
+the metamethod is computed and called with a dummy second operand,
+equal to the first one.
+This extra operand is only to simplify Lua's internals
+(by making these operators behave like a binary operation)
+and may be removed in future versions.
+(For most uses this extra operand is irrelevant.)
 
 @description{
 
 @item{@Q{add}|
 the @T{+} operation.
 @Lidx{__add}
-
-The function @T{getbinhandler} below defines how Lua chooses a handler
-for a binary operation.
-First, Lua tries the first operand.
-If its type does not define a handler for the operation,
-then Lua tries the second operand.
-@verbatim{
-function getbinhandler (op1, op2, event)
-  return metatable(op1)[event] or metatable(op2)[event]
-end
-}
-By using this function,
-the behavior of the @T{op1 + op2} is
-@verbatim{
-function add_event (op1, op2)
-  local o1, o2 = tonumber(op1), tonumber(op2)
-  if o1 and o2 then  -- both operands are numeric?
-    return o1 + o2   -- '+' here is the primitive 'add'
-  else  -- at least one of the operands is not numeric
-    local h = getbinhandler(op1, op2, "__add")
-    if h then
-      -- call the handler with both operands
-      return (h(op1, op2))
-    else  -- no handler available: default behavior
-      error(@Cdots)
-    end
-  end
-end
-}
+If any operand for an addition is not a number
+(nor a string coercible to a number),
+Lua will try to call a metamethod.
+First, Lua will check the first operand (even if it is valid).
+If that operand does not define a metamethod for the @St{__add} event,
+then Lua will check the second operand.
+If Lua cannot find a metamethod,
+it raises an error.
+Otherwise,
+it calls the metamethod with the two operands as arguments,
+and the result of the call
+(adjusted to one value)
+is the result of the operation.
 }
 
 @item{@Q{sub}|
@@ -389,254 +357,175 @@ Behavior similar to the @Q{add} operation.
 @item{@Q{mod}|
 the @T{%} operation.
 @Lidx{__mod}
-Behavior similar to the @Q{add} operation,
-with the operation
-@T{o1 - floor(o1/o2)*o2} as the primitive operation.
+Behavior similar to the @Q{add} operation.
 }
 
 @item{@Q{pow}|
 the @T{^} (exponentiation) operation.
 @Lidx{__pow}
-Behavior similar to the @Q{add} operation,
-with the function @T{pow} (from the @N{C math} library)
-as the primitive operation.
+Behavior similar to the @Q{add} operation.
 }
 
 @item{@Q{unm}|
-the unary @T{-} operation.
+the @T{-} (unary minus) operation.
 @Lidx{__unm}
-@verbatim{
-function unm_event (op)
-  local o = tonumber(op)
-  if o then  -- operand is numeric?
-    return -o  -- '-' here is the primitive 'unm'
-  else  -- the operand is not numeric.
-    -- Try to get a handler from the operand
-    local h = metatable(op).__unm
-    if h then
-      -- call the handler with the operand
-      return (h(op))
-    else  -- no handler available: default behavior
-      error(@Cdots)
-    end
-  end
-end
+Behavior similar to the @Q{add} operation.
 }
+
+@item{@Q{idiv}|
+the @T{//} (integer division) operation.
+@Lidx{__idiv}
+Behavior similar to the @Q{add} operation,
+except that Lua will try a metamethod
+if any operator is neither an integer
+nor a value coercible to an integer @see{coercion}.
+}
+
+@item{@Q{band}|
+the @T{&} (bitwise and) operation.
+@Lidx{__band}
+Behavior similar to the @Q{idiv} operation.
+}
+
+@item{@Q{bor}|
+the @T{|} (bitwise or) operation.
+@Lidx{__bor}
+Behavior similar to the @Q{band} operation.
+}
+
+@item{@Q{bxor}|
+the @T{~} (bitwise exclusive or) operation.
+@Lidx{__bxor}
+Behavior similar to the @Q{band} operation.
+}
+
+@item{@Q{bnot}|
+the @T{~} (bitwise unary not) operation.
+@Lidx{__bnot}
+Behavior similar to the @Q{band} operation.
+}
+
+@item{@Q{shl}|
+the @T{<<} (bitwise left shift) operation.
+@Lidx{__shl}
+Behavior similar to the @Q{band} operation.
+}
+
+@item{@Q{shr}|
+the @T{>>} (bitwise right shift) operation.
+@Lidx{__shr}
+Behavior similar to the @Q{band} operation.
 }
 
 
 @item{@Q{concat}|
 the @T{..} (concatenation) operation.
 @Lidx{__concat}
-@verbatim{
-function concat_event (op1, op2)
-  if (type(op1) == "string" or type(op1) == "number") and
-     (type(op2) == "string" or type(op2) == "number") then
-    return op1 .. op2  -- primitive string concatenation
-  else
-    local h = getbinhandler(op1, op2, "__concat")
-    if h then
-      return (h(op1, op2))
-    else
-      error(@Cdots)
-    end
-  end
-end
-}
+Behavior similar to the @Q{add} operation,
+except that Lua will try a metamethod
+if any operator is neither an string nor a number
+(which is always coercible to a string).
 }
 
 
 @item{@Q{len}|
-the @T{#} operation.
+the @T{#} (length) operation.
 @Lidx{__len}
-@verbatim{
-function len_event (op)
-  if type(op) == "string" then
-    return strlen(op)      -- primitive string length
-  else
-    local h = metatable(op).__len
-    if h then
-      return (h(op))       -- call handler with the operand
-    elseif type(op) == "table" then
-      return #op              -- primitive table length
-    else  -- no handler available: error
-      error(@Cdots)
-    end
-  end
-end
-}
-See @See{len-op} for a description of the length of a table.
-}
-
+If the object is not a string,
+Lua will try its metamethod.
+If there is a metamethod,
+Lua calls it with the object as argument,
+and the result of the call
+(always adjusted to one value)
+is the result of the operation.
+If there is no metamethod but the object is a table,
+then Lua uses the table length operation @see{len-op}.
+Otherwise, Lua raises an error.
 
 @item{@Q{eq}|
-the @T{==} operation.
+the @T{==} (equal) operation.
 @Lidx{__eq}
-The function @T{getequalhandler} defines how Lua chooses a metamethod
-for equality.
-A metamethod is selected only when both values
-being compared have the same type
-and the same metamethod for the selected operation,
-and the values are either tables or full userdata.
-@verbatim{
-function getequalhandler (op1, op2)
-  if type(op1) ~= type(op2) or
-     (type(op1) ~= "table" and type(op1) ~= "userdata") then
-    return nil     -- different values
-  end
-  local mm1 = metatable(op1).__eq
-  local mm2 = metatable(op2).__eq
-  if mm1 == mm2 then return mm1 else return nil end
-end
-}
-The @Q{eq} event is defined as follows:
-@verbatim{
-function eq_event (op1, op2)
-  if op1 == op2 then   -- primitive equal?
-    return true   -- values are equal
-  end
-  -- try metamethod
-  local h = getequalhandler(op1, op2)
-  if h then
-    return not not h(op1, op2)
-  else
-    return false
-  end
-end
-}
-Note that the result is always a boolean.
+Lua will try a metamethod only when the values
+being compared are both either tables or full userdata,
+both have the same metamethod,
+and they are not primitively equal.
+The result of the call is always converted to a boolean.
 }
 
 @item{@Q{lt}|
-the @T{<} operation.
+the @T{<} (less than) operation.
 @Lidx{__lt}
-@verbatim{
-function lt_event (op1, op2)
-  if type(op1) == "number" and type(op2) == "number" then
-    return op1 < op2   -- numeric comparison
-  elseif type(op1) == "string" and type(op2) == "string" then
-    return op1 < op2   -- lexicographic comparison
-  else
-    local h = getbinhandler(op1, op2, "__lt")
-    if h then
-      return not not h(op1, op2)
-    else
-      error(@Cdots)
-    end
-  end
-end
+Behavior similar to the @Q{add} operation,
+except that the result of the call is always converted to a boolean.
 }
-Note that the result is always a boolean.
-}
+
 
 @item{@Q{le}|
-the @T{<=} operation.
+the @T{<=} (less equal) operation.
 @Lidx{__lt}
-@verbatim{
-function le_event (op1, op2)
-  if type(op1) == "number" and type(op2) == "number" then
-    return op1 <= op2   -- numeric comparison
-  elseif type(op1) == "string" and type(op2) == "string" then
-    return op1 <= op2   -- lexicographic comparison
-  else
-    local h = getbinhandler(op1, op2, "__le")
-    if h then
-      return not not h(op1, op2)
-    else
-      h = getbinhandler(op1, op2, "__lt")
-      if h then
-        return not h(op2, op1)
-      else
-        error(@Cdots)
-      end
-    end
-  end
-end
-}
-Note that, in the absence of a @Q{le} metamethod,
-Lua tries the @Q{lt}, assuming that @T{a <= b} is
-equivalent to @T{not (b < a)}.
-
+Unlike other operations,
+The less-equal operation can use two different events.
+First, Lua looks for the @St{__le} metamethod in both operands,
+like in the @Q{add} operation.
+If it cannot find such a metamethod,
+then it will try the @St{__lt} event,
+assuming that @T{a <= b} is equivalent to @T{not (b < a)}.
 As with the other comparison operators,
 the result is always a boolean.
 }
 
 @item{@Q{index}|
 The indexing access @T{table[key]}.
-Note that the metamethod is tried only
-when @id{key} is not present in @id{table}.
-(When @id{table} is not a table,
-no key is ever present,
-so the metamethod is always tried.)
 @Lidx{__index}
-@verbatim{
-function gettable_event (table, key)
-  local h
-  if type(table) == "table" then
-    local v = rawget(table, key)
-    -- if key is present, return raw value
-    if v ~= nil then return v end
-    h = metatable(table).__index
-    if h == nil then return nil end
-  else
-    h = metatable(table).__index
-    if h == nil then
-      error(@Cdots)
-    end
-  end
-  if type(h) == "function" then
-    return (h(table, key))     -- call the handler
-  else return h[key]           -- or repeat operation on it
-  end
-end
-}
+This event happens when @id{table} is not a table or
+when @id{key} is not present in @id{table}.
+The metamethod is looked up in @id{table}.
+
+Despite the name,
+the metamethod for this event can be either a function or a table.
+If it is a function,
+it is called with @id{table} and @id{key} as arguments.
+If it is a table,
+the final result is the result of indexing this table with @id{key}.
+(This indexing is regular, not raw,
+and therefore can trigger another metamethod.)
 }
 
 @item{@Q{newindex}|
 The indexing assignment @T{table[key] = value}.
-Note that the metamethod is tried only
-when @id{key} is not present in @id{table}.
 @Lidx{__newindex}
-@verbatim{
-function settable_event (table, key, value)
-  local h
-  if type(table) == "table" then
-    local v = rawget(table, key)
-    -- if key is present, do raw assignment
-    if v ~= nil then rawset(table, key, value); return end
-    h = metatable(table).__newindex
-    if h == nil then rawset(table, key, value); return end
-  else
-    h = metatable(table).__newindex
-    if h == nil then
-      error(@Cdots)
-    end
-  end
-  if type(h) == "function" then
-    h(table, key,value)           -- call the handler
-  else h[key] = value             -- or repeat operation on it
-  end
-end
+Like the index event,
+this event happens when @id{table} is not a table or
+when @id{key} is not present in @id{table}.
+The metamethod is looked up in @id{table}.
+
+Again like with indexing,
+the metamethod for this event can be either a function or a table.
+If it is a function,
+it is called with @id{table}, @id{key}, and @id{value} as arguments.
+If it is a table,
+Lua does an indexing assignment to this table with the same key and value.
+(This assignment is regular, not raw,
+and therefore can trigger another metamethod.)
+
+Whenever there is a metamethod,
+Lua does not perform the primitive assignment.
+(If necessary,
+the metamethod itself can call @Lid{rawset}
+to do the assignment.)
 }
+
 }
 
 @item{@Q{call}|
-called when Lua calls a value.
+The call operation @T{func(args)}.
 @Lidx{__call}
-@verbatim{
-function function_event (func, ...)
-  if type(func) == "function" then
-    return func(...)   -- primitive call
-  else
-    local h = metatable(func).__call
-    if h then
-      return h(func, ...)
-    else
-      error(@Cdots)
-    end
-  end
-end
-}
+This event happens when Lua tries to call a non-function value
+(that is, @id{func} is not a function).
+The metamethod is looked up in @id{func}.
+If present,
+the metamethod is called with @id{func} as its first argument,
+followed by the arguments of the original call (@id{args}).
 }
 
 }
@@ -723,16 +612,13 @@ When a marked object becomes garbage,
 it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
-Lua does the equivalent of the following function
-for each object in that list:
-@verbatim{
-function gc_event (obj)
-  local h = metatable(obj).__gc
-  if type(h) == "function" then
-    h(obj)
-  end
-end
-}
+Lua goes through that list:
+For each object,
+it checks the object's @idx{__gc} metamethod;
+if it is a function,
+Lua calls it with the object as its single argument.
+(If the metamethod is not a function,
+Lua simply ignores it.)
 
 At the end of each garbage-collection cycle,
 the finalizers for objects are called in
@@ -6520,6 +6406,9 @@ The endianess is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
 the default is the native endianess.
 
+(This function may not work correctly for non-native endianess
+in @x{mixed-endian architectures}.)
+
 }
 
 @LibEntry{string.packint (n [, size [, endianess]])|
@@ -6531,6 +6420,9 @@ its default is zero.
 The endianess is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
 the default is the native endianess.
+
+(This function may not work correctly for native endianess
+in @x{mixed-endian architectures}.)
 
 }
 
