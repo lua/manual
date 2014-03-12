@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.107 2014/03/06 17:22:59 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.108 2014/03/12 20:48:20 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -2798,10 +2798,11 @@ for the @Q{index} event @see{metatable}.
 
 }
 
-@APIEntry{void lua_getglobal (lua_State *L, const char *name);|
+@APIEntry{int lua_getglobal (lua_State *L, const char *name);|
 @apii{0,1,e}
 
 Pushes onto the stack the value of the global @id{name}.
+Returns the type of that value.
 
 }
 
@@ -2814,7 +2815,7 @@ the function @N{returns 0} and pushes nothing on the stack.
 
 }
 
-@APIEntry{void lua_gettable (lua_State *L, int index);|
+@APIEntry{int lua_gettable (lua_State *L, int index);|
 @apii{1,1,e}
 
 Pushes onto the stack the value @T{t[k]},
@@ -2825,6 +2826,8 @@ This function pops the key from the stack
 (putting the resulting value in its place).
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
+
+Returns the type of the pushed value.
 
 }
 
@@ -3431,7 +3434,7 @@ Also @N{returns 0} if any of the indices are non valid.
 
 }
 
-@APIEntry{void lua_rawget (lua_State *L, int index);|
+@APIEntry{int lua_rawget (lua_State *L, int index);|
 @apii{1,1,-}
 
 Similar to @Lid{lua_gettable}, but does a raw access
@@ -3439,7 +3442,7 @@ Similar to @Lid{lua_gettable}, but does a raw access
 
 }
 
-@APIEntry{void lua_rawgeti (lua_State *L, int index, lua_Integer n);|
+@APIEntry{int lua_rawgeti (lua_State *L, int index, lua_Integer n);|
 @apii{0,1,-}
 
 Pushes onto the stack the value @T{t[n]},
@@ -3447,9 +3450,11 @@ where @id{t} is the table at the given index.
 The access is raw;
 that is, it does not invoke metamethods.
 
+Returns the type of the pushed value.
+
 }
 
-@APIEntry{void lua_rawgetp (lua_State *L, int index, const void *p);|
+@APIEntry{int lua_rawgetp (lua_State *L, int index, const void *p);|
 @apii{0,1,-}
 
 Pushes onto the stack the value @T{t[k]},
@@ -3457,6 +3462,8 @@ where @id{t} is the table at the given index and
 @id{k} is the pointer @id{p} represented as a light userdata.
 The access is raw;
 that is, it does not invoke metamethods.
+
+Returns the type of the pushed value.
 
 }
 
