@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.109 2014/03/12 20:59:16 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.110 2014/03/13 13:55:28 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -88,10 +88,10 @@ between integers and floats
 or assume complete control about the representation of each value.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
-uses 32-bit integers and single-precision (32-bit) floats
-(what is called @def{Small Lua})
-or other combinations,
-such as 32-bit integers and double-precision floats.
+uses 32-bit integers and/or single-precision (32-bit) floats.
+The option with 32 bits both for integers and floats 
+(what is called @def{Small Lua}) is particularly attractive
+for small machines.
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C
@@ -429,16 +429,14 @@ the @T{>>} (bitwise right shift) operation.
 Behavior similar to the @Q{band} operation.
 }
 
-
 @item{@Q{concat}|
 the @T{..} (concatenation) operation.
 @Lidx{__concat}
 Behavior similar to the @Q{add} operation,
 except that Lua will try a metamethod
-if any operator is neither an string nor a number
+if any operator is neither a string nor a number
 (which is always coercible to a string).
 }
-
 
 @item{@Q{len}|
 the @T{#} (length) operation.
@@ -453,6 +451,7 @@ is the result of the operation.
 If there is no metamethod but the object is a table,
 then Lua uses the table length operation @see{len-op}.
 Otherwise, Lua raises an error.
+}
 
 @item{@Q{eq}|
 the @T{==} (equal) operation.
@@ -470,7 +469,6 @@ the @T{<} (less than) operation.
 Behavior similar to the @Q{add} operation,
 except that the result of the call is always converted to a boolean.
 }
-
 
 @item{@Q{le}|
 the @T{<=} (less equal) operation.
@@ -525,8 +523,6 @@ Lua does not perform the primitive assignment.
 (If necessary,
 the metamethod itself can call @Lid{rawset}
 to do the assignment.)
-}
-
 }
 
 @item{@Q{call}|
@@ -984,7 +980,7 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
-A numeric constant with an fractional dot or an exponent 
+A numeric constant with a fractional dot or an exponent 
 denotes a float;
 otherwise it denotes an integer.
 Examples of valid integer constants are
@@ -1309,7 +1305,7 @@ for v = @rep{e1}, @rep{e2}, @rep{e3} do @rep{block} end
 is equivalent to the code:
 @verbatim{
 do
-  local @rep{var}, @rep{limit}, @rep{step} = tonumber(@rep{e1}), tonumber(@rep{e2}), tonumber(@rep{e3})
+  local @rep{var}, @rep{limit}, @rep{step} = convert(@rep{e1}, @rep{e2}, @rep{e3})
   if not (@rep{var} and @rep{limit} and @rep{step}) then error() end
   while (@rep{step} > 0 and @rep{var} <= @rep{limit}) or (@rep{step} <= 0 and @rep{var} >= @rep{limit}) do
     local v = @rep{var}
@@ -1318,6 +1314,11 @@ do
   end
 end
 }
+where @id{convert} returns
+its three arguments unaltered
+if they are all integers,
+otherwise it converts them to floats.
+
 Note the following:
 @itemize{
 
@@ -1325,6 +1326,12 @@ Note the following:
 All three control expressions are evaluated only once,
 before the loop starts.
 They must all result in numbers.
+}
+
+@item{
+If any of the three control values is not an integer,
+all three values are converted to floats,
+so that the loop is done with floats.
 }
 
 @item{
@@ -1338,14 +1345,14 @@ then a step @N{of 1} is used.
 }
 
 @item{
-You can use @Rw{break} to exit a @Rw{for} loop.
+You can use @Rw{break} and @Rw{goto} to exit a @Rw{for} loop.
 }
 
 @item{
 The loop variable @T{v} is local to the loop;
 you cannot use its value after the @Rw{for} ends or is broken.
-If you need this value,
-assign it to another variable before breaking or exiting the loop.
+If you need its value,
+assign it to another variable before exiting the loop.
 }
 
 }
