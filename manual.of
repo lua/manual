@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.110 2014/03/13 13:55:28 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.111 2014/03/17 16:35:31 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -5403,8 +5403,6 @@ Currently, Lua has the following standard libraries:
 
 @item{@link{mathlib|mathematical functions} (sin, log, etc.);}
 
-@item{@link{bitlib|bitwise operations};}
-
 @item{@link{iolib|input and output};}
 
 @item{@link{iosyslib|operating system facilities};}
@@ -5428,7 +5426,6 @@ the host program can open them individually by using
 @defid{luaopen_string} (for the string library),
 @defid{luaopen_table} (for the table library),
 @defid{luaopen_math} (for the mathematical library),
-@defid{luaopen_bit32} (for the bit library),
 @defid{luaopen_io} (for the I/O library),
 @defid{luaopen_os} (for the Operating System library),
 and @defid{luaopen_debug} (for the debug library).
@@ -5824,7 +5821,7 @@ and @St{userdata}.
 @LibEntry{_VERSION|
 A global variable (not a function) that
 holds a string containing the current interpreter version.
-The current contents of this variable is @St{Lua 5.3}.
+The current value of this variable is @St{Lua 5.3}.
 
 }
 
@@ -7089,142 +7086,6 @@ or @nil if @id{x} is not a number.
 
 }
 
-@sect2{bitlib| @title{Bitwise Operations}
-
-This library provides bitwise operations for 32-bit integers.
-It provides all its functions inside the table @defid{bit32}.
-
-Unless otherwise stated,
-each numeric argument is
-if needed, truncated to an integer (with floor),
-and normalized to the remainder of its division by @M{2@sp{32}},
-so that its final value falls in the range @M{[0,2@sp{32} - 1]}.
-Similarly, all results are in the range @M{[0,2@sp{32} - 1]}.
-
-@LibEntry{bit32.arshift (x, disp)|
-
-Returns the number @id{x} shifted @id{disp} bits to the right.
-The number @id{disp} may be any integer.
-Negative displacements shift to the left.
-
-This shift operation is what is called @x{arithmetic shift}.
-Vacant bits on the left are filled
-with copies of the higher bit of @id{x};
-vacant bits on the right are filled with zeros.
-In particular,
-displacements with absolute values higher than 31
-result in zero or @T{0xFFFFFFFF} (all original bits are shifted out).
-
-}
-
-@LibEntry{bit32.band (@Cdots)|
-
-Returns the bitwise @emphx{and} of its operands.
-
-}
-
-@LibEntry{bit32.bnot (x)|
-
-Returns the @x{bitwise negation} of @id{x}.
-
-}
-
-@LibEntry{bit32.bor (@Cdots)|
-
-Returns the bitwise @emphx{or} of its operands.
-
-}
-
-@LibEntry{bit32.btest (@Cdots)|
-
-Returns a boolean signaling
-whether the bitwise @emphx{and} of its operands is different from zero.
-
-}
-
-@LibEntry{bit32.bxor (@Cdots)|
-
-Returns the bitwise @emphx{exclusive or} of its operands.
-
-}
-
-@LibEntry{bit32.extract (n, field [, width])|
-
-Returns the unsigned number formed by the bits
-@id{field} to @id{field + width - 1} from @id{n}.
-Bits are numbered from 0 (least significant) to 31 (most significant).
-All accessed bits must be in the range @M{[0, 31]}.
-
-The default for @id{width} is 1.
-
-}
-
-@LibEntry{bit32.replace (n, v, field [, width])|
-
-Returns a copy of @id{n} with
-the bits @id{field} to @id{field + width - 1}
-replaced by the value @id{v}.
-See @Lid{bit32.extract} for details about @id{field} and @id{width}.
-
-}
-
-@LibEntry{bit32.lrotate (x, disp)|
-
-Returns the number @id{x} rotated @id{disp} bits to the left.
-The number @id{disp} may be any representable integer.
-
-For any displacement,
-the following identity holds:
-@verbatim{
-assert(bit32.lrotate(x, disp) == bit32.lrotate(x, disp % 32))
-}
-In particular,
-negative displacements rotate to the right.
-
-}
-
-@LibEntry{bit32.lshift (x, disp)|
-
-Returns the number @id{x} shifted @id{disp} bits to the left.
-The number @id{disp} may be any integer.
-Negative displacements shift to the right.
-In any direction, vacant bits are filled with zeros.
-In particular,
-displacements with absolute values higher than 31
-result in zero (all bits are shifted out).
-
-}
-
-@LibEntry{bit32.rrotate (x, disp)|
-
-Returns the number @id{x} rotated @id{disp} bits to the right.
-The number @id{disp} may be any representable integer.
-
-For any displacement,
-the following identity holds:
-@verbatim{
-assert(bit32.rrotate(x, disp) == bit32.rrotate(x, disp % 32))
-}
-In particular,
-negative displacements rotate to the left.
-
-}
-
-@LibEntry{bit32.rshift (x, disp)|
-
-Returns the number @id{x} shifted @id{disp} bits to the right.
-The number @id{disp} may be any integer.
-Negative displacements shift to the left.
-In any direction, vacant bits are filled with zeros.
-In particular,
-displacements with absolute values higher than 31
-result in zero (all bits are shifted out).
-
-This shift operation is what is called @x{logical shift}.
-
-}
-
-}
 
 @sect2{iolib| @title{Input and Output Facilities}
 
@@ -8128,7 +7989,20 @@ from @N{Lua 5.2} to @N{Lua 5.3}.
 You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
-all these compatibility options will be removed in the next version of Lua.
+all these compatibility options will be removed in the future.
+
+Lua versions can always change the C API in ways that
+do not imply source-code changes in a program,
+such as the numeric values for constants
+or the implementation of functions as macros.
+Therefore,
+you should never assume that binaries are compatible between
+different Lua versions.
+Always recompile clients of the Lua API when
+using a new version.
+
+The standard paths in the official distribution may
+change between versions.
 
 @sect2{@title{Changes in the Language}
 @itemize{
@@ -8140,18 +8014,26 @@ Although this change should not affect @Q{normal} computations,
 some computations
 (mainly those that involve some kind of overflow)
 can give different results.
+
 You can fix these differences by forcing a number to be a float
-(in Lua 5.2 all numbers were float),
+(in @N{Lua 5.2} all numbers were float),
 in particular writing constants with an ending @T{.0}
 or using @T{x = x + 0.0} to convert a variable.
-
 (This recomendation is only for a quick fix
 for an occasional incompatibility,
-not as a general guideline for bood programming.)
+not as a general guideline for bood programming.
+For good programming,
+use floats where you need floats
+and integers where you need integers.)
 
 Although not formally an incompatibility,
 the proper differentiation between floats and integers
 can sometimes have a big impact on performance.
+}
+
+@item{
+The generational mode for the garbage collector was removed.
+(It was an experimental feature in @N{Lua 5.2}.)
 }
 
 }
@@ -8162,18 +8044,21 @@ can sometimes have a big impact on performance.
 @itemize{
 
 @item{
-The standard paths in the official distribution may
-change between versions.
-}
-
-@item{
-The conversion of a float number to a string through @Lid{tostring}
+The conversion of a float to a string through @Lid{tostring}
 (which is used by @Lid{print}) now adds a @T{.0} suffix if the
-number is an integer.
-(For instance, the floating-point number 2 will be printed as @T{2.0},
+number has an integral value.
+(For instance, the float 2.0 will be printed as @T{2.0},
 not as @T{2}.)
 You should always use an explicit format
 when you need a specific format for numbers.
+}
+
+@item{
+The @id{bit32} library has been deprecated.
+It is easy to require a compatible external library or,
+better yet, to replace its functions with appropriate bitwise operations.
+(Just keep in mind that @id{bit32} operates on 32-bit integers,
+while the bitwise operators in Standard Lua operate on 64-bit integers.)
 }
 
 }
@@ -8181,18 +8066,11 @@ when you need a specific format for numbers.
 }
 
 @sect2{@title{Changes in the API}
+
 @itemize{
 
 @item{
-Lua versions can always change the API in ways that
-do not imply source-code changes in a program,
-such as the numeric values for constants
-or the implementation of functions as macros.
-Therefore,
-you should never assume that binaries are compatible between
-different versions.
-Always recompile clients of the Lua API when
-using a new version.
+No changes (yet).
 }
 
 }
