@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.112 2014/03/18 18:36:25 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.113 2014/03/21 14:34:43 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1139,7 +1139,7 @@ with an interpreter for the virtual machine.
 Chunks can also be precompiled into binary form;
 see program @idx{luac} and function @Lid{string.dump} for details.
 Programs in source and compiled forms are interchangeable;
-Lua automatically detects the file type and acts accordingly @see{load}.
+Lua automatically detects the file type and acts accordingly @seeF{load}.
 
 }
 
