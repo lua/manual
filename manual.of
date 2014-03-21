@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.111 2014/03/17 16:35:31 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.112 2014/03/18 18:36:25 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1137,10 +1137,9 @@ and then it executes the compiled code
 with an interpreter for the virtual machine.
 
 Chunks can also be precompiled into binary form;
-see program @idx{luac} for details.
+see program @idx{luac} and function @Lid{string.dump} for details.
 Programs in source and compiled forms are interchangeable;
-Lua automatically detects the file type and acts accordingly.
-@index{precompilation}
+Lua automatically detects the file type and acts accordingly @see{load}.
 
 }
 
@@ -5551,7 +5550,7 @@ A global variable (not a function) that
 holds the @x{global environment} @see{globalenv}.
 Lua itself does not use this variable;
 changing its value does not affect any environment,
-nor vice-versa.
+nor vice versa.
 
 }
 
@@ -5615,10 +5614,14 @@ or to @St{=(load)} otherwise.
 
 The string @id{mode} controls whether the chunk can be text or binary
 (that is, a precompiled chunk).
-It may be the string @St{b} (only binary chunks),
+It may be the string @St{b} (only @x{binary chunk}s),
 @St{t} (only text chunks),
 or @St{bt} (both binary and text).
 The default is @St{bt}.
+
+Lua does not check the consistency of binary chunks.
+Maliciously crafted binary chunks can crash
+the interpreter.
 
 }
 
@@ -6223,7 +6226,9 @@ Numerical codes are not necessarily portable across platforms.
 
 @LibEntry{string.dump (function [, strip])|
 
-Returns a string containing a binary representation of the given function,
+Returns a string containing a binary representation
+(a @emph{binary chunk})
+of the given function,
 so that a later @Lid{load} on this string returns
 a copy of the function (but with new upvalues).
 If @id{strip} is a true value,
@@ -7112,7 +7117,7 @@ all I/O functions return @nil on failure
 (plus an error message as a second result and
 a system-dependent error code as a third result)
 and some value different from @nil on success.
-On non-Posix systems,
+On non-POSIX systems,
 the computation of the error message and error code
 in case of errors
 may be not @x{thread safe},
@@ -7441,7 +7446,7 @@ When called without arguments,
 the host system and on the current locale
 (that is, @T{os.date()} is equivalent to @T{os.date("%c")}).
 
-On non-Posix systems,
+On non-POSIX systems,
 this function may be not @x{thread safe}
 because of its reliance on @CId{gmtime} and @CId{localtime}.
 
@@ -8019,9 +8024,9 @@ You can fix these differences by forcing a number to be a float
 (in @N{Lua 5.2} all numbers were float),
 in particular writing constants with an ending @T{.0}
 or using @T{x = x + 0.0} to convert a variable.
-(This recomendation is only for a quick fix
+(This recommendation is only for a quick fix
 for an occasional incompatibility,
-not as a general guideline for bood programming.
+not as a general guideline for good programming.
 For good programming,
 use floats where you need floats
 and integers where you need integers.)
