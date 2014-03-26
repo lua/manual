@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.113 2014/03/21 14:34:43 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.114 2014/03/21 18:32:52 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -83,9 +83,9 @@ one called @def{integer} and the other called @def{float}.
 Lua has explicit rules about when each representation is used,
 but it also converts between them automatically as needed @see{coercion}.
 Therefore,
-the programmer has the option of mostly ignore the difference
+the programmer has the option of mostly ignoring the difference
 between integers and floats
-or assume complete control about the representation of each value.
+or assuming complete control over the representation of each value.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
@@ -320,7 +320,7 @@ with the following code:
 rawget(getmetatable(obj) or {}, event_name)
 }
 
-For the unary minus and the bitwise not operators,
+For the unary operators (negation, length, and bitwise not),
 the metamethod is computed and called with a dummy second operand,
 equal to the first one.
 This extra operand is only to simplify Lua's internals
@@ -457,7 +457,7 @@ Otherwise, Lua raises an error.
 the @T{==} (equal) operation.
 @Lidx{__eq}
 Lua will try a metamethod only when the values
-being compared are both either tables or full userdata,
+being compared are either both tables or both full userdata,
 both have the same metamethod,
 and they are not primitively equal.
 The result of the call is always converted to a boolean.
@@ -879,6 +879,7 @@ are reserved for variables used by Lua.
 The following strings denote other @x{tokens}:
 @verbatim{
 +     -     *     /     %     ^     #
+&     ~     |     <<    >>    //
 ==    ~=    <=    >=    <     >     =
 (     )     {     }     [     ]     ::
 ;     :     ,     .     ..    ...
@@ -1615,6 +1616,8 @@ follows the rules of the Lua lexer.
 There is no direct conversion from strings to integers:
 If a string is provided where an integer is needed,
 Lua converts the string to a float and then the float to an integer.
+(You can use function @Lid{tonumber} for a direct conversion
+from strings to integers.)
 
 The conversion from numbers to strings use a human-readable,
 non-specified format.
@@ -1754,10 +1757,14 @@ from lower to higher priority:
 or
 and
 <     >     <=    >=    ~=    ==
+|
+~
+&
+<<    >>
 ..
 +     -
 *     /     //    %
-not   #     - (unary)
+unary operators (not   #     -     ~)
 ^
 }
 As usual,
@@ -6420,33 +6427,33 @@ its default value @N{is 1} and can be negative.
 
 }
 
-@LibEntry{string.packfloat (n [, size [, endianess]])|
+@LibEntry{string.packfloat (n [, size [, endianness]])|
 Returns a string with the machine representation of float @id{n},
-with given size and endianess.
+with given size and endianness.
 The @id{size} is the string @St{f} (single precision),
 @St{d} (double precision), or @St{n},
 which means the size of a @Lid{lua_Number};
 its default is St{n}.
-The endianess is the string @St{l} (little endian), @St{b} (big endian),
+The endianness is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
-the default is the native endianess.
+the default is the native endianness.
 
-(This function may not work correctly for non-native endianess
+(This function may not work correctly for non-native endianness
 in @x{mixed-endian architectures}.)
 
 }
 
-@LibEntry{string.packint (n [, size [, endianess]])|
+@LibEntry{string.packint (n [, size [, endianness]])|
 Returns a string with the machine representation of integer @id{n},
-with @id{size} bytes and given endianess.
+with @id{size} bytes and given endianness.
 The @id{size} can be any value from 1 to 8 or 0,
 which means the size of a @Lid{lua_Integer};
 its default is zero.
-The endianess is the string @St{l} (little endian), @St{b} (big endian),
+The endianness is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
-the default is the native endianess.
+the default is the native endianness.
 
-(This function may not work correctly for native endianess
+(This function may not work correctly for native endianness
 in @x{mixed-endian architectures}.)
 
 }
@@ -6487,17 +6494,17 @@ the function returns the empty string.
 
 }
 
-@LibEntry{string.unpackfloat (s [, pos [, size [, endianess]]])|
+@LibEntry{string.unpackfloat (s [, pos [, size [, endianness]]])|
 Reads the machine representation of a float starting at position
 @id{pos} in string @id{s} and returns that number.
-See @Lid{string.packfloat} for details about @id{size} and @id{endianess}.
+See @Lid{string.packfloat} for details about @id{size} and @id{endianness}.
 
 }
 
-@LibEntry{string.unpackint (s [, pos [, size [, endianess]]])|
+@LibEntry{string.unpackint (s [, pos [, size [, endianness]]])|
 Reads the machine representation of an integer starting at position
 @id{pos} in string @id{s} and returns that integer.
-See @Lid{string.packint} for details about @id{size} and @id{endianess}.
+See @Lid{string.packint} for details about @id{size} and @id{endianness}.
 
 Integers are always read as signed.
 
@@ -6745,7 +6752,7 @@ It raises an error if it meets any invalid byte sequence.
 Returns the number of UTF-8 characters in string @id{s},
 starting from position @id{i}.
 The default for @id{i} is 1.
-Returns @nil if the sufix of @id{s} starting at @id{i}
+Returns @nil if the suffix of @id{s} starting at @id{i}
 contains any invalid byte sequence.
 
 }
@@ -8183,12 +8190,20 @@ Here is the complete syntax of Lua in extended BNF.
 
 @producname{fieldsep}@producbody{@bnfter{,} @Or @bnfter{;}}
 
-@producname{binop}@producbody{@bnfter{+} @Or @bnfter{-} @Or @bnfter{*} @Or @bnfter{/}
-  @Or @bnfter{^} @Or @bnfter{%} @Or
-  @bnfter{..} @OrNL @bnfter{<} @Or @bnfter{<=} @Or @bnfter{>} @Or @bnfter{>=}
-  @Or @bnfter{==} @Or @bnfter{~=} @OrNL @Rw{and} @Or @Rw{or}}
+@producname{binop}@producbody{
+  @bnfter{+} @Or @bnfter{-} @Or @bnfter{*} @Or @bnfter{/} @Or @bnfter{//}
+    @Or @bnfter{^} @Or @bnfter{%}
+        @OrNL
+  @bnfter{&} @Or @bnfter{~} @Or @bnfter{|} @Or @bnfter{>>} @Or @bnfter{<<}
+    @Or @bnfter{..}
+        @OrNL
+  @bnfter{<} @Or @bnfter{<=} @Or @bnfter{>} @Or @bnfter{>=}
+    @Or @bnfter{==} @Or @bnfter{~=}
+        @OrNL
+  @Rw{and} @Or @Rw{or}}
 
-@producname{unop}@producbody{@bnfter{-} @Or @Rw{not} @Or @bnfter{#}}
+@producname{unop}@producbody{@bnfter{-} @Or @Rw{not} @Or @bnfter{#} @Or
+  @bnfter{~}}
 
 }
 
