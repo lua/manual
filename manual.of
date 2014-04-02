@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.114 2014/03/21 18:32:52 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.115 2014/03/26 17:18:55 roberto Exp roberto $}
 @C{-------------------------------------------------------------------------}
 @manual{
 
@@ -1523,15 +1523,18 @@ or @nil if @id{f} does not return any values.)
 
 @sect3{arith| @title{Arithmetic Operators}
 Lua supports the following @x{arithmetic operators}:
-the binary @T{+} (addition),
-@T{-} (subtraction), @T{*} (multiplication),
-@T{/} (division), @T{//} (integer division),
-@T{%} (modulo), and @T{^} (exponentiation);
-and unary @T{-} (mathematical negation).
-Modulo is defined as the remainder of a division
-that rounds the quotient towards minus infinite (floor).
+@Tab2{
+@row{@col{@T{+}}@col{addition}}
+@row{@col{@T{-}}@col{subtraction}}
+@row{@col{@T{*}}@col{multiplication}}
+@row{@col{@T{/}}@col{float division}}
+@row{@col{@T{//}}@col{integer division}}
+@row{@col{@T{%}}@col{modulo}}
+@row{@col{@T{^}}@col{exponentiation}}
+@row{@col{@T{-}}@col{unary minus}}
+}
 
-With the exception of division and integer division,
+With the exception of divisions,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1544,13 +1547,16 @@ for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
 
-Division (@T{/}) always converts its operands to floats
+Float division (@T{/}) always converts its operands to floats
 and its result is always a float.
 
 Integer division (@T{//}) converts its operands to integers
 @see{coercion}
 and its result is always an integer.
 The result is always rounded towards minus infinite (floor).
+
+Modulo is defined as the remainder of a division
+that rounds the quotient towards minus infinite (floor).
 
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
@@ -1560,10 +1566,14 @@ according to the usual rules of two-complement arithmetic.
 
 @sect3{bitwise| @title{Bitwise Operators}
 Lua supports the following @x{bitwise operators}:
-the binary @T{&} (bitwise and),
-@T{|} (bitwise or), @T{~} (bitwise exclusive or),
-@T{>>} (right shift), @T{<<} (left shift),
-and unary @T{~} (bitwise not).
+@Tab2{
+@row{@col{@T{&}}@col{bitwise and}}
+@row{@col{@T{|}}@col{bitwise or}}
+@row{@col{@T{~}}@col{bitwise exclusive or}}
+@row{@col{@T{>>}}@col{right shift}}
+@row{@col{@T{<<}}@col{left shift}}
+@row{@col{@T{~}}@col{unary bitwise not}}
+}
 
 All bitwise operations convert its operands to integers
 @see{coercion},
@@ -1584,7 +1594,7 @@ types and representations at run time.
 Most arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the @def{usual rule}.
-Division always convert integer operands to floats;
+Float division always convert integer operands to floats;
 integer division and bitwise operators
 always convert float operands to integers.
 The C API also converts both integers to floats and
@@ -1628,9 +1638,14 @@ use the @id{format} function from the string library
 }
 
 @sect3{rel-ops| @title{Relational Operators}
-The @x{relational operators} in Lua are
-@verbatim{
-==    ~=    <     >     <=    >=
+Lua supports the following @x{relational operators}:
+@Tab2{
+@row{@col{@T{==}}@col{equality}}
+@row{@col{@T{~=}}@col{inequality}}
+@row{@col{@T{<}}@col{less than}}
+@row{@col{@T{>}}@col{greater than}}
+@row{@col{@T{<=}}@col{less or equal}}
+@row{@col{@T{>=}}@col{greater or equal}}
 }
 These operators always result in @false or @true.
 
@@ -2470,7 +2485,7 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPADD}| performs addition (@T{+})}
 @item{@defid{LUA_OPSUB}| performs subtraction (@T{-})}
 @item{@defid{LUA_OPMUL}| performs multiplication (@T{*})}
-@item{@defid{LUA_OPDIV}| performs division (@T{/})}
+@item{@defid{LUA_OPDIV}| performs float division (@T{/})}
 @item{@defid{LUA_OPIDIV}| performs integer division (@T{//})}
 @item{@defid{LUA_OPMOD}| performs modulo (@T{%})}
 @item{@defid{LUA_OPPOW}| performs exponentiation (@T{^})}
@@ -6438,13 +6453,13 @@ The endianness is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
 the default is the native endianness.
 
-(This function may not work correctly for non-native endianness
-in @x{mixed-endian architectures}.)
+This function may not work correctly in architectures
+with @x{mixed endian}.
 
 }
 
 @LibEntry{string.packint (n [, size [, endianness]])|
-Returns a string with the machine representation of integer @id{n},
+Returns a string with the two-complement representation of integer @id{n},
 with @id{size} bytes and given endianness.
 The @id{size} can be any value from 1 to 8 or 0,
 which means the size of a @Lid{lua_Integer};
@@ -6453,8 +6468,9 @@ The endianness is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
 the default is the native endianness.
 
-(This function may not work correctly for native endianness
-in @x{mixed-endian architectures}.)
+This function may not work correctly in architectures
+with @x{mixed endian} or
+that do not use a two-complement representation for integers.
 
 }
 
@@ -6873,8 +6889,6 @@ By default, @id{i} @N{is 1} and @id{j} is @T{#list}.
 
 This library is an interface to the standard @N{C math} library.
 It provides all its functions inside the table @defid{math}.
-Unless stated otherwise,
-all functions in this library operate with and return floats.
 
 @LibEntry{math.abs (x)|
 
@@ -6911,7 +6925,8 @@ quadrant of the result.
 
 @LibEntry{math.ceil (x)|
 
-Returns the smallest integer larger than or equal to @id{x}.
+Returns a float with the smaller
+integral value larger than or equal to @id{x}.
 
 }
 
