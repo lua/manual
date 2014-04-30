@@ -1,5 +1,5 @@
-@Ci{$Id: manual.of,v 1.115 2014/03/26 17:18:55 roberto Exp roberto $}
-@C{-------------------------------------------------------------------------}
+@Ci{$Id: manual.of,v 1.116 2014/04/02 11:38:34 roberto Exp roberto $}
+@C{[(-------------------------------------------------------------------------}
 @manual{
 
 @sect1{@title{Introduction}
@@ -929,11 +929,12 @@ enclosed by @def{long brackets}.
 We define an @def{opening long bracket of level @rep{n}} as an opening
 square bracket followed by @rep{n} equal signs followed by another
 opening square bracket.
-So, an opening long bracket of @N{level 0} is written as @T{[[},
-an opening long bracket of @N{level 1} is written as @T{[=[},
+So, an opening long bracket of @N{level 0} is written as @T{[[}, @C{]]}
+an opening long bracket of @N{level 1} is written as @T{[=[}, @C{]]}
 and so on.
 A @emph{closing long bracket} is defined similarly;
-for instance, a closing long bracket of @N{level 4} is written as @T{]====]}.
+for instance,
+a closing long bracket of @N{level 4} is written as @C{[[} @T{]====]}.
 A @def{long literal} starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
 It can contain any text except a closing bracket of the proper level.
@@ -1315,9 +1316,11 @@ do
 end
 }
 where @id{convert} returns
-its three arguments unaltered
-if they are all integers,
-otherwise it converts them to floats.
+its three arguments as integers
+if @id{var} and @id{step} are integers and
+@id{limit} can be converted to an adequate integer
+(that is, its floor for non-negative steps and its ceiling for negative steps);
+otherwise @id{convert} converts all three values to floats.
 
 Note the following:
 @itemize{
@@ -1329,7 +1332,8 @@ They must all result in numbers.
 }
 
 @item{
-If any of the three control values is not an integer,
+If the initial value or the step are not integers,
+or if the limit cannot be converted to an integer,
 all three values are converted to floats,
 so that the loop is done with floats.
 }
@@ -1534,7 +1538,7 @@ Lua supports the following @x{arithmetic operators}:
 @row{@col{@T{-}}@col{unary minus}}
 }
 
-With the exception of divisions,
+With the exception of divisions and exponentiation,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1546,6 +1550,13 @@ the operation is performed following the usual rules
 for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
+
+Exponentiation follows similar rules,
+except that, if the exponent is negative,
+it always performs a floating-point operation
+and gives a floating-point result.
+Floating-point exponentiation uses the @ANSI{pow},
+so that it works for non-integer exponents too.
 
 Float division (@T{/}) always converts its operands to floats
 and its result is always a float.
@@ -1561,6 +1572,7 @@ that rounds the quotient towards minus infinite (floor).
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
 according to the usual rules of two-complement arithmetic.
+(In other words, they return the correct result modulo @M{2^64}.)
 
 }
 
@@ -1580,7 +1592,7 @@ All bitwise operations convert its operands to integers
 operate on all bits of those integers,
 and result in an integer.
 
-Both right and left shifts fill with zeros the vacant bits.
+Both right and left shifts fill the vacant bits with zeros.
 Negative displacements shift to the other direction;
 displacements with absolute values equal to or higher than
 the number of bits in an integer
@@ -1620,20 +1632,23 @@ If that value can be represented as an integer
 that is the result.
 Otherwise, the conversion fails.
 
-The conversion from strings to floats
-follows the rules of the Lua lexer.
-(The string may have leading and trailing spaces and a sign.)
-There is no direct conversion from strings to integers:
-If a string is provided where an integer is needed,
-Lua converts the string to a float and then the float to an integer.
-(You can use function @Lid{tonumber} for a direct conversion
-from strings to integers.)
+The conversion from strings to floats goes as follows:
+First, the string is converted to an integer or a float,
+following its syntax and the rules of the Lua lexer.
+(The string may have also leading and trailing spaces and a sign.)
+Then, the resulting number is converted to the required type
+(float or integer) according to the previous rules.
 
 The conversion from numbers to strings use a human-readable,
 non-specified format.
 For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
 @seeF{string.format}.
+
+To convert a number @id{x} to a float, you can write @T{x + 0.0};
+to convert a number @id{x} to an integer,
+use @T{x | 0} (which raises an error in case of fail)
+or call @Lid{math.ifloor} (which does not).
 
 }
 
@@ -2243,7 +2258,7 @@ The registry table is always located at pseudo-index
 @defid{LUA_REGISTRYINDEX},
 which is a valid index.
 Any @N{C library} can store data into this table,
-but it should take care to choose keys
+but it must take care to choose keys
 that are different from those used
 by other libraries, to avoid collisions.
 Typically, you should use as key a string containing your library name,
@@ -2256,7 +2271,7 @@ uppercase letters are reserved for Lua.
 The integer keys in the registry are used by the reference mechanism,
 implemented by the auxiliary library,
 and by some predefined values.
-Therefore, integer keys should not be used for other purposes.
+Therefore, integer keys must not be used for other purposes.
 
 When you create a new Lua state,
 its registry comes with some predefined values.
@@ -2302,14 +2317,14 @@ The panic function runs as if it were a @x{message handler} @see{error};
 in particular, the error message is at the top of the stack.
 However, there is no guarantees about stack space.
 To push anything on the stack,
-the panic function should first check the available space @see{stacksize}.
+the panic function must first check the available space @see{stacksize}.
 
-Most functions in the API can throw an error,
+Most functions in the API can raise an error,
 for instance due to a @x{memory allocation error}.
 The documentation for each function indicates whether
-it can throw errors.
+it can raise errors.
 
-Inside a @N{C function} you can throw an error by calling @Lid{lua_error}.
+Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
 
 }
 
@@ -2387,10 +2402,10 @@ we cannot know how many elements the function pops/pushes
 by looking only at its arguments
 (e.g., they may depend on what is on the stack).
 The third field, @T{x},
-tells whether the function may throw errors:
-@Char{-} means the function never throws any error;
-@Char{e} means the function may throw errors;
-@Char{v} means the function may throw an error on purpose.
+tells whether the function may raise errors:
+@Char{-} means the function never raises any error;
+@Char{e} means the function may raise errors;
+@Char{v} means the function may raise an error on purpose.
 
 
 @APIEntry{int lua_absindex (lua_State *L, int idx);|
@@ -2435,11 +2450,11 @@ Lua is allocating memory for something else.
 Lua assumes the following behavior from the allocator function:
 
 When @id{nsize} is zero,
-the allocator should behave like @id{free}
+the allocator must behave like @id{free}
 and return @id{NULL}.
 
 When @id{nsize} is not zero,
-the allocator should behave like @id{realloc}.
+the allocator must behave like @id{realloc}.
 The allocator returns @id{NULL}
 if and only if it cannot fulfill the request.
 Lua assumes that the allocator never fails when
@@ -2829,13 +2844,15 @@ as in the case of a yield.
 
 }
 
-@APIEntry{void lua_getfield (lua_State *L, int index, const char *k);|
+@APIEntry{int lua_getfield (lua_State *L, int index, const char *k);|
 @apii{0,1,e}
 
 Pushes onto the stack the value @T{t[k]},
 where @id{t} is the value at the given index.
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
+
+Returns the type of the pushed value.
 
 }
 
@@ -2900,7 +2917,7 @@ because a pseudo-index is not an actual stack position.
 
 }
 
-@APIEntry{typedef long long int lua_Integer;|
+@APIEntry{typedef @ldots lua_Integer;|
 
 The type of integers in Lua.
 
@@ -2909,6 +2926,10 @@ By default this type is @id{long long}
 but that can be changed in @id{luaconf.h}
 to @id{long} or @id{int}
 (usually a 32-bit two-complement integer).
+
+Lua also defines the constants
+@defid{LUA_MININTEGER} and @defid{LUA_MAXINTEGER},
+with the minimum and the maximum values that fit in this type.
 
 }
 
@@ -3076,7 +3097,7 @@ with the addition that
 a @id{NULL} value is equivalent to the string @St{bt}.
 
 @id{lua_load} uses the stack internally,
-so the reader function should always leave the stack
+so the reader function must always leave the stack
 unmodified when returning.
 
 If the resulting function has one upvalue,
@@ -3278,11 +3299,11 @@ it is possible to associate some values with it,
 thus creating a @x{@N{C closure}} @see{c-closure};
 these values are then accessible to the function whenever it is called.
 To associate values with a @N{C function},
-first these values should be pushed onto the stack
+first these values must be pushed onto the stack
 (when there are multiple values, the first value is pushed first).
 Then @Lid{lua_pushcclosure}
 is called to create and push the @N{C function} onto the stack,
-with the argument @id{n} telling how many values should be
+with the argument @id{n} telling how many values will be
 associated with the function.
 @Lid{lua_pushcclosure} also pops these values from the stack.
 
@@ -3291,7 +3312,7 @@ The maximum value for @id{n} is 255.
 When @id{n} is zero,
 this function creates a @def{light C function},
 which is just a pointer to the @N{C function}.
-In that case, it never throws a memory error.
+In that case, it never raises a memory error.
 
 }
 
@@ -3948,9 +3969,12 @@ which must be one the values returned by @Lid{lua_type}.
 
 }
 
-@APIEntry{typedef unsigned long lua_Unsigned;|
+@APIEntry{typedef @ldots lua_Unsigned;|
 
 The unsigned version of @Lid{lua_Integer}.
+
+Lua also defines the constant @defid{LUA_MAXUNSIGNED},
+with the maximum value that fits in this type.
 
 }
 
@@ -4271,7 +4295,7 @@ and names.
 @Lid{lua_getlocal} pushes the variable's value onto the stack
 and returns its name.
 
-In the second case, @id{ar} should be @id{NULL} and the function
+In the second case, @id{ar} must be @id{NULL} and the function
 to be inspected must be at the top of the stack.
 In this case, only parameters of Lua functions are visible
 (as there is no information about what variables are active)
@@ -4499,7 +4523,7 @@ Because the error message is formatted for arguments
 you should not use these functions for other stack values.
 
 Functions called @id{luaL_check*}
-always throw an error if the check is not satisfied.
+always raise an error if the check is not satisfied.
 
 @sect2{@title{Functions and Types}
 
@@ -5043,7 +5067,7 @@ returns 0.
 Otherwise,
 creates a new table to be used as a metatable for userdata,
 adds to this new table the pair @T{__name = tname},
-adds to the registry the pair @T[tname] = new table},
+adds to the registry the pair @T{[tname] = new table},
 and returns 1.
 
 In both cases pushes onto the stack the final value associated
@@ -5316,7 +5340,7 @@ the field value is changed to @nil to signal that the handle is closed.
 
 This function works like @Lid{luaL_checkudata},
 except that, when the test fails,
-it returns @id{NULL} instead of throwing an error.
+it returns @id{NULL} instead of raising an error.
 
 }
 
@@ -5803,7 +5827,7 @@ according to the lexical conventions of Lua @see{lexical}.
 (The string may have leading and trailing spaces and a sign.)
 
 When called with @id{base},
-then @id{e} should be a string to be interpreted as
+then @id{e} must be a string to be interpreted as
 an integer numeral in that base.
 The base may be any integer between 2 and 36, inclusive.
 In bases @N{above 10}, the letter @Char{A} (in either upper or lower case)
@@ -5966,7 +5990,7 @@ for @Lid{package.searchers}.
 
 First @id{require} queries @T{package.preload[modname]}.
 If it has a value,
-this value (which should be a function) is the loader.
+this value (which must be a function) is the loader.
 Otherwise @id{require} searches for a Lua loader using the
 path stored in @Lid{package.path}.
 If that also fails, it searches for a @N{C loader} using the
@@ -6259,6 +6283,39 @@ about the function
 (local variable names, lines, etc.).
 
 }
+}
+
+@LibEntry{string.dumpfloat (n [, size [, endianness]])|
+Returns a string with the machine representation of float @id{n},
+with given size and endianness.
+The @id{size} is the string @St{f} (single precision),
+@St{d} (double precision), or @St{n},
+which means the size of a @Lid{lua_Number};
+its default is St{n}.
+The endianness is the string @St{l} (little endian), @St{b} (big endian),
+or @St{n} (native);
+the default is the native endianness.
+
+This function may not work correctly in architectures
+with @x{mixed endian}.
+
+
+@LibEntry{string.dumpint (n [, size [, endianness]])|
+Returns a string with the two-complement representation of integer @id{n},
+with @id{size} bytes and given endianness.
+The @id{size} can be any value from 1 to 12,
+or 0, which means the size of a @Lid{lua_Integer}
+(8 bytes in standard Lua);
+its default is zero.
+The endianness is the string @St{l} (little endian), @St{b} (big endian),
+or @St{n} (native);
+the default is the native endianness.
+
+This function may not work correctly in architectures
+with @x{mixed endian} or
+that do not use a two-complement representation for integers.
+
+}
 
 @LibEntry{string.find (s, pattern [, init [, plain]])|
 
@@ -6442,38 +6499,6 @@ its default value @N{is 1} and can be negative.
 
 }
 
-@LibEntry{string.packfloat (n [, size [, endianness]])|
-Returns a string with the machine representation of float @id{n},
-with given size and endianness.
-The @id{size} is the string @St{f} (single precision),
-@St{d} (double precision), or @St{n},
-which means the size of a @Lid{lua_Number};
-its default is St{n}.
-The endianness is the string @St{l} (little endian), @St{b} (big endian),
-or @St{n} (native);
-the default is the native endianness.
-
-This function may not work correctly in architectures
-with @x{mixed endian}.
-
-}
-
-@LibEntry{string.packint (n [, size [, endianness]])|
-Returns a string with the two-complement representation of integer @id{n},
-with @id{size} bytes and given endianness.
-The @id{size} can be any value from 1 to 8 or 0,
-which means the size of a @Lid{lua_Integer};
-its default is zero.
-The endianness is the string @St{l} (little endian), @St{b} (big endian),
-or @St{n} (native);
-the default is the native endianness.
-
-This function may not work correctly in architectures
-with @x{mixed endian} or
-that do not use a two-complement representation for integers.
-
-}
-
 @LibEntry{string.rep (s, n [, sep])|
 Returns a string that is the concatenation of @id{n} copies of
 the string @id{s} separated by the string @id{sep}.
@@ -6510,17 +6535,17 @@ the function returns the empty string.
 
 }
 
-@LibEntry{string.unpackfloat (s [, pos [, size [, endianness]]])|
+@LibEntry{string.undumpfloat (s [, pos [, size [, endianness]]])|
 Reads the machine representation of a float starting at position
 @id{pos} in string @id{s} and returns that number.
-See @Lid{string.packfloat} for details about @id{size} and @id{endianness}.
+See @Lid{string.dumpfloat} for details about @id{size} and @id{endianness}.
 
 }
 
-@LibEntry{string.unpackint (s [, pos [, size [, endianness]]])|
+@LibEntry{string.undumpint (s [, pos [, size [, endianness]]])|
 Reads the machine representation of an integer starting at position
 @id{pos} in string @id{s} and returns that integer.
-See @Lid{string.packint} for details about @id{size} and @id{endianness}.
+See @Lid{string.dumpint} for details about @id{size} and @id{endianness}.
 
 Integers are always read as signed.
 
@@ -6721,7 +6746,7 @@ Any operation that needs the meaning of a character,
 such as character classification, is outside its scope.
 
 Unless stated otherwise,
-all functions that expect a byte index as a parameter
+all functions that expect a byte position as a parameter
 assume that the given position is either the start of a byte sequence
 or one plus the length of the subject string.
 As in the string library,
@@ -6764,22 +6789,27 @@ It raises an error if it meets any invalid byte sequence.
 
 }
 
-@LibEntry{utf8.len (s [, i])|
-Returns the number of UTF-8 characters in string @id{s},
-starting from position @id{i}.
-The default for @id{i} is 1.
-Returns @nil if the suffix of @id{s} starting at @id{i}
-contains any invalid byte sequence.
+@LibEntry{utf8.len (s [, i [, j]])|
+Returns the number of UTF-8 characters in string @id{s}
+that start between positions @id{i} and @{j} (both inclusive).
+The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
+If it finds any invalid byte sequence,
+returns @nil plus the position of the first invalid byte. 
 
 }
 
 @LibEntry{utf8.offset (s, n [, i])|
-Returns the byte index where the encoding of the
-@id{n}-th character of @id{s} starts,
-counting from position @id{i}.
+Returns the position (in bytes) where the encoding of the
+@id{n}-th character of @id{s}
+(counting from position @id{i}) starts.
 A negative @id{n} gets characters before position @id{i}.
-The default for @id{i} is 1.
-Returns @nil if the subject does not have such character.
+The default for @id{i} is 1 when @id{n} is non-negative
+and @T{#s + 1} otherwise,
+so that @T{utf8.offset(s, -n)} gets the offset of the
+@id{n}-th character from the end of the string.
+If the specified character is not in the subject
+or right after its end,
+the function returns @nil.
 
 As a special case,
 when @id{n} is 0 the function returns the start of the encoding
@@ -6797,7 +6827,7 @@ This library provides generic functions for table manipulation.
 It provides all its functions inside the table @defid{table}.
 
 Remember that, whenever an operation needs the length of a table,
-the table should be a proper sequence
+the table must be a proper sequence
 or have a @idx{__len} metamethod @see{len-op}.
 All functions ignore non-numeric keys
 in tables given as arguments.
@@ -6975,7 +7005,7 @@ that rounds the quotient towards zero.
 
 Returns @id{m} and @id{e} such that @M{x = m2@sp{e}},
 @id{e} is an integer and the absolute value of @id{m} is
-in the range @M{[0.5, 1)}
+in the range @C{(} @M{[0.5, 1)} @C{]}
 (or zero when @id{x} is zero).
 
 }
@@ -7012,13 +7042,25 @@ The default for @id{base} is @M{e}
 
 @LibEntry{math.max (x, @Cdots)|
 
-Returns the maximum value among its arguments.
+Returns the argument with the maximum value,
+according to the Lua operator @T{<}.
+
+}
+
+@LibEntry{math.maxinteger|
+The maximum value for an integer.
 
 }
 
 @LibEntry{math.min (x, @Cdots)|
 
-Returns the minimum value among its arguments.
+Returns the argument with the minimum value,
+according to the Lua operator @T{<}.
+
+}
+
+@LibEntry{math.mininteger|
+The minimum value for an integer.
 
 }
 
@@ -7050,17 +7092,18 @@ Returns the angle @id{x} (given in degrees) in radians.
 
 @LibEntry{math.random ([m [, n]])|
 
-This function is an interface to the simple
-pseudo-random generator function @id{rand} provided by @N{Standard C}.
-(No guarantees can be given for its statistical properties.)
-
 When called without arguments,
-returns a uniform pseudo-random float
-in the range @M{[0,1)}.  @C{]}
+returns a pseudo-random float with uniform distribution
+in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
-@id{math.random} returns a uniform pseudo-random
-integer in the range @M{[m, n]}.
+@id{math.random} returns a pseudo-random integer
+with uniform distribution in the range @M{[m, n]}.
+(The difference @T{m-n} must fit in a Lua integer.)
 The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
+
+This function is an interface to the underling
+pseudo-random generator function provided by C.
+No guarantees can be given for its statistical properties.
 
 }
 
@@ -7286,7 +7329,7 @@ Returns an iterator function that,
 each time it is called,
 reads the file according to the given formats.
 When no format is given,
-uses @Q{*l} as a default.
+uses @St{l} as a default.
 As an example, the construction
 @verbatim{
 for c in file:lines(1) do @rep{body} end
@@ -7315,7 +7358,7 @@ it uses a default format that reads the next line
 The available formats are
 @description{
 
-@item{@St{*n}|
+@item{@St{n}|
 reads a number and returns it as a float.
 If the input has only a prefix of a valid number
 (e.g., @St{0x} or @St{3.4e-}),
@@ -7323,22 +7366,22 @@ this format can read the entire prefix
 even when returning @nil.
 }
 
-@item{@St{*i}|
+@item{@St{i}|
 reads an integral number and returns it as an integer.
 }
 
-@item{@St{*a}|
+@item{@St{a}|
 reads the whole file, starting at the current position.
 On end of file, it returns the empty string.
 }
 
-@item{@St{*l}|
+@item{@St{l}|
 reads the next line skipping the end of line,
 returning @nil on end of file.
 This is the default format.
 }
 
-@item{@St{*L}|
+@item{@St{L}|
 reads the next line keeping the end-of-line character (if present),
 returning @nil on end of file.
 }
@@ -7352,7 +7395,7 @@ or @nil on end of file.
 }
 
 }
-The formats @St{*l} and @St{*L} should be used only for text files.
+The formats @St{l} and @St{L} should be used only for text files.
 
 }
 
@@ -7511,7 +7554,7 @@ When called without a @id{command},
 
 }
 
-@LibEntry{os.exit ([code [, close])|
+@LibEntry{os.exit ([code [, close]])|
 
 Calls the @ANSI{exit} to terminate the host program.
 If @id{code} is @Rw{true},
@@ -7643,6 +7686,28 @@ thread to operate over.
 The default is always the current thread.
 
 
+@LibEntry{debug.Csize (t)|
+
+Returns the size of the underlying representation of a given C type,
+according to the following table:
+@Tab2{
+@row{@col{@Char{I}}@col{@id{lua_Integer}}}
+@row{@col{@Char{F}}@col{@id{lua_Number}}}
+@row{@col{@Char{b}}@col{@id{byte}}}
+@row{@col{@Char{d}}@col{@id{double}}}
+@row{@col{@Char{f}}@col{@id{float}}}
+@row{@col{@Char{h}}@col{@id{short int}}}
+@row{@col{@Char{i}}@col{@id{int}}}
+@row{@col{@Char{l}}@col{@id{long int}}}
+@row{@col{@Char{z}}@col{@id{size_t}}}
+}
+For all options except @Char{b},
+the size is given in number of bytes;
+for option @Char{b},
+the size is its number of bits.
+
+}
+
 @LibEntry{debug.debug ()|
 
 Enters an interactive mode with the user,
@@ -7712,12 +7777,12 @@ but also parameters, temporaries, etc.
 The first parameter or local variable has @N{index 1}, and so on,
 until the last active variable.
 Negative indices refer to vararg parameters;
--1 is the first vararg parameter.
+@num{-1} is the first vararg parameter.
 The function returns @nil if there is no variable with the given index,
 and raises an error when called with a level out of range.
 (You can call @Lid{debug.getinfo} to check whether the level is valid.)
 
-Variable names starting with @Char{(} (open parenthesis)
+Variable names starting with @Char{(} (open parenthesis) @C{)}
 represent variables with no known names
 (internal variables like loop control variables,
 and variables from chunks saved without debug information).
@@ -7746,7 +7811,7 @@ This function returns the name and the value of the upvalue
 with index @id{up} of the function @id{f}.
 The function returns @nil if there is no upvalue with the given index.
 
-Variable names starting with @Char{(} (open parenthesis)
+Variable names starting with @Char{(} (open parenthesis) @C{)}
 represent variables with no known names
 (variables from chunks saved without debug information).
 
@@ -7757,14 +7822,6 @@ represent variables with no known names
 Returns the Lua value associated to @id{u}.
 If @id{u} is not a userdata,
 returns @nil.
-
-}
-
-@LibEntry{debug.numbits (t)|
-
-Returns the number of bits in the underlying representation
-of an integer (if @id{t} is @St{i})
-or a float (if  @id{t} is @St{f}).
 
 }
 
@@ -8088,6 +8145,11 @@ better yet, to replace its functions with appropriate bitwise operations.
 while the bitwise operators in Standard Lua operate on 64-bit integers.)
 }
 
+@item{
+Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
+For compatibility, Lua will continue to ignore this character.
+}
+
 }
 
 }
@@ -8227,3 +8289,4 @@ Here is the complete syntax of Lua in extended BNF.
 @C{]===============================================================}
 
 }
+@C{)]-------------------------------------------------------------------------}
