@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.116 2014/04/02 11:38:34 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.117 2014/04/30 17:14:30 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -645,15 +645,18 @@ and the object memory is freed in the next garbage-collection cycle.
 However, if the finalizer stores the object in some global place
 (e.g., a global variable),
 then there is a permanent resurrection.
+Moreover, if the finalizer marks a finalizing object for finalization again,
+its finalizer will be called again in the next cycle where the
+object is unreacheable.
 In any case,
-the object memory is freed only when it becomes completely inaccessible;
-its finalizer will never be called twice.
+the object memory is freed only in the GC cycle where
+the object is unreacheable and not marked for finalization.
 
 When you close a state @see{lua_close},
 Lua calls the finalizers of all objects marked for finalization,
 following the reverse order that they were marked.
-If any finalizer marks new objects for collection during that phase,
-these new objects will not be finalized.
+If any finalizer marks objects for collection during that phase,
+these marks have no effect.
 
 }
 
@@ -872,9 +875,10 @@ then      true      until     while
 Lua is a case-sensitive language:
 @id{and} is a reserved word, but @id{And} and @id{AND}
 are two different, valid names.
-As a convention, names starting with an underscore followed by
-uppercase letters (such as @Lid{_VERSION})
-are reserved for variables used by Lua.
+As a convention,
+programs should avoid creating 
+names that start with an underscore followed by
+one or more uppercase letters (such as @Lid{_VERSION}).
 
 The following strings denote other @x{tokens}:
 @verbatim{
@@ -1293,8 +1297,8 @@ The numeric @Rw{for} loop repeats a block of code while a
 control variable runs through an arithmetic progression.
 It has the following syntax:
 @Produc{
-@producname{stat}@producbody{@Rw{for} @bnfNter{Name} @bnfter{=} exp @bnfter{,} exp @bnfopt{@bnfter{,} exp}
-                    @Rw{do} block @Rw{end}}
+@producname{stat}@producbody{@Rw{for} @bnfNter{Name} @bnfter{=}
+  exp @bnfter{,} exp @bnfopt{@bnfter{,} exp} @Rw{do} block @Rw{end}}
 }
 The @emph{block} is repeated for @emph{name} starting at the value of
 the first @emph{exp}, until it passes the second @emph{exp} by steps of the
@@ -1306,21 +1310,19 @@ for v = @rep{e1}, @rep{e2}, @rep{e3} do @rep{block} end
 is equivalent to the code:
 @verbatim{
 do
-  local @rep{var}, @rep{limit}, @rep{step} = convert(@rep{e1}, @rep{e2}, @rep{e3})
+  local @rep{var}, @rep{limit}, @rep{step} = tonumber(@rep{e1}), tonumber(@rep{e2}), tonumber(@rep{e3})
   if not (@rep{var} and @rep{limit} and @rep{step}) then error() end
-  while (@rep{step} > 0 and @rep{var} <= @rep{limit}) or (@rep{step} <= 0 and @rep{var} >= @rep{limit}) do
+  @rep{var} = @rep{var} - @rep{step}
+  while true do
+    @rep{var} = @rep{var} + @rep{step}
+    if (@rep{step} >= 0 and @rep{var} > @rep{limit}) or (@rep{step} < 0 and @rep{var} < @rep{limit}) then
+      break
+    end
     local v = @rep{var}
     @rep{block}
-    @rep{var} = @rep{var} + @rep{step}
   end
 end
 }
-where @id{convert} returns
-its three arguments as integers
-if @id{var} and @id{step} are integers and
-@id{limit} can be converted to an adequate integer
-(that is, its floor for non-negative steps and its ceiling for negative steps);
-otherwise @id{convert} converts all three values to floats.
 
 Note the following:
 @itemize{
@@ -1329,13 +1331,6 @@ Note the following:
 All three control expressions are evaluated only once,
 before the loop starts.
 They must all result in numbers.
-}
-
-@item{
-If the initial value or the step are not integers,
-or if the limit cannot be converted to an integer,
-all three values are converted to floats,
-so that the loop is done with floats.
 }
 
 @item{
@@ -1353,9 +1348,8 @@ You can use @Rw{break} and @Rw{goto} to exit a @Rw{for} loop.
 }
 
 @item{
-The loop variable @T{v} is local to the loop;
-you cannot use its value after the @Rw{for} ends or is broken.
-If you need its value,
+The loop variable @T{v} is local to the loop body.
+If you need its value after the loop,
 assign it to another variable before exiting the loop.
 }
 
@@ -1551,15 +1545,11 @@ for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
 
-Exponentiation follows similar rules,
-except that, if the exponent is negative,
-it always performs a floating-point operation
-and gives a floating-point result.
-Floating-point exponentiation uses the @ANSI{pow},
+Float division (@T{/}) and exponentiation
+always convert their operands to floats
+and the result is always a float.
+Exponentiation uses the @ANSI{pow},
 so that it works for non-integer exponents too.
-
-Float division (@T{/}) always converts its operands to floats
-and its result is always a float.
 
 Integer division (@T{//}) converts its operands to integers
 @see{coercion}
@@ -1572,7 +1562,7 @@ that rounds the quotient towards minus infinite (floor).
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
 according to the usual rules of two-complement arithmetic.
-(In other words, they return the correct result modulo @M{2^64}.)
+(In other words, they return the correct result modulo @M{2@sp{64}}.)
 
 }
 
@@ -1616,7 +1606,6 @@ besides strings.
 
 Lua also converts strings to numbers,
 whenever a number is expected.
-(This conversion may be deprecated in future versions.)
 
 In a conversion from integer to float,
 if the integer value has an exact representation as a float,
@@ -1632,14 +1621,14 @@ If that value can be represented as an integer
 that is the result.
 Otherwise, the conversion fails.
 
-The conversion from strings to floats goes as follows:
+The conversion from strings to numbers goes as follows:
 First, the string is converted to an integer or a float,
 following its syntax and the rules of the Lua lexer.
 (The string may have also leading and trailing spaces and a sign.)
 Then, the resulting number is converted to the required type
 (float or integer) according to the previous rules.
 
-The conversion from numbers to strings use a human-readable,
+The conversion from numbers to strings uses a human-readable,
 non-specified format.
 For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
@@ -2899,11 +2888,13 @@ this result is equal to the number of elements in the stack
 
 }
 
-@APIEntry{void lua_getuservalue (lua_State *L, int index);|
+@APIEntry{int lua_getuservalue (lua_State *L, int index);|
 @apii{0,1,-}
 
 Pushes onto the stack the Lua value associated with the userdata
 at the given index.
+
+Returns the type of the pushed value.
 
 }
 
@@ -3038,6 +3029,14 @@ and @N{0 otherwise}.
 
 Returns 1 if the value at the given index is a userdata
 (either full or light), and @N{0 otherwise}.
+
+}
+
+@APIEntry{int lua_isyieldable (lua_State *L);|
+@apii{0,0,-}
+
+Returns 1 if the given coroutine can yield,
+and @N{0 otherwise}.
 
 }
 
@@ -3663,6 +3662,18 @@ this parameter can be @id{NULL}.
 
 }
 
+@APIEntry{void lua_rotate (lua_State *L, int idx, int n);|
+@apii{0,0,-}
+
+Rotates the stack elements from @id{idx} to the top @id{n} positions
+in the direction of the top, for a positive @id{n},
+or @T{-n} positions in the direction of the bottom,
+for a negative @id{n}.
+The absolute value of @id{n} must not be greater than the size
+of the slice being rotated.
+
+}
+
 @APIEntry{void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);|
 @apii{0,0,-}
 
@@ -3764,11 +3775,13 @@ You can resume threads with status @Lid{LUA_OK}
 
 }
 
-@APIEntry{int lua_strtonum (lua_State *L, const char *s, size_t len);|
+@APIEntry{size_t lua_strtonum (lua_State *L, const char *s);|
 @apii{0,1,-}
 
-Converts the string @id{s} (with length @id{len}) to a number and
-pushes that number into the stack.
+Converts the zero-terminated string @id{s} to a number,
+pushes that number into the stack,
+and returns the total size of the string
+(that is, its length plus one).
 The conversion can result in an integer or a float,
 according to the lexical conventions of Lua @see{lexical}.
 The string may have leading and trailing spaces and a sign.
@@ -5899,6 +5912,15 @@ an object with type @T{"thread"}.
 
 }
 
+@LibEntry{coroutine.isyieldable ()|
+
+Returns true when the running coroutine can yield.
+
+A running coroutine is yieldable if it is not the main thread and
+it is not inside a non-yieldable C function.
+
+}
+
 @LibEntry{coroutine.resume (co [, val1, @Cdots])|
 
 Starts or continues the execution of coroutine @id{co}.
@@ -5913,8 +5935,8 @@ as the results from the yield.
 
 If the coroutine runs without any errors,
 @id{resume} returns @true plus any values passed to @id{yield}
-(if the coroutine yields) or any values returned by the body function
-(if the coroutine terminates).
+(when the coroutine yields) or any values returned by the body function
+(when the coroutine terminates).
 If there is any error,
 @id{resume} returns @false plus the error message.
 
@@ -6917,12 +6939,15 @@ By default, @id{i} @N{is 1} and @id{j} is @T{#list}.
 
 @sect2{mathlib| @title{Mathematical Functions}
 
-This library is an interface to the standard @N{C math} library.
-It provides all its functions inside the table @defid{math}.
+This library provides basic mathematical functions.
+It provides all its functions and constants inside the table @defid{math}.
+Functions with the annotation @St{integer/float} give
+integer results for integer arguments
+and float results for float (or mixed) arguments.
 
 @LibEntry{math.abs (x)|
 
-Returns the absolute value of @id{x}.
+Returns the absolute value of @id{x}. (integer/float)
 
 }
 
@@ -6938,18 +6963,17 @@ Returns the arc sine of @id{x} (in radians).
 
 }
 
-@LibEntry{math.atan (x)|
+@LibEntry{math.atan (y [, x])|
 
-Returns the arc tangent of @id{x} (in radians).
-
-}
-
-@LibEntry{math.atan2 (y, x)|
-
+@index{atan2}
 Returns the arc tangent of @T{y/x} (in radians),
 but uses the signs of both parameters to find the
 quadrant of the result.
 (It also handles correctly the case of @id{x} being zero.)
+
+The default value for @id{x} is 1,
+so that the call @T{math.atan(y)}
+returns the arc tangent of @id{y}.
 
 }
 
@@ -6966,22 +6990,9 @@ Returns the cosine of @id{x} (assumed to be in radians).
 
 }
 
-
-@LibEntry{math.cosh (x)|
-
-Returns the hyperbolic cosine of @id{x}.
-
-}
-
 @LibEntry{math.deg (x)|
 
-Returns the angle @id{x} (given in radians) in degrees.
-
-}
-
-@LibEntry{math.exp (x)|
-
-Returns the value @M{e@sp{x}}.
+Converts the angle @id{x} from radians to degrees.
 
 }
 
@@ -6997,22 +7008,13 @@ integral value smaller than or equal to @id{x}.
 @LibEntry{math.fmod (x, y)|
 
 Returns the remainder of the division of @id{x} by @id{y}
-that rounds the quotient towards zero.
-
-}
-
-@LibEntry{math.frexp (x)|
-
-Returns @id{m} and @id{e} such that @M{x = m2@sp{e}},
-@id{e} is an integer and the absolute value of @id{m} is
-in the range @C{(} @M{[0.5, 1)} @C{]}
-(or zero when @id{x} is zero).
+that rounds the quotient towards zero. (integer/float)
 
 }
 
 @LibEntry{math.huge|
 
-The value @idx{HUGE_VAL},
+The float value @idx{HUGE_VAL},
 a value larger than or equal to any other numerical value.
 
 }
@@ -7023,12 +7025,6 @@ a value larger than or equal to any other numerical value.
 Returns the largest integer smaller than or equal to @id{x}.
 If the value does not fit in an integer,
 returns @nil.
-
-}
-
-@LibEntry{math.ldexp (m, e)|
-
-Returns @M{m2@sp{e}} (@id{e} should be an integer).
 
 }
 
@@ -7043,30 +7039,30 @@ The default for @id{base} is @M{e}
 @LibEntry{math.max (x, @Cdots)|
 
 Returns the argument with the maximum value,
-according to the Lua operator @T{<}.
+according to the Lua operator @T{<}. (integer/float)
 
 }
 
 @LibEntry{math.maxinteger|
-The maximum value for an integer.
+An integer with the maximum value for an integer.
 
 }
 
 @LibEntry{math.min (x, @Cdots)|
 
 Returns the argument with the minimum value,
-according to the Lua operator @T{<}.
+according to the Lua operator @T{<}. (integer/float)
 
 }
 
 @LibEntry{math.mininteger|
-The minimum value for an integer.
+An integer with the minimum value for an integer.
 
 }
 
 @LibEntry{math.modf (x)|
 
-Returns two numbers,
+Returns two floats,
 the integral part of @id{x} and the fractional part of @id{x}.
 
 }
@@ -7077,16 +7073,9 @@ The value of @M{@pi}.
 
 }
 
-@LibEntry{math.pow (x, y)|
-
-Returns @M{x@sp{y}}.
-(You can also use the expression @T{x^y} to compute this value.)
-
-}
-
 @LibEntry{math.rad (x)|
 
-Returns the angle @id{x} (given in degrees) in radians.
+Converts the angle @id{x} from degrees to radians.
 
 }
 
@@ -7098,7 +7087,7 @@ in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.
-(The difference @T{m-n} must fit in a Lua integer.)
+(The interval size must fit in a Lua integer.)
 The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
 
 This function is an interface to the underling
@@ -7121,12 +7110,6 @@ Returns the sine of @id{x} (assumed to be in radians).
 
 }
 
-@LibEntry{math.sinh (x)|
-
-Returns the hyperbolic sine of @id{x}.
-
-}
-
 @LibEntry{math.sqrt (x)|
 
 Returns the square root of @id{x}.
@@ -7137,12 +7120,6 @@ Returns the square root of @id{x}.
 @LibEntry{math.tan (x)|
 
 Returns the tangent of @id{x} (assumed to be in radians).
-
-}
-
-@LibEntry{math.tanh (x)|
-
-Returns the hyperbolic tangent of @id{x}.
 
 }
 
@@ -8116,6 +8093,19 @@ can sometimes have a big impact on performance.
 }
 
 @item{
+The conversion of a float to a string now adds a @T{.0} suffix if the
+number has an integral value.
+(For instance, the float 2.0 will be printed as @T{2.0},
+not as @T{2}.)
+You should always use an explicit format
+when you need a specific format for numbers.
+
+(Formally this is not an incompatibility,
+because Lua never specified how numbers are formatted as strings,
+but some programs assumed a specific format.)
+}
+
+@item{
 The generational mode for the garbage collector was removed.
 (It was an experimental feature in @N{Lua 5.2}.)
 }
@@ -8128,16 +8118,6 @@ The generational mode for the garbage collector was removed.
 @itemize{
 
 @item{
-The conversion of a float to a string through @Lid{tostring}
-(which is used by @Lid{print}) now adds a @T{.0} suffix if the
-number has an integral value.
-(For instance, the float 2.0 will be printed as @T{2.0},
-not as @T{2}.)
-You should always use an explicit format
-when you need a specific format for numbers.
-}
-
-@item{
 The @id{bit32} library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
@@ -8148,6 +8128,18 @@ while the bitwise operators in Standard Lua operate on 64-bit integers.)
 @item{
 Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
 For compatibility, Lua will continue to ignore this character.
+}
+
+@item{
+The following functions were deprecated in the mathematical library:
+@id{atan2}, @id{cosh}, @id{sinh}, @id{tanh}, @id{pow},
+@id{frexp}, and @id{ldexp}.
+You can replace @T{math.pow(x,y)} with @T{x^y};
+you can replace @id{math.atan2} with @id{math.atan},
+which now accepts two parameters;
+you can replace @T{math.ldexp(x,exp)} with @T{x * 2.0^exp}.
+For the other operations,
+the best choice is to use an external library.
 }
 
 }
