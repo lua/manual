@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.117 2014/04/30 17:14:30 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.118 2014/05/14 16:16:27 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -456,9 +456,9 @@ Otherwise, Lua raises an error.
 @item{@Q{eq}|
 the @T{==} (equal) operation.
 @Lidx{__eq}
-Lua will try a metamethod only when the values
-being compared are either both tables or both full userdata,
-both have the same metamethod,
+Behavior similar to the @Q{add} operation,
+except that Lua will try a metamethod only when the values
+being compared are either both tables or both full userdata
 and they are not primitively equal.
 The result of the call is always converted to a boolean.
 }
@@ -467,7 +467,9 @@ The result of the call is always converted to a boolean.
 the @T{<} (less than) operation.
 @Lidx{__lt}
 Behavior similar to the @Q{add} operation,
-except that the result of the call is always converted to a boolean.
+except that Lua will try a metamethod only when the values
+being compared are neither both numbers nor both strings.
+The result of the call is always converted to a boolean.
 }
 
 @item{@Q{le}|
@@ -476,7 +478,7 @@ the @T{<=} (less equal) operation.
 Unlike other operations,
 The less-equal operation can use two different events.
 First, Lua looks for the @St{__le} metamethod in both operands,
-like in the @Q{add} operation.
+like in the @Q{lt} operation.
 If it cannot find such a metamethod,
 then it will try the @St{__lt} event,
 assuming that @T{a <= b} is equivalent to @T{not (b < a)}.
@@ -630,7 +632,7 @@ Lua simply ignores it.)
 
 At the end of each garbage-collection cycle,
 the finalizers for objects are called in
-the reverse order that they were marked for collection,
+the reverse order that they were marked for finalization,
 among those collected in that cycle;
 that is, the first finalizer to be called is the one associated
 with the object marked last in the program.
@@ -1634,11 +1636,6 @@ For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
 @seeF{string.format}.
 
-To convert a number @id{x} to a float, you can write @T{x + 0.0};
-to convert a number @id{x} to an integer,
-use @T{x | 0} (which raises an error in case of fail)
-or call @Lid{math.ifloor} (which does not).
-
 }
 
 @sect3{rel-ops| @title{Relational Operators}
@@ -1659,8 +1656,8 @@ Otherwise, the values of the operands are compared.
 Strings are compared in the obvious way.
 Numbers follow the usual rule for binary operations:
 if both operands are integers,
-the are compared as integers.
-Otherwise, they are converted to floats
+the are compared as integers;
+otherwise, they are converted to floats
 and compared as such.
 
 Tables, userdata, and threads
@@ -2705,7 +2702,10 @@ Otherwise you can use the function @Lid{lua_newtable}.
 
 }
 
-@APIEntry{int lua_dump (lua_State *L, lua_Writer writer, void *data);|
+@APIEntry{int lua_dump (lua_State *L,
+                        lua_Writer writer,
+                        void *data,
+                        int strip);|
 @apii{0,0,e}
 
 Dumps a function as a binary chunk.
@@ -2717,6 +2717,10 @@ As it produces parts of the chunk,
 @Lid{lua_dump} calls function @id{writer} @seeC{lua_Writer}
 with the given @id{data}
 to write them.
+
+If @id{strip} is true,
+the binary representation is created without debug information
+about the function.
 
 The value returned is the error code returned by the last
 call to the writer;
@@ -2730,8 +2734,7 @@ This function does not pop the Lua function from the stack.
 @apii{1,0,v}
 
 Generates a Lua error.
-The error message (which can actually be a Lua value of any type)
-must be on the stack top.
+The error object must be on the stack top.
 This function does a long jump,
 and therefore never returns
 @seeC{luaL_error}.
@@ -4282,6 +4285,9 @@ numbers of the lines that are valid on the function.
 (A @emph{valid line} is a line with some associated code,
 that is, a line where you can put a break point.
 Non-valid lines include empty lines and comments.)
+
+If this option is given together with option @Char{f},
+its table is pushed after the function.
 }
 
 }
@@ -5498,11 +5504,13 @@ implementations for some of its facilities.
 
 
 @LibEntry{assert (v [, message])|
-Issues an  error when
+
+Calls @Lid{error} if
 the value of its argument @id{v} is false (i.e., @nil or @false);
 otherwise, returns all its arguments.
-@id{message} is an error message;
-when absent, it defaults to @Q{assertion failed!}
+In case of error,
+@id{message} is the error object;
+when absent, it defaults to @St{assertion failed!}
 
 }
 
@@ -5563,16 +5571,6 @@ returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 }
 
-@item{@St{generational}|
-changes the collector to @x{generational mode}.
-This is an experimental feature @see{GC}.
-}
-
-@item{@St{incremental}|
-changes the collector to @x{incremental mode}.
-This is the default mode.
-}
-
 }
 
 }
@@ -5589,7 +5587,7 @@ to its caller (that is, @id{dofile} does not run in protected mode).
 
 @LibEntry{error (message [, level])|
 Terminates the last protected function called
-and returns @id{message} as the error message.
+and returns @id{message} as the error object.
 Function @id{error} never returns.
 
 Usually, @id{error} adds some information about the error position
@@ -6073,7 +6071,7 @@ The path used by @Lid{require} to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
-using the environment variable @defid{LUA_CPATH_5_2}
+using the environment variable @defid{LUA_CPATH_5_3}
 or the environment variable @defid{LUA_CPATH}
 or a default path defined in @id{luaconf.h}.
 
@@ -6129,7 +6127,7 @@ plus other Unix systems that support the @id{dlfcn} standard).
 The path used by @Lid{require} to search for a Lua loader.
 
 At start-up, Lua initializes this variable with
-the value of the environment variable @defid{LUA_PATH_5_2} or
+the value of the environment variable @defid{LUA_PATH_5_3} or
 the environment variable @defid{LUA_PATH} or
 with a default path defined in @id{luaconf.h},
 if those environment variables are not defined.
@@ -6313,7 +6311,7 @@ with given size and endianness.
 The @id{size} is the string @St{f} (single precision),
 @St{d} (double precision), or @St{n},
 which means the size of a @Lid{lua_Number};
-its default is St{n}.
+its default is @St{n}.
 The endianness is the string @St{l} (little endian), @St{b} (big endian),
 or @St{n} (native);
 the default is the native endianness.
@@ -6944,6 +6942,10 @@ It provides all its functions and constants inside the table @defid{math}.
 Functions with the annotation @St{integer/float} give
 integer results for integer arguments
 and float results for float (or mixed) arguments.
+Rounding functions
+(@Lid{math.ceil}, @Lid{math.floor}, and @Lid{math.modf})
+return an integer when the result fits in the range of an integer,
+otherwise they return a float.
 
 @LibEntry{math.abs (x)|
 
@@ -6979,8 +6981,7 @@ returns the arc tangent of @id{y}.
 
 @LibEntry{math.ceil (x)|
 
-Returns a float with the smaller
-integral value larger than or equal to @id{x}.
+Returns the smaller integral value larger than or equal to @id{x}.
 
 }
 
@@ -6999,8 +7000,7 @@ Converts the angle @id{x} from radians to degrees.
 
 @LibEntry{math.floor (x)|
 
-Returns a float with the largest
-integral value smaller than or equal to @id{x}.
+Returns the largest integral value smaller than or equal to @id{x}.
 
 }
 
@@ -7019,14 +7019,6 @@ a value larger than or equal to any other numerical value.
 
 }
 
-
-@LibEntry{math.ifloor (x)|
-
-Returns the largest integer smaller than or equal to @id{x}.
-If the value does not fit in an integer,
-returns @nil.
-
-}
 
 @LibEntry{math.log (x [, base])|
 
@@ -7062,8 +7054,8 @@ An integer with the minimum value for an integer.
 
 @LibEntry{math.modf (x)|
 
-Returns two floats,
-the integral part of @id{x} and the fractional part of @id{x}.
+Returns the integral part of @id{x} and the fractional part of @id{x}.
+Its second result is always a float.
 
 }
 
@@ -7336,11 +7328,14 @@ The available formats are
 @description{
 
 @item{@St{n}|
-reads a number and returns it as a float.
-If the input has only a prefix of a valid number
-(e.g., @St{0x} or @St{3.4e-}),
-this format can read the entire prefix
-even when returning @nil.
+reads a numeral and returns it as a float or an integer,
+following the lexical conventions of Lua.
+(The numeral may have leading spaces and a sign.)
+This format always reads the longest input sequence that
+is a valid prefix for a number;
+if that prefix does not form a valid number
+(e.g., an empty string, @St{0x}, or @St{3.4e-}),
+it is discarded and the function returns @nil.
 }
 
 @item{@St{i}|
@@ -7952,7 +7947,7 @@ when the standard input (@id{stdin}) is a terminal,
 and as @T{lua -} otherwise.
 
 When called without option @T{-E}, 
-the interpreter checks for an environment variable @defid{LUA_INIT_5_2}
+the interpreter checks for an environment variable @defid{LUA_INIT_5_3}
 (or @defid{LUA_INIT} if it is not defined)
 before running any argument.
 If the variable content has the format @T{@At@rep{filename}},
@@ -7976,33 +7971,41 @@ will first set @id{a} to 1, then print the value of @id{a},
 and finally run the file @id{script.lua} with no arguments.
 (Here @T{$} is the shell prompt. Your prompt may be different.)
 
-Before starting to run the script,
-@id{lua} collects all arguments in the command line
+Before running any code,
+@id{lua} collects all command-line arguments
 in a global table called @id{arg}.
-The script name is stored at index 0,
+The script name goes to index 0,
 the first argument after the script name goes to index 1,
 and so on.
 Any arguments before the script name
-(that is, the interpreter name plus the options)
+(that is, the interpreter name plus its options)
 go to negative indices.
 For instance, in the call
 @verbatim{
 $ lua -la b.lua t1 t2
 }
-the interpreter first runs the file @id{a.lua},
-then creates a table
+the table is like this:
 @verbatim{
 arg = { [-2] = "lua", [-1] = "-la",
         [0] = "b.lua",
         [1] = "t1", [2] = "t2" }
 }
-and finally runs the file @id{b.lua}.
-The script is called with @T{arg[1]}, @T{arg[2]}, @ldots
-as arguments;
-it can also access these arguments with the vararg expression @Char{...}.
+If there is no script in the call,
+the interpreter name goes to index 0,
+followed by the other arguments.
+For instance, the call
+@verbatim{
+$ lua -e "print(arg[1])"
+}
+will print @St{-e}.
 
 In interactive mode,
-if you write an incomplete statement,
+Lua repeatedly prompts and waits for a line.
+After readling a line,
+Lua first try to interpret the line as an expression.
+If it succeeds, it prints its value.
+Otherwise, it interprets the line as a statement.
+If you write an incomplete statement,
 the interpreter waits for its completion
 by issuing a different prompt.
 
@@ -8062,6 +8065,10 @@ different Lua versions.
 Always recompile clients of the Lua API when
 using a new version.
 
+Similarly, Lua versions can always change the internal representation
+of precompiled chunks;
+precompiled chunks are never compatible between different Lua verions.
+
 The standard paths in the official distribution may
 change between versions.
 
@@ -8093,8 +8100,8 @@ can sometimes have a big impact on performance.
 }
 
 @item{
-The conversion of a float to a string now adds a @T{.0} suffix if the
-number has an integral value.
+The conversion of a float to a string now adds a @T{.0} suffix
+to the result if it looks like an integer.
 (For instance, the float 2.0 will be printed as @T{2.0},
 not as @T{2}.)
 You should always use an explicit format
@@ -8151,7 +8158,8 @@ the best choice is to use an external library.
 @itemize{
 
 @item{
-No changes (yet).
+Function @Lid{lua_dump} has an extra parameter, @id{strip}.
+Use 0 as the value of this parameter to get the old behavior.
 }
 
 }
