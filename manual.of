@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.118 2014/05/14 16:16:27 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.119 2014/06/09 19:51:31 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -649,12 +649,12 @@ However, if the finalizer stores the object in some global place
 then there is a permanent resurrection.
 Moreover, if the finalizer marks a finalizing object for finalization again,
 its finalizer will be called again in the next cycle where the
-object is unreacheable.
+object is unreachable.
 In any case,
 the object memory is freed only in the GC cycle where
-the object is unreacheable and not marked for finalization.
+the object is unreachable and not marked for finalization.
 
-When you close a state @see{lua_close},
+When you close a state @seeF{lua_close},
 Lua calls the finalizers of all objects marked for finalization,
 following the reverse order that they were marked.
 If any finalizer marks objects for collection during that phase,
@@ -2160,7 +2160,7 @@ so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
 
 When you call a Lua function
-without a fixed number of results @see{lua_call},
+without a fixed number of results @seeF{lua_call},
 Lua ensures that the stack has enough size for all results,
 but it does not ensure any extra space.
 So, before pushing anything in the stack after such a call
@@ -2317,7 +2317,7 @@ Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
 @sect2{continuations|@title{Handling Yields in C}
 
 Internally, Lua uses the C @id{longjmp} facility to yield a coroutine.
-Therefore, if a function @id{foo} calls an API function
+Therefore, if a C function @id{foo} calls an API function
 and this API function yields
 (directly or indirectly by calling another function that yields),
 Lua cannot return to @id{foo} any more,
@@ -2352,6 +2352,56 @@ As the name implies,
 the continuation function should continue the task
 of the original function.
 
+As an illustration, consider the following function:
+@verbatim{
+int original_function (lua_State *L) {
+  ...     /* code 1 */
+  status = lua_pcall(L, n, m, h);  /* calls Lua */
+  ...     /* code 2 */
+}
+}
+Now we want to allow
+the Lua code being ran by @Lid{lua_pcall} to yield.
+First, we can rewrite our function like here:
+@verbatim{
+int k (lua_State *L, int status, int ctx) {
+  ...  /* code 2 */
+}
+
+int original_function (lua_State *L) {
+  ...     /* code 1 */
+  return k(L, lua_pcall(L, n, m, h), ctx);
+}
+}
+In the above code,
+the new function @id{k} is a @emph{continuation function},
+which should do all that the original function was doing after
+calling @Lid{lua_pcall}.
+Now, we must inform Lua that it must call @id{k} if the Lua code
+begin running by @Lid{lua_pcall} gets interrupted in some way
+(errors or yielding),
+so we rewrite the code as here:
+@verbatim{
+int original_function (lua_State *L) {
+  ...     /* code 1 */
+  return k(L, lua_pcallk(L, n, m, h, ctx2, k), ctx1);
+}
+}
+
+Besides the Lua state,
+the continuation function has two other parameters:
+the final status of the call plus the context value (@id{ctx}) that
+was passed originally to @Lid{lua_pcallk}.
+(Lua does not use this context value;
+it only passes this value from the original function to the
+continuation function.)
+For @Lid{lua_pcallk},
+the status is the same value that would be returned by @Lid{lua_pcallk},
+except that it is @Lid{LUA_YIELD} when being executed after an yield
+(instead of @Lid{LUA_OK}).
+For @Lid{lua_yieldk} and @Lid{lua_callk},
+the status is always @Lid{LUA_YIELD} when Lua calls the continuation.
+
 Lua treats the continuation function as if it were the original function.
 The continuation function receives the same Lua stack
 from the original function,
@@ -2362,9 +2412,6 @@ removed from the stack and replaced by the results from the call.)
 It also has the same upvalues.
 Whatever it returns is handled by Lua as if it were the return
 of the original function.
-
-The only difference in the Lua state between the original function
-and its continuation is the result of a call to @Lid{lua_getctx}.
 
 }
 
@@ -2560,7 +2607,7 @@ This is considered good programming practice.
 
 @APIEntry{
 void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
-                lua_CFunction k);|
+                lua_KFunction k);|
 @apii{nargs + 1,nresults,e}
 
 This function behaves exactly like @Lid{lua_call},
@@ -2808,34 +2855,6 @@ opaque pointer passed to @Lid{lua_newstate}.
 
 }
 
-@APIEntry{int lua_getctx (lua_State *L, int *ctx);|
-@apii{0,0,-}
-
-This function is called by a continuation function @see{continuations}
-to retrieve the status of the thread and a context information.
-
-When called in the original function,
-@Lid{lua_getctx} always returns @Lid{LUA_OK}
-and does not change the value of its argument @id{ctx}.
-When called inside a continuation function,
-@Lid{lua_getctx} returns @Lid{LUA_YIELD} and sets
-the value of @id{ctx} to be the @x{context information}
-(the value passed as the @id{ctx} argument
-to the callee together with the continuation function).
-
-When the callee is @Lid{lua_pcallk},
-Lua may also call its continuation function
-to handle errors during the call.
-That is, upon an error in the function called by @Lid{lua_pcallk},
-Lua may not return to the original function
-but instead may call the continuation function.
-In that case, a call to @Lid{lua_getctx} will return the error code
-(the value that would be returned by @Lid{lua_pcallk});
-the value of @id{ctx} will be set to the context information,
-as in the case of a yield.
-
-}
-
 @APIEntry{int lua_getfield (lua_State *L, int index, const char *k);|
 @apii{0,1,e}
 
@@ -3043,6 +3062,12 @@ and @N{0 otherwise}.
 
 }
 
+@APIEntry{typedef int (*lua_KFunction) (lua_State *L, int status, int ctx);|
+
+Type for continuation functions @see{continuations}.
+
+}
+
 @APIEntry{void lua_len (lua_State *L, int index);|
 @apii{0,1,e}
 
@@ -3200,6 +3225,22 @@ but that can be changed in @id{luaconf.h} to a single float.
 
 }
 
+@APIEntry{int lua_numtointeger (lua_Number n, lua_Integer *p);|
+
+Converts a Lua float to a Lua integer.
+This macro assumes that @id{n} has an integral value.
+If that value is within the range of Lua integers,
+it is converted to an integer and assigned to @T{*p}.
+The macro results in a boolean indicating whether the
+conversion was successful.
+(Note that this range test can be tricky to do
+correctly without this macro,
+due to roundings.)
+
+This macro may evaluate its arguments more than once.
+
+}
+
 @APIEntry{int lua_pcall (lua_State *L, int nargs, int nresults, int msgh);|
 @apii{nargs + 1,nresults|1,-}
 
@@ -3269,7 +3310,7 @@ int lua_pcallk (lua_State *L,
                 int nresults,
                 int errfunc,
                 int ctx,
-                lua_CFunction k);|
+                lua_KFunction k);|
 @apii{nargs + 1,nresults|1,-}
 
 This function behaves exactly like @Lid{lua_pcall},
@@ -4056,7 +4097,7 @@ the function calling @id{lua_yield}.
 
 
 @APIEntry{
-int lua_yieldk (lua_State *L, int nresults, int ctx, lua_CFunction k);|
+int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k);|
 @apii{?,?,-}
 
 Yields a coroutine.
@@ -4064,24 +4105,24 @@ Yields a coroutine.
 This function should only be called as the
 return expression of a @N{C function}, as follows:
 @verbatim{
-return lua_yieldk (L, n, i, k);
+return lua_yieldk (L, n, ctx, k);
 }
 When a @N{C function} calls @Lid{lua_yieldk} in that way,
 the running coroutine suspends its execution,
 and the call to @Lid{lua_resume} that started this coroutine returns.
 The parameter @id{nresults} is the number of values from the stack
-that are passed as results to @Lid{lua_resume}.
+that will be passed as results to @Lid{lua_resume}.
 
 When the coroutine is resumed again,
 Lua calls the given @x{continuation function} @id{k} to continue
 the execution of the C function that yielded @see{continuations}.
 This continuation function receives the same stack
 from the previous function,
-with the results removed and
+with the @id{n} results removed and
 replaced by the arguments passed to @Lid{lua_resume}.
 Moreover,
-the continuation function may access the value @id{ctx}
-by calling @Lid{lua_getctx}.
+the continuation function receives the value @id{ctx}
+that was passed to @Lid{lua_yieldk}.
 
 }
 
@@ -4608,7 +4649,7 @@ void luaL_argcheck (lua_State *L,
 @apii{0,0,v}
 
 Checks whether @id{cond} is true.
-If it is not, raises an error with a standard message @see{luaL_argerror}.
+If it is not, raises an error with a standard message @seeF{luaL_argerror}.
 
 }
 
@@ -5070,7 +5111,7 @@ Creates a new table with a size optimized
 to store all entries in the array @id{l}
 (but does not actually store them).
 It is intended to be used in conjunction with @Lid{luaL_setfuncs}
-@see{luaL_newlib}.
+@seeF{luaL_newlib}.
 
 It is implemented as a macro.
 The array @id{l} must be the actual array,
@@ -5337,7 +5378,7 @@ A file handle is implemented as a full userdata,
 with a metatable called @id{LUA_FILEHANDLE}.
 @id{LUA_FILEHANDLE} is a macro with the actual metatable's name.
 The metatable is created by the I/O library
-@see{luaL_newmetatable}.
+@seeF{luaL_newmetatable}.
 
 This userdata must start with the structure @id{luaL_Stream};
 it can contain other data after this initial structure.
@@ -6016,7 +6057,7 @@ path stored in @Lid{package.path}.
 If that also fails, it searches for a @N{C loader} using the
 path stored in @Lid{package.cpath}.
 If that also fails,
-it tries an @emph{all-in-one} loader @see{pdf-package.searchers}.
+it tries an @emph{all-in-one} loader @seeF{package.searchers}.
 
 Once a loader is found,
 @id{require} calls the loader with two arguments:
@@ -7015,10 +7056,17 @@ that rounds the quotient towards zero. (integer/float)
 @LibEntry{math.huge|
 
 The float value @idx{HUGE_VAL},
-a value larger than or equal to any other numerical value.
+a value larger than any other numerical value.
 
 }
 
+@LibEntry{math.ifloor (x)|
+
+Returns the largest integer smaller than or equal to @id{x}.
+If the value does not fit in an integer,
+returns @nil.
+
+}
 
 @LibEntry{math.log (x [, base])|
 
@@ -8001,7 +8049,7 @@ will print @St{-e}.
 
 In interactive mode,
 Lua repeatedly prompts and waits for a line.
-After readling a line,
+After reading a line,
 Lua first try to interpret the line as an expression.
 If it succeeds, it prints its value.
 Otherwise, it interprets the line as a statement.
@@ -8020,7 +8068,7 @@ the interpreter does not report the error.
 
 When finishing normally,
 the interpreter closes its main Lua state
-@see{lua_close}.
+@seeF{lua_close}.
 The script can avoid this step by
 calling @Lid{os.exit} to terminate.
 
@@ -8067,7 +8115,7 @@ using a new version.
 
 Similarly, Lua versions can always change the internal representation
 of precompiled chunks;
-precompiled chunks are never compatible between different Lua verions.
+precompiled chunks are never compatible between different Lua versions.
 
 The standard paths in the official distribution may
 change between versions.
@@ -8088,15 +8136,15 @@ You can fix these differences by forcing a number to be a float
 in particular writing constants with an ending @T{.0}
 or using @T{x = x + 0.0} to convert a variable.
 (This recommendation is only for a quick fix
-for an occasional incompatibility,
-not as a general guideline for good programming.
+for an occasional incompatibility;
+it is not a general guideline for good programming.
 For good programming,
 use floats where you need floats
 and integers where you need integers.)
 
 Although not formally an incompatibility,
 the proper differentiation between floats and integers
-can sometimes have a big impact on performance.
+have an impact on performance.
 }
 
 @item{
@@ -8108,7 +8156,7 @@ You should always use an explicit format
 when you need a specific format for numbers.
 
 (Formally this is not an incompatibility,
-because Lua never specified how numbers are formatted as strings,
+because Lua does not specify how numbers are formatted as strings,
 but some programs assumed a specific format.)
 }
 
@@ -8128,7 +8176,7 @@ The generational mode for the garbage collector was removed.
 The @id{bit32} library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
-(Just keep in mind that @id{bit32} operates on 32-bit integers,
+(Keep in mind that @id{bit32} operates on 32-bit integers,
 while the bitwise operators in Standard Lua operate on 64-bit integers.)
 }
 
@@ -8156,6 +8204,13 @@ the best choice is to use an external library.
 @sect2{@title{Changes in the API}
 
 @itemize{
+
+@item{
+Continuation functions now receive as parameters what they needed
+to get through @id{lua_getctx},
+so @id{lua_getctx} has been removed.
+Adapt your code accordingly.
+}
 
 @item{
 Function @Lid{lua_dump} has an extra parameter, @id{strip}.
