@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.120 2014/06/17 22:35:02 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.121 2014/06/18 19:12:23 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -71,7 +71,7 @@ it usually represents the absence of a useful value.
 Both @nil and @false make a condition false;
 any other value makes it true.
 @emph{Number} represents both
-integral numbers and real (floating-point) numbers.
+integer numbers and real (floating-point) numbers.
 @emph{String} represents immutable sequences of bytes.
 @index{eight-bit clean}
 Lua is 8-bit clean:
@@ -90,7 +90,7 @@ Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits both for integers and floats 
-(what is called @def{Small Lua}) is particularly attractive
+(called @def{Small Lua}) is particularly attractive
 for small machines.
 
 Lua can call (and manipulate) functions written in Lua and
@@ -99,7 +99,7 @@ functions written in C
 
 The type @emph{userdata} is provided to allow arbitrary @N{C data} to
 be stored in Lua variables.
-A userdata value is a pointer to a block of raw memory.
+A userdata value represents a block of raw memory.
 There are two kinds of userdata:
 @x{full userdata}, where the block of memory is managed by Lua,
 and @x{light userdata}, where the block of memory is managed by the host.
@@ -116,7 +116,7 @@ The type @def{thread} represents independent threads of execution
 and it is used to implement coroutines @see{coroutine}.
 Do not confuse Lua threads with operating-system threads.
 Lua supports coroutines on all systems,
-even those that do not support threads.
+even those that do not support threads natively.
 
 The type @emph{table} implements @x{associative arrays},
 that is, @x{arrays} that can be indexed not only with numbers,
@@ -1656,7 +1656,7 @@ Otherwise, the values of the operands are compared.
 Strings are compared in the obvious way.
 Numbers follow the usual rule for binary operations:
 if both operands are integers,
-the are compared as integers;
+they are compared as integers;
 otherwise, they are converted to floats
 and compared as such.
 
@@ -2883,8 +2883,9 @@ Returns the type of that value.
 @APIEntry{int lua_getmetatable (lua_State *L, int index);|
 @apii{0,0|1,-}
 
-Pushes onto the stack the metatable of the value at the given index.
-If the value does not have a metatable,
+If the value at the given index has a metatable,
+the function pushes that metatable onto the stack and @N{returns 1}.
+Otherwise,
 the function @N{returns 0} and pushes nothing on the stack.
 
 }
@@ -3506,13 +3507,6 @@ Returns 1 if this thread is the @x{main thread} of its state.
 
 }
 
-@APIEntry{void lua_pushunsigned (lua_State *L, lua_Unsigned n);|
-@apii{0,1,-}
-
-Pushes an integer with value @id{n} onto the stack.
-
-}
-
 @APIEntry{void lua_pushvalue (lua_State *L, int index);|
 @apii{0,1,-}
 
@@ -3961,36 +3955,6 @@ otherwise, the function returns @id{NULL}.
 
 }
 
-@APIEntry{lua_Unsigned lua_tounsigned (lua_State *L, int index);|
-@apii{0,0,-}
-
-Equivalent to @Lid{lua_tounsignedx} with @id{isnum} equal to @id{NULL}.
-
-}
-
-@APIEntry{lua_Unsigned lua_tounsignedx (lua_State *L, int index, int *isnum);|
-@apii{0,0,-}
-
-Converts the Lua value at the given index
-to the unsigned integral type @Lid{lua_Unsigned}.
-The Lua value must be an integer,
-or a float,
-or a string convertible to a number
-@see{coercion};
-otherwise, @id{lua_tounsignedx} @N{returns 0}.
-
-If the number is not an integer,
-it is rounded towards minus infinite (floor).
-If the result is outside the range of representable values,
-it is normalized to the module of its division by
-one more than the maximum representable value.
-
-If @id{isnum} is not @id{NULL},
-its referent is assigned a boolean value that
-indicates whether the operation succeeded.
-
-}
-
 @APIEntry{void *lua_touserdata (lua_State *L, int index);|
 @apii{0,0,-}
 
@@ -4089,7 +4053,7 @@ and pushes them onto the stack @id{to}.
 }
 
 @APIEntry{int lua_yield (lua_State *L, int nresults);|
-@apii{?,?,-}
+@apii{?,?,e}
 
 This function is equivalent to @Lid{lua_yieldk},
 but it has no continuation @see{continuations}.
@@ -4102,7 +4066,7 @@ the function calling @id{lua_yield}.
 
 @APIEntry{
 int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k);|
-@apii{?,?,-}
+@apii{?,?,e}
 
 Yields a coroutine.
 
@@ -4882,14 +4846,6 @@ returns the userdata address @seeC{lua_touserdata}.
 
 }
 
-@APIEntry{lua_Unsigned luaL_checkunsigned (lua_State *L, int arg);|
-@apii{0,0,v}
-
-Checks whether the function argument @id{arg} is a number
-and returns this number converted to a @Lid{lua_Unsigned}.
-
-}
-
 @APIEntry{void luaL_checkversion (lua_State *L);|
 @apii{0,0,-}
 
@@ -5242,20 +5198,6 @@ Otherwise, raises an error.
 
 }
 
-@APIEntry{
-lua_Unsigned luaL_optunsigned (lua_State *L,
-                               int arg,
-                               lua_Unsigned u);|
-@apii{0,0,v}
-
-If the function argument @id{arg} is a number,
-returns this number converted to a @Lid{lua_Unsigned}.
-If this argument is absent or is @nil,
-returns @id{u}.
-Otherwise, raises an error.
-
-}
-
 @APIEntry{char *luaL_prepbuffer (luaL_Buffer *B);|
 @apii{?,?,e}
 
@@ -5333,14 +5275,15 @@ void luaL_requiref (lua_State *L, const char *modname,
                     lua_CFunction openf, int glb);|
 @apii{0,1,e}
 
-Calls function @id{openf} with string @id{modname} as an argument
+If @id{modname} is not already present in @Lid{package.loaded},
+calls function @id{openf} with string @id{modname} as an argument
 and sets the call result in @T{package.loaded[modname]},
 as if that function has been called through @Lid{require}.
 
 If @id{glb} is true,
-also stores the result into global @id{modname}.
+also stores the module into global @id{modname}.
 
-Leaves a copy of that result on the stack.
+Leaves a copy of the module on the stack.
 
 }
 
@@ -6348,7 +6291,6 @@ about the function
 (local variable names, lines, etc.).
 
 }
-}
 
 @LibEntry{string.dumpfloat (n [, size [, endianness]])|
 Returns a string with the machine representation of float @id{n},
@@ -6364,6 +6306,7 @@ the default is the native endianness.
 This function may not work correctly in architectures
 with @x{mixed endian}.
 
+}
 
 @LibEntry{string.dumpint (n [, size [, endianness]])|
 Returns a string with the two-complement representation of integer @id{n},
@@ -6385,7 +6328,7 @@ that do not use a two-complement representation for integers.
 @LibEntry{string.find (s, pattern [, init [, plain]])|
 
 Looks for the first match of
-@id{pattern} in the string @id{s}.
+@id{pattern} @see{pm} in the string @id{s}.
 If it finds a match, then @id{find} returns the indices @N{of @T{s}}
 where this occurrence starts and ends;
 otherwise, it returns @nil.
@@ -6444,7 +6387,8 @@ it is converted to one following the same rules of @Lid{tostring}.
 @LibEntry{string.gmatch (s, pattern)|
 Returns an iterator function that,
 each time it is called,
-returns the next captures from @id{pattern} over the string @id{s}.
+returns the next captures from @id{pattern} @see{pm}
+over the string @id{s}.
 If @id{pattern} specifies no captures,
 then the whole match is produced in each call.
 
@@ -6475,7 +6419,7 @@ work as an anchor, as this would prevent the iteration.
 @LibEntry{string.gsub (s, pattern, repl [, n])|
 Returns a copy of @id{s}
 in which all (or the first @id{n}, if given)
-occurrences of the @id{pattern} have been
+occurrences of the @id{pattern} @see{pm} have been
 replaced by a replacement string specified by @id{repl},
 which can be a string, a table, or a function.
 @id{gsub} also returns, as its second value,
@@ -6552,7 +6496,7 @@ The definition of what an uppercase letter is depends on the current locale.
 
 @LibEntry{string.match (s, pattern [, init])|
 Looks for the first @emph{match} of
-@id{pattern} in the string @id{s}.
+@id{pattern} @see{pm} in the string @id{s}.
 If it finds one, then @id{match} returns
 the captures from the pattern;
 otherwise it returns @nil.
@@ -6622,7 +6566,18 @@ lowercase letters changed to uppercase.
 All other characters are left unchanged.
 The definition of what a lowercase letter is depends on the current locale.
 
+}
+
 @sect3{pm| @title{Patterns}
+
+Patterns in Lua are described by regular strings,
+which are interpreted as patterns by the pattern-matching functions
+@Lid{string.find},
+@Lid{string.gmatch},
+@Lid{string.gsub},
+and @Lid{string.match}.
+This section describes the syntax and the meaning
+(that is, what they match) of these strings.
 
 @sect4{@title{Character Class:}
 A @def{character class} is used to represent a set of characters.
@@ -6799,8 +6754,6 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 
 }
 
-}
-
 @sect2{utf8| @title{UTF-8 Support}
 
 This library provides basic support for @x{UTF-8} encoding.
@@ -6896,9 +6849,6 @@ the table must be a proper sequence
 or have a @idx{__len} metamethod @see{len-op}.
 All functions ignore non-numeric keys
 in tables given as arguments.
-
-For performance reasons,
-all table accesses (get/set) performed by these functions are raw.
 
 
 @LibEntry{table.concat (list [, sep [, i [, j]]])|
@@ -8185,6 +8135,12 @@ while the bitwise operators in Standard Lua operate on 64-bit integers.)
 }
 
 @item{
+The Table library now respects metamethods
+for setting and getting elements.
+}
+
+
+@item{
 Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
 For compatibility, Lua will continue to ignore this character.
 }
@@ -8219,6 +8175,13 @@ Adapt your code accordingly.
 @item{
 Function @Lid{lua_dump} has an extra parameter, @id{strip}.
 Use 0 as the value of this parameter to get the old behavior.
+}
+
+@item{
+Functions to inject/project unsigned integers
+(@id{lua_pushunsigned}, @id{lua_tounsigned}, etc.)
+were deprecated.
+Use their signed equivalents with a type cast.
 }
 
 }
