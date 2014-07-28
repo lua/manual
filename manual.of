@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.121 2014/06/18 19:12:23 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.122 2014/07/16 14:56:22 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1564,8 +1564,9 @@ that rounds the quotient towards minus infinite (floor).
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
 according to the usual rules of two-complement arithmetic.
-(In other words, they return the correct result modulo @M{2@sp{64}}.)
-
+(In other words,
+they return the unique representable integer
+that is equal modulo @M{2@sp{64}} to the mathematical result.)
 }
 
 @sect3{bitwise| @title{Bitwise Operators}
@@ -1588,7 +1589,7 @@ Both right and left shifts fill the vacant bits with zeros.
 Negative displacements shift to the other direction;
 displacements with absolute values equal to or higher than
 the number of bits in an integer
-result in zero (all bits are shifted out).
+result in zero (as all bits are shifted out).
 
 }
 
@@ -1613,14 +1614,15 @@ In a conversion from integer to float,
 if the integer value has an exact representation as a float,
 that is the result.
 Otherwise,
-the conversion gets the nearest higher or lower representable value.
+the conversion gets the nearest higher or
+the nearest lower representable value.
 This kind of conversion never fails.
 
 The conversion from float to integer
-first takes the floor of the float number.
-If that value can be represented as an integer
-(that is, it is in the range of integer representation),
-that is the result.
+checks whether the float has an exact representation as an integer
+(that is, the float has an integral value and
+it is in the range of integer representation).
+If it does, that representation is the result.
 Otherwise, the conversion fails.
 
 The conversion from strings to numbers goes as follows:
@@ -1673,7 +1675,7 @@ Closures with any detectable difference
 You can change the way that Lua compares tables and userdata
 by using the @Q{eq} metamethod @see{metatable}.
 
-Equality comparisons never convert strings to numbers
+Equality comparisons do not convert strings to numbers
 or vice versa.
 Thus, @T{"0"==0} evaluates to @false,
 and @T{t[0]} and @T{t["0"]} denote different
@@ -1810,7 +1812,7 @@ with key @id{exp1} and value @id{exp2}.
 A field of the form @T{name = exp} is equivalent to
 @T{["name"] = exp}.
 Finally, fields of the form @id{exp} are equivalent to
-@T{[i] = exp}, where @id{i} are consecutive numerical integers,
+@T{[i] = exp}, where @id{i} are consecutive integers
 starting with 1.
 Fields in the other formats do not affect this counting.
 For example,
@@ -2364,7 +2366,7 @@ Now we want to allow
 the Lua code being ran by @Lid{lua_pcall} to yield.
 First, we can rewrite our function like here:
 @verbatim{
-int k (lua_State *L, int status, int ctx) {
+int k (lua_State *L, int status, lua_Ctx ctx) {
   ...  /* code 2 */
 }
 
@@ -2406,6 +2408,12 @@ the status is always @Lid{LUA_YIELD} when Lua calls the continuation.
 (For these two functions,
 Lua will not call the continuation in case of errors,
 because they do not handle errors.)
+Similarly, when using @Lid{lua_callk},
+you should call the continuation function
+with @Lid{LUA_OK} as the status.
+(For @Lid{lua_yieldk}, there is not much point in calling
+directly the continuation function,
+because @Lid{lua_yieldk} usually does not return.)
 
 Lua treats the continuation function as if it were the original function.
 The continuation function receives the same Lua stack
@@ -2611,7 +2619,7 @@ This is considered good programming practice.
 }
 
 @APIEntry{
-void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
+void lua_callk (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults,e}
 
@@ -2732,7 +2740,7 @@ Concatenation is performed following the usual semantics of Lua
 @APIEntry{void lua_copy (lua_State *L, int fromidx, int toidx);|
 @apii{0,0,-}
 
-Moves the element at index @id{fromidx}
+Copies the element at index @id{fromidx}
 into the valid index @id{toidx}
 without shifting any element
 (therefore replacing the value at that position).
@@ -2751,6 +2759,17 @@ Lua may use these hints to preallocate memory for the new table.
 This pre-allocation is useful for performance when you know in advance
 how many elements the table will have.
 Otherwise you can use the function @Lid{lua_newtable}.
+
+}
+
+@APIEntry{typedef @ldots lua_Ctx;|
+
+The type for continuation-function contexts.
+It must be a numerical type.
+This type is defined as @id{intptr_t}
+when @id{intptr_t} is available,
+so that it can store pointers too.
+Otherwise, it is defined as @id{ptrdiff_t}.
 
 }
 
@@ -2872,6 +2891,23 @@ Returns the type of the pushed value.
 
 }
 
+@APIEntry{void *lua_getextraspace (lua_State *L);|
+@apii{0,0,-}
+
+Returns a pointer to a raw memory area associated with the
+given Lua state.
+The application can use this area for any purpose;
+Lua does not use it for anything.
+
+Each new thread has this area initialized with a copy
+of the area of the @x{main thread}.
+
+By default, this area has the size of a pointer to void,
+but you can recompile Lua with a different size for this area.
+(See @id{LUA_EXTRASPACE} in @id{luaconf.h}.)
+
+}
+
 @APIEntry{int lua_getglobal (lua_State *L, const char *name);|
 @apii{0,1,e}
 
@@ -2942,9 +2978,9 @@ The type of integers in Lua.
 
 By default this type is @id{long long}
 (usually a 64-bit two-complement integer),
-but that can be changed in @id{luaconf.h}
-to @id{long} or @id{int}
-(usually a 32-bit two-complement integer).
+but that can be changed to @id{long} or @id{int},
+usually a 32-bit two-complement integer.
+(See @id{LUA_INT} in @id{luaconf.h}.)
 
 Lua also defines the constants
 @defid{LUA_MININTEGER} and @defid{LUA_MAXINTEGER},
@@ -3068,7 +3104,7 @@ and @N{0 otherwise}.
 
 }
 
-@APIEntry{typedef int (*lua_KFunction) (lua_State *L, int status, int ctx);|
+@APIEntry{typedef int (*lua_KFunction) (lua_State *L, int status, lua_Ctx ctx);|
 
 Type for continuation functions @see{continuations}.
 
@@ -3227,7 +3263,8 @@ the table during its traversal.
 The type of floats in Lua.
 
 By default this type is double,
-but that can be changed in @id{luaconf.h} to a single float.
+but that can be changed to a single float.
+(See @id{LUA_REAL} in @id{luaconf.h}.)
 
 }
 
@@ -3314,7 +3351,7 @@ int lua_pcallk (lua_State *L,
                 int nargs,
                 int nresults,
                 int errfunc,
-                int ctx,
+                lua_Ctx ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults|1,-}
 
@@ -3896,9 +3933,10 @@ to a string inside the Lua state.
 This string always has a zero (@Char{\0})
 after its last character (as @N{in C}),
 but can contain other zeros in its body.
+
 Because Lua has garbage collection,
 there is no guarantee that the pointer returned by @id{lua_tolstring}
-will be valid after the corresponding value is removed from the stack.
+will be valid after the corresponding Lua value is removed from the stack.
 
 }
 
@@ -4058,24 +4096,19 @@ and pushes them onto the stack @id{to}.
 This function is equivalent to @Lid{lua_yieldk},
 but it has no continuation @see{continuations}.
 Therefore, when the thread resumes,
-it returns to the function that called
+it continues the function that called
 the function calling @id{lua_yield}.
 
 }
 
 
 @APIEntry{
-int lua_yieldk (lua_State *L, int nresults, int ctx, lua_KFunction k);|
+int lua_yieldk (lua_State *L, int nresults, lua_Ctx ctx, lua_KFunction k);|
 @apii{?,?,e}
 
-Yields a coroutine.
+Yields a coroutine (thread).
 
-This function should only be called as the
-return expression of a @N{C function}, as follows:
-@verbatim{
-return lua_yieldk (L, n, ctx, k);
-}
-When a @N{C function} calls @Lid{lua_yieldk} in that way,
+When a @N{C function} calls @Lid{lua_yieldk},
 the running coroutine suspends its execution,
 and the call to @Lid{lua_resume} that started this coroutine returns.
 The parameter @id{nresults} is the number of values from the stack
@@ -4091,6 +4124,25 @@ replaced by the arguments passed to @Lid{lua_resume}.
 Moreover,
 the continuation function receives the value @id{ctx}
 that was passed to @Lid{lua_yieldk}.
+
+Usually, this function does not return;
+when the coroutine eventually resumes,
+it continues executing the continuation function.
+However, there is one special case,
+which is when this function is called
+from inside a line hook @see{debugI}.
+In that case, @id{lua_yieldk} should be called with no continuation
+(probably in the form of @Lid{lua_yield}),
+and the hook should return immediately after the call.
+Lua will yield and,
+when the coroutine resumes again,
+it will continue the normal execution
+of the (Lua) function that triggered the hook.
+
+This function can raise an error if it is called from a thread
+with a pending C call with no continuation function,
+or it is called from a thread that is not running inside a resume
+(e.g., the main thread).
 
 }
 
@@ -5611,18 +5663,17 @@ Otherwise, returns the metatable of the given object.
 
 @LibEntry{ipairs (t)|
 
-If @id{t} has a metamethod @idx{__ipairs},
-calls it with @id{t} as argument and returns the first three
-results from the call.
-
-Otherwise,
-returns three values: an iterator function, the table @id{t}, and 0,
+Returns three values (an iterator function, the table @id{t}, and 0)
 so that the construction
 @verbatim{
 for i,v in ipairs(t) do @rep{body} end
 }
-will iterate over the pairs (@T{1,t[1]}), (@T{2,t[2]}), @ldots,
-up to the first integer key absent from the table.
+will iterate over the pairs
+(@T{1,t[1]}), (@T{2,t[2]}), @ldots, (@T{#t,t[#t]}).
+
+The table should be a proper sequence
+or have a @idx{__len} metamethod @see{len-op}.
+
 
 }
 
@@ -6179,9 +6230,9 @@ The name of this @N{C function} is the string @St{luaopen_}
 concatenated with a copy of the module name where each dot
 is replaced by an underscore.
 Moreover, if the module name has a hyphen,
-its prefix up to (and including) the first hyphen is removed.
-For instance, if the module name is @id{a.v1-b.c},
-the function name will be @id{luaopen_b_c}.
+its sufix after (and including) the first hyphen is removed.
+For instance, if the module name is @id{a.b.c-v2.1},
+the function name will be @id{luaopen_a_b_c}.
 
 The fourth searcher tries an @def{all-in-one loader}.
 It searches the @N{C path} for a library for
@@ -6862,6 +6913,18 @@ If @id{i} is greater than @id{j}, returns the empty string.
 
 }
 
+@LibEntry{table.copy (a1, f, e, [a2,] t)|
+
+Copies elements from table @id{a1} to table @id{a2}.
+This function performs the equivalent to the following
+multiple assignment:
+@T{a2[t],@Cdots = a1[f],@Cdots,a1[e]}.
+The default for @id{a2} is @id{a1}.
+The destination range can overlap with the source range.
+Index @id{f} must be positive.
+
+}
+
 @LibEntry{table.insert (list, [pos,] value)|
 
 Inserts element @id{value} at position @id{pos} in @id{list},
@@ -7014,14 +7077,6 @@ a value larger than any other numerical value.
 
 }
 
-@LibEntry{math.ifloor (x)|
-
-Returns the largest integer smaller than or equal to @id{x}.
-If the value does not fit in an integer,
-returns @nil.
-
-}
-
 @LibEntry{math.log (x [, base])|
 
 Returns the logarithm of @id{x} in the given base.
@@ -7117,11 +7172,27 @@ Returns the tangent of @id{x} (assumed to be in radians).
 
 }
 
+@LibEntry{math.tointeger (x)|
+
+If the value @id{x} is convertible to an integer,
+returns that integer.
+Otherwise, returns @nil.
+
+}
+
 @LibEntry{math.type (x)|
 
 Returns @St{integer} if @id{x} is an integer,
 @St{float} if it is a float,
 or @nil if @id{x} is not a number.
+
+}
+
+@LibEntry{math.ult (m, n)|
+
+Returns a boolean,
+true if integer @id{m} is below integer @id{n} when
+they are compared as @x{unsigned integers}.
 
 }
 
@@ -7941,8 +8012,7 @@ The options are:
 @item{@T{--}| stops handling options;}
 @item{@T{-}| executes @id{stdin} as a file and stops handling options.}
 }
-After handling its options, @id{lua} runs the given @emph{script},
-passing to it the given @emph{args} as string arguments.
+After handling its options, @id{lua} runs the given @emph{script}.
 When called without arguments,
 @id{lua} behaves as @T{lua -v -i}
 when the standard input (@id{stdin}) is a terminal,
@@ -7950,7 +8020,7 @@ and as @T{lua -} otherwise.
 
 When called without option @T{-E}, 
 the interpreter checks for an environment variable @defid{LUA_INIT_5_3}
-(or @defid{LUA_INIT} if it is not defined)
+(or @defid{LUA_INIT} if the versioned name is not defined)
 before running any argument.
 If the variable content has the format @T{@At@rep{filename}},
 then @id{lua} executes the file.
@@ -8000,6 +8070,11 @@ For instance, the call
 $ lua -e "print(arg[1])"
 }
 will print @St{-e}.
+If there is a script,
+the script is called with parameters
+@T{arg[1]}, @Cdots, @T{arg[#arg]}.
+(Like all chunks in Lua,
+the script is compiled as a vararg function.)
 
 In interactive mode,
 Lua repeatedly prompts and waits for a line.
@@ -8062,14 +8137,14 @@ do not imply source-code changes in a program,
 such as the numeric values for constants
 or the implementation of functions as macros.
 Therefore,
-you should never assume that binaries are compatible between
+you should not assume that binaries are compatible between
 different Lua versions.
 Always recompile clients of the Lua API when
 using a new version.
 
 Similarly, Lua versions can always change the internal representation
 of precompiled chunks;
-precompiled chunks are never compatible between different Lua versions.
+precompiled chunks are not compatible between different Lua versions.
 
 The standard paths in the official distribution may
 change between versions.
@@ -8095,10 +8170,6 @@ it is not a general guideline for good programming.
 For good programming,
 use floats where you need floats
 and integers where you need integers.)
-
-Although not formally an incompatibility,
-the proper differentiation between floats and integers
-have an impact on performance.
 }
 
 @item{
@@ -8139,6 +8210,11 @@ The Table library now respects metamethods
 for setting and getting elements.
 }
 
+@item{
+The @Lid{ipairs} iterator now respects metamethods and
+its id{__ipairs} metamethod has been deprecated.
+}
+
 
 @item{
 Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
@@ -8151,10 +8227,21 @@ The following functions were deprecated in the mathematical library:
 @id{frexp}, and @id{ldexp}.
 You can replace @T{math.pow(x,y)} with @T{x^y};
 you can replace @id{math.atan2} with @id{math.atan},
-which now accepts two parameters;
+which now accepts one or two parameters;
 you can replace @T{math.ldexp(x,exp)} with @T{x * 2.0^exp}.
 For the other operations,
 the best choice is to use an external library.
+}
+
+@item{
+The searcher for C loaders used by @Lid{require}
+changed the way it handles versioned names.
+Now, the version should come after the module name
+(as is usual in most other tools).
+For compatibility, that searcher still tries the old format
+if if cannot find an open function according to the new style.
+(@N{Lua 5.2} already worked that way,
+but it did not document the change.)
 }
 
 }
@@ -8196,7 +8283,7 @@ Use their signed equivalents with a type cast.
 @sect1{BNF| @title{The Complete Syntax of Lua}
 
 Here is the complete syntax of Lua in extended BNF.
-(It does not describe operator precedences.)
+(For operator precedences, see @See{prec}.)
 @index{grammar}
 
 @Produc{
