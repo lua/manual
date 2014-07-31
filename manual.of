@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.123 2014/07/28 19:15:54 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.124 2014/07/31 13:27:36 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -230,7 +230,9 @@ is never updated by Lua.
 
 Because Lua is an embedded extension language,
 all Lua actions start from @N{C code} in the host program
-calling a function from the Lua library @seeC{lua_pcall}.
+calling a function from the Lua library.
+(when you use Lua standalone,
+the @id{lua} application is the host program.)
 Whenever an error occurs during
 the compilation or execution of a Lua chunk,
 control returns to the host,
