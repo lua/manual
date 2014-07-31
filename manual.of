@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.122 2014/07/16 14:56:22 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.123 2014/07/28 19:15:54 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -4035,9 +4035,6 @@ which must be one the values returned by @Lid{lua_type}.
 @APIEntry{typedef @ldots lua_Unsigned;|
 
 The unsigned version of @Lid{lua_Integer}.
-
-Lua also defines the constant @defid{LUA_MAXUNSIGNED},
-with the maximum value that fits in this type.
 
 }
 
