@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.124 2014/07/31 13:27:36 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.125 2014/07/31 13:58:08 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2368,7 +2368,7 @@ Now we want to allow
 the Lua code being ran by @Lid{lua_pcall} to yield.
 First, we can rewrite our function like here:
 @verbatim{
-int k (lua_State *L, int status, lua_Ctx ctx) {
+int k (lua_State *L, int status, lua_Kcontext ctx) {
   ...  /* code 2 */
 }
 
@@ -2621,7 +2621,7 @@ This is considered good programming practice.
 }
 
 @APIEntry{
-void lua_callk (lua_State *L, int nargs, int nresults, lua_Ctx ctx,
+void lua_callk (lua_State *L, int nargs, int nresults, lua_Kcontext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults,e}
 
@@ -2761,17 +2761,6 @@ Lua may use these hints to preallocate memory for the new table.
 This pre-allocation is useful for performance when you know in advance
 how many elements the table will have.
 Otherwise you can use the function @Lid{lua_newtable}.
-
-}
-
-@APIEntry{typedef @ldots lua_Ctx;|
-
-The type for continuation-function contexts.
-It must be a numerical type.
-This type is defined as @id{intptr_t}
-when @id{intptr_t} is available,
-so that it can store pointers too.
-Otherwise, it is defined as @id{ptrdiff_t}.
 
 }
 
@@ -3106,7 +3095,21 @@ and @N{0 otherwise}.
 
 }
 
-@APIEntry{typedef int (*lua_KFunction) (lua_State *L, int status, lua_Ctx ctx);|
+@APIEntry{typedef @ldots lua_Kcontext;|
+
+The type for continuation-function contexts.
+It must be a numerical type.
+This type is defined as @id{intptr_t}
+when @id{intptr_t} is available,
+so that it can store pointers too.
+Otherwise, it is defined as @id{ptrdiff_t}.
+
+}
+
+@APIEntry{
+typedef int (*lua_KFunction) (lua_State *L,
+                              int status,
+                              lua_Kcontext ctx);|
 
 Type for continuation functions @see{continuations}.
 
@@ -3353,7 +3356,7 @@ int lua_pcallk (lua_State *L,
                 int nargs,
                 int nresults,
                 int errfunc,
-                lua_Ctx ctx,
+                lua_Kcontext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults|1,-}
 
@@ -4102,7 +4105,10 @@ the function calling @id{lua_yield}.
 
 
 @APIEntry{
-int lua_yieldk (lua_State *L, int nresults, lua_Ctx ctx, lua_KFunction k);|
+int lua_yieldk (lua_State *L,
+                int nresults,
+                lua_Kcontext ctx,
+                lua_KFunction k);|
 @apii{?,?,e}
 
 Yields a coroutine (thread).
@@ -6229,7 +6235,7 @@ The name of this @N{C function} is the string @St{luaopen_}
 concatenated with a copy of the module name where each dot
 is replaced by an underscore.
 Moreover, if the module name has a hyphen,
-its sufix after (and including) the first hyphen is removed.
+its suffix after (and including) the first hyphen is removed.
 For instance, if the module name is @id{a.b.c-v2.1},
 the function name will be @id{luaopen_a_b_c}.
 
@@ -8211,7 +8217,7 @@ for setting and getting elements.
 
 @item{
 The @Lid{ipairs} iterator now respects metamethods and
-its id{__ipairs} metamethod has been deprecated.
+its @id{__ipairs} metamethod has been deprecated.
 }
 
 
