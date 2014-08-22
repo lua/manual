@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.125 2014/07/31 13:58:08 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.126 2014/08/01 18:53:05 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -7,14 +7,14 @@
 Lua is an extension programming language designed to support
 general procedural programming with data description
 facilities.
-It also offers good support for object-oriented programming,
+Lua also offers good support for object-oriented programming,
 functional programming, and data-driven programming.
 Lua is intended to be used as a powerful, lightweight,
 embeddable scripting language for any program that needs one.
 Lua is implemented as a library, written in @emphx{clean C},
 the common subset of @N{Standard C} and C++.
 
-Being an extension language, Lua has no notion of a @Q{main} program:
+As an extension language, Lua has no notion of a @Q{main} program:
 it only works @emph{embedded} in a host client,
 called the @emph{embedding program} or simply the @emphx{host}.
 The host program can invoke functions to execute a piece of Lua code,
@@ -77,21 +77,23 @@ integer numbers and real (floating-point) numbers.
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
 including @x{embedded zeros} (@Char{\0}).
+Lua is also enconding-agnostic;
+it makes no assumptions about the contents of a string.
 
 The type @emph{number} uses two internal representations,
 one called @def{integer} and the other called @def{float}.
 Lua has explicit rules about when each representation is used,
 but it also converts between them automatically as needed @see{coercion}.
 Therefore,
-the programmer has the option of mostly ignoring the difference
+the programmer may choose to mostly ignore the difference
 between integers and floats
-or assuming complete control over the representation of each value.
+or to assume complete control over the representation of each number.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
-The option with 32 bits both for integers and floats 
-(called @def{Small Lua}) is particularly attractive
-for small machines.
+The option with 32 bits for both integers and floats 
+(called @def{Lua 32}) is particularly attractive
+for small machines and embedded systems.
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C
@@ -101,8 +103,10 @@ The type @emph{userdata} is provided to allow arbitrary @N{C data} to
 be stored in Lua variables.
 A userdata value represents a block of raw memory.
 There are two kinds of userdata:
-@x{full userdata}, where the block of memory is managed by Lua,
-and @x{light userdata}, where the block of memory is managed by the host.
+@emphx{full userdata},
+where the block of memory is managed by Lua,
+and @emphx{light userdata},
+where the block of memory is managed by the host.
 Userdata has no predefined operations in Lua,
 except assignment and identity test.
 By using @emph{metatables},
@@ -120,16 +124,16 @@ even those that do not support threads natively.
 
 The type @emph{table} implements @x{associative arrays},
 that is, @x{arrays} that can be indexed not only with numbers,
-but with any Lua value except @nil and @x{NaN}
-(@emphx{Not a Number}, a special numeric value used to represent
-undefined or unrepresentable results, such as @T{0/0}).
+but with any Lua value except @nil and @x{NaN}.
+(@emphx{Not a Number} is a special numeric value used to represent
+undefined or unrepresentable results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
 Any key with value @nil is not considered part of the table.
 Conversely, any key that is not part of a table has
 an associated value @nil.
 
-Tables are the sole data structuring mechanism in Lua;
+Tables are the sole data-structuring mechanism in Lua;
 they can be used to represent ordinary arrays, sequences,
 symbol tables, sets, records, graphs, trees, etc.
 To represent @x{records}, Lua uses the field name as an index.
@@ -139,7 +143,7 @@ There are several convenient ways to create tables in Lua
 @see{tableconstructor}.
 
 We use the term @def{sequence} to denote a table where
-the set of all positive numeric keys is equal to @M{{1..n}}
+the set of all positive numeric keys is equal to {1..@M{n}}
 for some integer @M{n},
 which is called the @x{length} of the sequence @see{len-op}.
 
@@ -166,6 +170,10 @@ is converted to its respective integer.
 For instance, if you write @T{a[2.0] = true},
 the actual key inserted into the table will be the
 integer @T{2}.
+(On the other hand,
+2 and @St{2} are different Lua values and therefore
+denote different table entries.)
+
 
 Tables, functions, threads, and (full) userdata values are @emph{objects}:
 variables do not actually @emph{contain} these values,
@@ -185,7 +193,7 @@ As will be discussed in @refsec{variables} and @refsec{assignment},
 any reference to a global name @id{var} is syntactically translated
 to @T{_ENV.var}.
 Moreover, every chunk is compiled in the scope of
-an external local variable called @id{_ENV} @see{chunks},
+an external local variable named @id{_ENV} @see{chunks},
 so @id{_ENV} itself is never a global name in a chunk.
 
 Despite the existence of this external @id{_ENV} variable and
@@ -201,28 +209,20 @@ Any table used as the value of @id{_ENV} is called an @def{environment}.
 
 Lua keeps a distinguished environment called the @def{global environment}.
 This value is kept at a special index in the C registry @see{registry}.
-In Lua, the variable @Lid{_G} is initialized with this same value.
+In Lua, the global variable @Lid{_G} is initialized with this same value.
+(@Lid{_G} is never used internally.)
 
-When Lua compiles a chunk,
-it initializes the value of its @id{_ENV} upvalue
-with the global environment @seeF{load}.
+When Lua loads a chunk,
+the default value for its @id{_ENV} upvalue
+is the global environment @seeF{load}.
 Therefore, by default,
-global variables in Lua code refer to entries in the global environment.
+global names in Lua code refer to entries in the global environment.
 Moreover, all standard libraries are loaded in the global environment
-and several functions there operate on that environment.
+and some functions there operate on that environment.
 You can use @Lid{load} (or @Lid{loadfile})
 to load a chunk with a different environment.
 (In C, you have to load the chunk and then change the value
 of its first upvalue.)
-
-If you change the global environment in the registry
-(through C code or the debug library),
-all chunks loaded after the change will get the new environment.
-Previously loaded chunks are not affected, however,
-as each has its own reference to the environment in its @id{_ENV} variable.
-Moreover, the variable @Lid{_G}
-(which is stored in the original global environment)
-is never updated by Lua.
 
 }
 
@@ -231,7 +231,7 @@ is never updated by Lua.
 Because Lua is an embedded extension language,
 all Lua actions start from @N{C code} in the host program
 calling a function from the Lua library.
-(when you use Lua standalone,
+(When you use Lua standalone,
 the @id{lua} application is the host program.)
 Whenever an error occurs during
 the compilation or execution of a Lua chunk,
@@ -248,9 +248,11 @@ to call a given function in @emphx{protected mode}.
 Whenever there is an error,
 an @def{error object} (also called an @def{error message})
 is propagated with information about the error.
-Lua itself only generates errors where the error object is a string,
+Lua itself only generates errors whose error object is a string,
 but programs may generate errors with
-any value for the error object.
+any value as the error object.
+It is up to the Lua program or its host to handle such error objects.
+
 
 When you use @Lid{xpcall} or @Lid{lua_pcall},
 you may give a @def{message handler}
@@ -263,7 +265,8 @@ for instance by inspecting the stack and creating a stack traceback.
 This message handler is still protected by the protected call;
 so, an error inside the message handler
 will call the message handler again.
-If this loop goes on, Lua breaks it and returns an appropriate message.
+If this loop goes on for too long,
+Lua breaks it and returns an appropriate message.
 
 }
 
@@ -291,7 +294,7 @@ using the @Lid{getmetatable} function.
 You can replace the metatable of tables
 using the @Lid{setmetatable} function.
 You cannot change the metatable of other types from Lua
-(except by using the debug library);
+(except by using the @link{debuglib|debug library});
 you must use the @N{C API} for that.
 
 Tables and full userdata have individual metatables
@@ -303,10 +306,10 @@ By default, a value has no metatable,
 but the string library sets a metatable for the string type @see{strlib}.
 
 A metatable controls how an object behaves in
-arithmetic and bitwise operations,
+arithmetic operations, bitwise operations,
 order comparisons, concatenation, length operation, calls, and indexing.
 A metatable also can define a function to be called
-when a userdata or a table is garbage collected.
+when a userdata or a table is @link{GC|garbage collected}.
 
 A detailed list of events controlled by metatables is given next.
 Each operation is identified by its corresponding event name.
@@ -341,13 +344,13 @@ Lua will try to call a metamethod.
 First, Lua will check the first operand (even if it is valid).
 If that operand does not define a metamethod for the @St{__add} event,
 then Lua will check the second operand.
-If Lua cannot find a metamethod,
-it raises an error.
-Otherwise,
+If Lua can find a metamethod,
 it calls the metamethod with the two operands as arguments,
 and the result of the call
 (adjusted to one value)
 is the result of the operation.
+Otherwise,
+it raises an error.
 }
 
 @item{@Q{sub}|
@@ -522,7 +525,7 @@ Lua does an indexing assignment to this table with the same key and value.
 (This assignment is regular, not raw,
 and therefore can trigger another metamethod.)
 
-Whenever there is a metamethod,
+Whenever there is a @Q{newindex} metamethod,
 Lua does not perform the primitive assignment.
 (If necessary,
 the metamethod itself can call @Lid{rawset}
@@ -548,8 +551,8 @@ followed by the arguments of the original call (@id{args}).
 
 Lua performs automatic memory management.
 This means that
-you have to worry neither about allocating memory for new objects
-nor about freeing it when the objects are no longer needed.
+you do not have to worry about allocating memory for new objects
+or freeing it when the objects are no longer needed.
 Lua manages memory automatically by running
 a @def{garbage collector} to collect all @emph{dead objects}
 (that is, objects that are no longer accessible from Lua).
@@ -577,7 +580,7 @@ memory allocation.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
 You should not use values smaller than 100,
-as they make the collector too slow and
+because they make the collector too slow and
 can result in the collector never finishing a cycle.
 The default is 200,
 which means that the collector runs at @Q{twice}
@@ -617,7 +620,7 @@ and the metatable has a field indexed by the string @St{__gc}.
 Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
 the object will not be marked for finalization.
-However, after an object is marked,
+However, after an object has been marked,
 you can freely change the @idx{__gc} field of its metatable.
 
 When a marked object becomes garbage,
@@ -625,16 +628,16 @@ it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
 Lua goes through that list:
-For each object,
+For each object in the list,
 it checks the object's @idx{__gc} metamethod;
 if it is a function,
 Lua calls it with the object as its single argument.
-(If the metamethod is not a function,
-Lua simply ignores it.)
+If the metamethod is not a function,
+Lua simply ignores it.
 
 At the end of each garbage-collection cycle,
 the finalizers for objects are called in
-the reverse order that they were marked for finalization,
+the reverse order that the objects were marked for finalization,
 among those collected in that cycle;
 that is, the first finalizer to be called is the one associated
 with the object marked last in the program.
@@ -642,13 +645,13 @@ The execution of each finalizer may occur at any point during
 the execution of the regular code.
 
 Because the object being collected must still be used by the finalizer,
-it (and other objects accessible only through it)
+that object (and other objects accessible only through it)
 must be @emph{resurrected} by Lua.@index{resurrection}
 Usually, this resurrection is transient,
 and the object memory is freed in the next garbage-collection cycle.
 However, if the finalizer stores the object in some global place
 (e.g., a global variable),
-then there is a permanent resurrection.
+then the resurrection is permanent.
 Moreover, if the finalizer marks a finalizing object for finalization again,
 its finalizer will be called again in the next cycle where the
 object is unreachable.
@@ -706,7 +709,7 @@ are removed from weak tables.
 Values, such as numbers and @x{light C functions},
 are not subject to garbage collection,
 and therefore are not removed from weak tables
-(unless its associated value is collected).
+(unless their associated values are collected).
 Although strings are subject to garbage collection,
 they do not have an explicit construction,
 and therefore are not removed from weak tables.
@@ -750,8 +753,8 @@ passing as its first argument
 a thread returned by @Lid{coroutine.create},
 the coroutine starts its execution,
 at the first line of its main function.
-Extra arguments passed to @Lid{coroutine.resume} are passed on
-to the coroutine main function.
+Extra arguments passed to @Lid{coroutine.resume} are passed
+as arguments to the coroutine's main function.
 After the coroutine starts running,
 it runs until it terminates or @emph{yields}.
 
@@ -759,7 +762,8 @@ A coroutine can terminate its execution in two ways:
 normally, when its main function returns
 (explicitly or implicitly, after the last instruction);
 and abnormally, if there is an unprotected error.
-In the first case, @Lid{coroutine.resume} returns @true,
+In case of normal termination,
+@Lid{coroutine.resume} returns @true,
 plus any values returned by the coroutine main function.
 In case of errors, @Lid{coroutine.resume} returns @false
 plus an error message.
@@ -2907,6 +2911,18 @@ Returns the type of that value.
 
 }
 
+@APIEntry{int lua_geti (lua_State *L, int index, lua_Integer n);|
+@apii{0,1,e}
+
+Pushes onto the stack the value @T{t[n]},
+where @id{t} is the value at the given index.
+As in Lua, this function may trigger a metamethod
+for the @Q{index} event @see{metatable}.
+
+Returns the type of the pushed value.
+
+}
+
 @APIEntry{int lua_getmetatable (lua_State *L, int index);|
 @apii{0,0|1,-}
 
@@ -3784,6 +3800,19 @@ for the @Q{newindex} event @see{metatable}.
 
 Pops a value from the stack and
 sets it as the new value of global @id{name}.
+
+}
+
+@APIEntry{void lua_seti (lua_State *L, int index, lua_Integer n);|
+@apii{1,0,e}
+
+Does the equivalent to @T{t[n] = v},
+where @id{t} is the value at the given index
+and @id{v} is the value at the top of the stack.
+
+This function pops the value from the stack.
+As in Lua, this function may trigger a metamethod
+for the @Q{newindex} event @see{metatable}.
 
 }
 
@@ -5704,7 +5733,8 @@ or to the value of the @x{global environment}.
 (When you load a main chunk,
 the resulting function will always have exactly one upvalue,
 the @id{_ENV} variable @see{globalenv}.
-When you load a binary chunk created from a function @seeF{string.dump},
+However,
+when you load a binary chunk created from a function @seeF{string.dump},
 the resulting function can have arbitrary upvalues.)
 
 @id{source} is used as the source of the chunk for error messages
@@ -6364,7 +6394,7 @@ with @x{mixed endian}.
 
 }
 
-@LibEntry{string.dumpint (n [, size [, endianness]])|
+@LibEntry{string.dumpinteger (n [, size [, endianness]])|
 Returns a string with the two-complement representation of integer @id{n},
 with @id{size} bytes and given endianness.
 The @id{size} can be any value from 1 to 12,
@@ -6607,10 +6637,10 @@ See @Lid{string.dumpfloat} for details about @id{size} and @id{endianness}.
 
 }
 
-@LibEntry{string.undumpint (s [, pos [, size [, endianness]]])|
+@LibEntry{string.undumpinteger (s [, pos [, size [, endianness]]])|
 Reads the machine representation of an integer starting at position
 @id{pos} in string @id{s} and returns that integer.
-See @Lid{string.dumpint} for details about @id{size} and @id{endianness}.
+See @Lid{string.dumpinteger} for details about @id{size} and @id{endianness}.
 
 Integers are always read as signed.
 
@@ -6918,18 +6948,6 @@ If @id{i} is greater than @id{j}, returns the empty string.
 
 }
 
-@LibEntry{table.copy (a1, f, e, [a2,] t)|
-
-Copies elements from table @id{a1} to table @id{a2}.
-This function performs the equivalent to the following
-multiple assignment:
-@T{a2[t],@Cdots = a1[f],@Cdots,a1[e]}.
-The default for @id{a2} is @id{a1}.
-The destination range can overlap with the source range.
-Index @id{f} must be positive.
-
-}
-
 @LibEntry{table.insert (list, [pos,] value)|
 
 Inserts element @id{value} at position @id{pos} in @id{list},
@@ -6938,6 +6956,18 @@ shifting up the elements
 The default value for @id{pos} is @T{#list+1},
 so that a call @T{table.insert(t,x)} inserts @id{x} at the end
 of list @id{t}.
+
+}
+
+@LibEntry{table.move (a1, f, e, t [,a2])|
+
+Moves elements from table @id{a1} to table @id{a2}.
+This function performs the equivalent to the following
+multiple assignment:
+@T{a2[t],@Cdots = a1[f],@Cdots,a1[e]}.
+The default for @id{a2} is @id{a1}.
+The destination range can overlap with the source range.
+Index @id{f} must be positive.
 
 }
 
@@ -7060,13 +7090,18 @@ Converts the angle @id{x} from radians to degrees.
 
 }
 
+@LibEntry{math.exp (x)|
+
+Returns the value @M{e@sp{x}}
+(where @id{e} is the base of natural logarithms).
+
+}
 
 @LibEntry{math.floor (x)|
 
 Returns the largest integral value smaller than or equal to @id{x}.
 
 }
-
 
 @LibEntry{math.fmod (x, y)|
 
@@ -7736,28 +7771,6 @@ thread to operate over.
 The default is always the current thread.
 
 
-@LibEntry{debug.Csize (t)|
-
-Returns the size of the underlying representation of a given C type,
-according to the following table:
-@Tab2{
-@row{@col{@Char{I}}@col{@id{lua_Integer}}}
-@row{@col{@Char{F}}@col{@id{lua_Number}}}
-@row{@col{@Char{b}}@col{@id{byte}}}
-@row{@col{@Char{d}}@col{@id{double}}}
-@row{@col{@Char{f}}@col{@id{float}}}
-@row{@col{@Char{h}}@col{@id{short int}}}
-@row{@col{@Char{i}}@col{@id{int}}}
-@row{@col{@Char{l}}@col{@id{long int}}}
-@row{@col{@Char{z}}@col{@id{size_t}}}
-}
-For all options except @Char{b},
-the size is given in number of bytes;
-for option @Char{b},
-the size is its number of bits.
-
-}
-
 @LibEntry{debug.debug ()|
 
 Enters an interactive mode with the user,
@@ -7949,6 +7962,24 @@ the Lua value associated to the given @id{udata}.
 @id{udata} must be a full userdata.
 
 Returns @id{udata}.
+
+}
+
+@LibEntry{debug.sizeof (t)|
+
+Returns the size of the underlying representation of a given C type,
+according to the following table:
+@Tab2{
+@row{@col{@Char{I}}@col{@id{lua_Integer}}}
+@row{@col{@Char{F}}@col{@id{lua_Number}}}
+@row{@col{@Char{d}}@col{@id{double}}}
+@row{@col{@Char{f}}@col{@id{float}}}
+@row{@col{@Char{h}}@col{@id{short int}}}
+@row{@col{@Char{i}}@col{@id{int}}}
+@row{@col{@Char{l}}@col{@id{long int}}}
+@row{@col{@Char{z}}@col{@id{size_t}}}
+}
+The size is given in number of bytes.
 
 }
 
