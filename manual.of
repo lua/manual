@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.126 2014/08/01 18:53:05 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.127 2014/08/22 15:59:00 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -144,7 +144,7 @@ There are several convenient ways to create tables in Lua
 
 We use the term @def{sequence} to denote a table where
 the set of all positive numeric keys is equal to {1..@M{n}}
-for some integer @M{n},
+for some non-negative integer @M{n},
 which is called the @x{length} of the sequence @see{len-op}.
 
 Like indices,
@@ -986,7 +986,8 @@ alo
 123"]==]
 }
 
-A @def{numerical constant} can be written with an optional fractional part
+A @def{numerical constant} (or @def{numeral})
+can be written with an optional fractional part
 and an optional decimal exponent,
 marked by a letter @Char{e} or @Char{E}.
 Lua also accepts @x{hexadecimal constants},
@@ -1455,8 +1456,8 @@ The basic expressions in Lua are the following:
 @Produc{
 @producname{exp}@producbody{prefixexp}
 @producname{exp}@producbody{@Rw{nil} @Or @Rw{false} @Or @Rw{true}}
-@producname{exp}@producbody{@bnfNter{Number}}
-@producname{exp}@producbody{@bnfNter{String}}
+@producname{exp}@producbody{@bnfNter{Numeral}}
+@producname{exp}@producbody{@bnfNter{LiteralString}}
 @producname{exp}@producbody{functiondef}
 @producname{exp}@producbody{tableconstructor}
 @producname{exp}@producbody{@bnfter{...}}
@@ -1466,7 +1467,7 @@ The basic expressions in Lua are the following:
                                   @bnfter{(} exp @bnfter{)}}
 }
 
-Numbers and literal strings are explained in @See{lexical};
+Numerals and literal strings are explained in @See{lexical};
 variables are explained in @See{variables};
 function definitions are explained in @See{func-def};
 function calls are explained in @See{functioncall};
@@ -1878,7 +1879,7 @@ Arguments have the following syntax:
 @Produc{
 @producname{args}@producbody{@bnfter{(} @bnfopt{explist} @bnfter{)}}
 @producname{args}@producbody{tableconstructor}
-@producname{args}@producbody{@bnfNter{String}}
+@producname{args}@producbody{@bnfNter{LiteralString}}
 }
 All argument expressions are evaluated before the call.
 A call of the form @T{f{@rep{fields}}} is
@@ -5010,10 +5011,10 @@ file-related functions in the standard library
 @apii{0,0|1,e}
 
 Pushes onto the stack the field @id{e} from the metatable
-of the object at index @id{obj}.
+of the object at index @id{obj} and returns the type of pushed value.
 If the object does not have a metatable,
 or if the metatable does not have this field,
-returns false and pushes nothing.
+pushes nothing and returns @id{LUA_TNIL}.
 
 }
 
@@ -5138,15 +5139,18 @@ it does not run it.
 }
 
 
-@APIEntry{void luaL_newlib (lua_State *L, const luaL_Reg *l);|
+@APIEntry{void luaL_newlib (lua_State *L, const luaL_Reg l[]);|
 @apii{0,1,e}
 
 Creates a new table and registers there
 the functions in list @id{l}.
+
 It is implemented as the following macro:
 @verbatim{
 (luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
 }
+The array @id{l} must be the actual array,
+not a pointer to it.
 
 }
 
@@ -5424,7 +5428,8 @@ this function receives the file handle as its sole argument and
 must return either @Rw{true} (in case of success)
 or @nil plus an error message (in case of error).
 Once Lua calls this field,
-the field value is changed to @nil to signal that the handle is closed.
+the field value is changed to @id{NULL}
+to signal that the handle is closed.
 
 }
 
@@ -6131,7 +6136,7 @@ Default is @Char{?}.}
 is replaced by the executable's directory.
 Default is @Char{!}.}
 
-@item{The fifth line is a mark to ignore all text before it
+@item{The fifth line is a mark to ignore all text after it
 when building the @id{luaopen_} function name.
 Default is @Char{-}.}
 
@@ -6701,7 +6706,8 @@ represents the character @emph{x} itself.
 @item{@T{%@rep{x}}| (where @rep{x} is any non-alphanumeric character)
 represents the character @rep{x}.
 This is the standard way to escape the magic characters.
-Any punctuation character (even the non magic)
+Any non-alphanumeric character
+(including all punctuations, even the non magic)
 can be preceded by a @Char{%}
 when used to represent itself in a pattern.
 }
@@ -7433,6 +7439,8 @@ according to the given formats, which specify what to read.
 For each format,
 the function returns a string or a number with the characters read,
 or @nil if it cannot read data with the specified format.
+(In this latter case,
+the function does not read subsequent formats.)
 When called without formats,
 it uses a default format that reads the next line
 (see below).
@@ -7977,6 +7985,7 @@ according to the following table:
 @row{@col{@Char{h}}@col{@id{short int}}}
 @row{@col{@Char{i}}@col{@id{int}}}
 @row{@col{@Char{l}}@col{@id{long int}}}
+@row{@col{@Char{p}}@col{@T{void *}}}
 @row{@col{@Char{z}}@col{@id{size_t}}}
 }
 The size is given in number of bytes.
@@ -7989,7 +7998,7 @@ If @id{message} is present but is neither a string nor @nil,
 this function returns @id{message} without further processing.
 Otherwise,
 it returns a string with a traceback of the call stack.
-An optional @id{message} string is appended
+The optional @id{message} string is appended
 at the beginning of the traceback.
 An optional @id{level} number tells at which level
 to start the traceback
@@ -8266,7 +8275,8 @@ you can replace @id{math.atan2} with @id{math.atan},
 which now accepts one or two parameters;
 you can replace @T{math.ldexp(x,exp)} with @T{x * 2.0^exp}.
 For the other operations,
-the best choice is to use an external library.
+you can either use an external library or
+implement them in Lua.
 }
 
 @item{
@@ -8319,7 +8329,13 @@ Use their signed equivalents with a type cast.
 @sect1{BNF| @title{The Complete Syntax of Lua}
 
 Here is the complete syntax of Lua in extended BNF.
-(For operator precedences, see @See{prec}.)
+As usual in extended BNF,
+@bnfNter{{A}} means 0 or more @bnfNter{A}s,
+and @bnfNter{[A]} means an optional @bnfNter{A}.
+(For operator precedences, see @See{prec};
+for a description of the terminals
+@bnfNter{Name}, @bnfNter{Numeral},
+and @bnfNter{LiteralString}, see @See{lexical}.)
 @index{grammar}
 
 @Produc{
@@ -8374,8 +8390,8 @@ Here is the complete syntax of Lua in extended BNF.
 	@Rw{nil}
 @Or	@Rw{false}
 @Or	@Rw{true}
-@Or	@bnfNter{Number}
-@Or	@bnfNter{String}
+@Or	@bnfNter{Numeral}
+@Or	@bnfNter{LiteralString}
 @Or	@bnfter{...}
 @Or	functiondef
 @OrNL	prefixexp
@@ -8394,7 +8410,7 @@ Here is the complete syntax of Lua in extended BNF.
 @producname{args}@producbody{
 	@bnfter{(} @bnfopt{explist} @bnfter{)}
 @Or	tableconstructor
-@Or	@bnfNter{String}
+@Or	@bnfNter{LiteralString}
 }
 
 @producname{functiondef}@producbody{@Rw{function} funcbody}
