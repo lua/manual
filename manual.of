@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.127 2014/08/22 15:59:00 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.128 2014/09/30 11:54:01 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -3469,7 +3469,7 @@ The conversion specifiers can only be
 @Char{%p} (inserts a pointer as a hexadecimal numeral),
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
-@Char{%U} (inserts an @T{int} as a @x{UTF-8} byte sequence).
+@Char{%U} (inserts a @T{long int} as a @x{UTF-8} byte sequence).
 }
 
 }
@@ -4823,30 +4823,12 @@ of any type (including @nil) at position @id{arg}.
 
 }
 
-@APIEntry{int luaL_checkint (lua_State *L, int arg);|
-@apii{0,0,v}
-
-Checks whether the function argument @id{arg} is an integer
-(or can be converted to an integer)
-and returns this integer cast to an @id{int}.
-
-}
-
 @APIEntry{lua_Integer luaL_checkinteger (lua_State *L, int arg);|
 @apii{0,0,v}
 
 Checks whether the function argument @id{arg} is an integer
 (or can be converted to an integer)
 and returns this integer cast to a @Lid{lua_Integer}.
-
-}
-
-@APIEntry{long luaL_checklong (lua_State *L, int arg);|
-@apii{0,0,v}
-
-Checks whether the function argument @id{arg} is an integer
-(or can be converted to an integer)
-and returns this integer cast to a @id{long}.
 
 }
 
@@ -5207,17 +5189,6 @@ Opens all standard Lua libraries into the given state.
 
 }
 
-@APIEntry{int luaL_optint (lua_State *L, int arg, int d);|
-@apii{0,0,v}
-
-If the function argument @id{arg} is a number,
-returns this number cast to an @id{int}.
-If this argument is absent or is @nil,
-returns @id{d}.
-Otherwise, raises an error.
-
-}
-
 @APIEntry{
 lua_Integer luaL_optinteger (lua_State *L,
                              int arg,
@@ -5227,18 +5198,6 @@ lua_Integer luaL_optinteger (lua_State *L,
 If the function argument @id{arg} is an integer
 (or convertible to an integer),
 returns this integer.
-If this argument is absent or is @nil,
-returns @id{d}.
-Otherwise, raises an error.
-
-}
-
-@APIEntry{long luaL_optlong (lua_State *L, int arg, long d);|
-@apii{0,0,v}
-
-If the function argument @id{arg} is an integer
-(or convertible to an integer),
-returns this integer cast to a @id{long}.
 If this argument is absent or is @nil,
 returns @id{d}.
 Otherwise, raises an error.
@@ -5708,11 +5667,8 @@ so that the construction
 for i,v in ipairs(t) do @rep{body} end
 }
 will iterate over the pairs
-(@T{1,t[1]}), (@T{2,t[2]}), @ldots, (@T{#t,t[#t]}).
-
-The table should be a proper sequence
-or have a @idx{__len} metamethod @see{len-op}.
-
+(@T{1,t[1]}), (@T{2,t[2]}), @ldots,
+up to the first integer key absent from the table.
 
 }
 
@@ -6904,7 +6860,7 @@ Returns the number of UTF-8 characters in string @id{s}
 that start between positions @id{i} and @{j} (both inclusive).
 The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
 If it finds any invalid byte sequence,
-returns @nil plus the position of the first invalid byte. 
+returns a false value plus the position of the first invalid byte. 
 
 }
 
@@ -8312,9 +8268,18 @@ Use 0 as the value of this parameter to get the old behavior.
 
 @item{
 Functions to inject/project unsigned integers
-(@id{lua_pushunsigned}, @id{lua_tounsigned}, etc.)
+(@id{lua_pushunsigned}, @id{lua_tounsigned}, @id{lua_tounsignedx},
+@id{luaL_checkunsigned}, @id{luaL_optunsigned})
 were deprecated.
 Use their signed equivalents with a type cast.
+}
+
+@item{
+Macros to project non-default integer types
+(@id{luaL_checkint}, @id{luaL_optint}, @id{luaL_checklong}, @id{luaL_optlong})
+were deprecated.
+Use their equivalent over @Lid{lua_Integer} with a type cast
+(or, when possible, use @Lid{lua_Integer} in your code).
 }
 
 }
