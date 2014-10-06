@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.128 2014/09/30 11:54:01 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.129 2014/10/02 18:24:27 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -919,15 +919,17 @@ it is particularly useful to break and indent a long literal string
 into multiple lines without adding the newlines and spaces
 into the string contents.
 
-A byte in a literal string can also be specified by its numerical value.
-This can be done with the escape sequence @T{\x@rep{XX}},
+Strings in Lua can contain any 8-bit value, including @x{embedded zeros},
+which can be specified as @Char{\0}.
+More generally,
+we can specify any byte in a literal string by its numerical value.
+This can be done
+with the escape sequence @T{\x@rep{XX}},
 where @rep{XX} is a sequence of exactly two hexadecimal digits,
 or with the escape sequence @T{\@rep{ddd}},
 where @rep{ddd} is a sequence of up to three decimal digits.
-(Note that if a decimal escape is to be followed by a digit,
+(Note that if a decimal escape sequence is to be followed by a digit,
 it must be expressed using exactly three digits.)
-Strings in Lua can contain any 8-bit value, including @x{embedded zeros},
-which can be specified as @Char{\0}.
 
 The @x{UTF-8} encoding of a @x{Unicode} character
 can be inserted in a literal string with
@@ -949,7 +951,7 @@ for instance,
 a closing long bracket of @N{level 4} is written as @C{[[} @T{]====]}.
 A @def{long literal} starts with an opening long bracket of any level and
 ends at the first closing long bracket of the same level.
-It can contain any text except a closing bracket of the proper level.
+It can contain any text except a closing bracket of the same level.
 Literals in this bracketed form can run for several lines,
 do not interpret any escape sequences,
 and ignore long brackets of any other level.
@@ -1147,8 +1149,9 @@ even if it does not use that variable.
 
 A chunk can be stored in a file or in a string inside the host program.
 To execute a chunk,
-Lua first precompiles the chunk into instructions for a virtual machine,
-and then it executes the compiled code
+Lua first \emph{loads} it,
+precompiling the chunk's code into instructions for a virtual machine,
+and then Lua executes the compiled code
 with an interpreter for the virtual machine.
 
 Chunks can also be precompiled into binary form;
@@ -1185,7 +1188,7 @@ before the adjustment
 (except when the call is enclosed in parentheses; see @See{expressions}).
 
 The assignment statement first evaluates all its expressions
-and only then are the assignments performed.
+and only then the assignments are performed.
 Thus the code
 @verbatim{
 i = 3
@@ -1214,7 +1217,7 @@ An assignment to an indexed variable @T{t[i] = val} is equivalent to
 This function is not defined or callable in Lua.
 We use it here only for explanatory purposes.)
 
-An assignment to a global variable @T{x = val}
+An assignment to a global name @T{x = val}
 is equivalent to the assignment
 @T{_ENV.x = val} @see{globalenv}.
 
@@ -1279,7 +1282,8 @@ skipping to the next statement after the loop:
 A @Rw{break} ends the innermost enclosing loop.
 
 The @Rw{return} statement is used to return values
-from a function or a chunk (which is a function in disguise).
+from a function or a chunk
+(which is an anonymous function).
 @index{return statement}
 Functions can return more than one value,
 so the syntax for the @Rw{return} statement is
@@ -1483,7 +1487,7 @@ relational operators @see{rel-ops}, logical operators @see{logic},
 and the concatenation operator @see{concat}.
 Unary operators comprise the unary minus @see{arith},
 the unary bitwise not @see{bitwise},
-the unary logic @Rw{not} @see{logic},
+the unary logical @Rw{not} @see{logic},
 and the unary @def{length operator} @see{len-op}.
 
 Both function calls and vararg expressions can result in multiple values.
@@ -1563,10 +1567,11 @@ so that it works for non-integer exponents too.
 Integer division (@T{//}) converts its operands to integers
 @see{coercion}
 and its result is always an integer.
-The result is always rounded towards minus infinite (floor).
+The result is always rounded towards minus infinite
+(floor division).
 
 Modulo is defined as the remainder of a division
-that rounds the quotient towards minus infinite (floor).
+that rounds the quotient towards minus infinite (floor division).
 
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
@@ -1606,7 +1611,7 @@ types and representations at run time.
 Most arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the @def{usual rule}.
-Float division always convert integer operands to floats;
+Float division always converts integer operands to floats;
 integer division and bitwise operators
 always convert float operands to integers.
 The C API also converts both integers to floats and
@@ -1639,8 +1644,8 @@ following its syntax and the rules of the Lua lexer.
 Then, the resulting number is converted to the required type
 (float or integer) according to the previous rules.
 
-The conversion from numbers to strings uses a human-readable,
-non-specified format.
+The conversion from numbers to strings uses a
+non-specified human-readable format.
 For complete control over how numbers are converted to strings,
 use the @id{format} function from the string library
 @seeF{string.format}.
