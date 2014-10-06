@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.129 2014/10/02 18:24:27 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.130 2014/10/06 17:23:19 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -92,7 +92,7 @@ Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits for both integers and floats 
-(called @def{Lua 32}) is particularly attractive
+(called @def{Small Lua}) is particularly attractive
 for small machines and embedded systems.
 
 Lua can call (and manipulate) functions written in Lua and
