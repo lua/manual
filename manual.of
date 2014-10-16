@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.130 2014/10/06 17:23:19 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.131 2014/10/06 17:29:23 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -96,17 +96,17 @@ The option with 32 bits for both integers and floats
 for small machines and embedded systems.
 
 Lua can call (and manipulate) functions written in Lua and
-functions written in C
-@see{functioncall}.
+functions written in C @see{functioncall}.
+Both are represented by the type @emph{function}.
 
 The type @emph{userdata} is provided to allow arbitrary @N{C data} to
 be stored in Lua variables.
 A userdata value represents a block of raw memory.
 There are two kinds of userdata:
 @emphx{full userdata},
-where the block of memory is managed by Lua,
+which is an object with a block of memory managed by Lua,
 and @emphx{light userdata},
-where the block of memory is managed by the host.
+which is simply a @N{C pointer} value.
 Userdata has no predefined operations in Lua,
 except assignment and identity test.
 By using @emph{metatables},
@@ -118,7 +118,7 @@ This guarantees the integrity of data owned by the host program.
 
 The type @def{thread} represents independent threads of execution
 and it is used to implement coroutines @see{coroutine}.
-Do not confuse Lua threads with operating-system threads.
+Lua threads are not related to operating-system threads.
 Lua supports coroutines on all systems,
 even those that do not support threads natively.
 
@@ -160,7 +160,6 @@ The expressions @T{a[i]} and @T{a[j]}
 denote the same table element
 if and only if @id{i} and @id{j} are raw equal
 (that is, equal without metamethods).
-
 In particular, floats with integral values
 are equal to their respective integers
 (e.g., @T{1.0 == 1}).
@@ -190,18 +189,19 @@ of a given value @see{predefined}.
 @sect2{globalenv| @title{Environments and the Global Environment}
 
 As will be discussed in @refsec{variables} and @refsec{assignment},
-any reference to a global name @id{var} is syntactically translated
-to @T{_ENV.var}.
+any reference to a free name
+(that is, a name not bound to any declaration) @id{var}
+is syntactically translated to @T{_ENV.var}.
 Moreover, every chunk is compiled in the scope of
 an external local variable named @id{_ENV} @see{chunks},
-so @id{_ENV} itself is never a global name in a chunk.
+so @id{_ENV} itself is never a free name in a chunk.
 
 Despite the existence of this external @id{_ENV} variable and
-the translation of global names,
+the translation of free names,
 @id{_ENV} is a completely regular name.
 In particular,
 you can define new variables and parameters with that name.
-Each reference to a global name uses the @id{_ENV} that is
+Each reference to a free name uses the @id{_ENV} that is
 visible at that point in the program,
 following the usual visibility rules of Lua @see{visibility}.
 
@@ -216,7 +216,8 @@ When Lua loads a chunk,
 the default value for its @id{_ENV} upvalue
 is the global environment @seeF{load}.
 Therefore, by default,
-global names in Lua code refer to entries in the global environment.
+free names in Lua code refer to entries in the global environment
+(and, therefore, they are also called @def{global variables}).
 Moreover, all standard libraries are loaded in the global environment
 and some functions there operate on that environment.
 You can use @Lid{load} (or @Lid{loadfile})
@@ -2264,7 +2265,7 @@ by other libraries, to avoid collisions.
 Typically, you should use as key a string containing your library name,
 or a light userdata with the address of a @N{C object} in your code,
 or any Lua object created by your code.
-As with global names,
+As with variable names,
 string keys starting with an underscore followed by
 uppercase letters are reserved for Lua.
 
@@ -2378,7 +2379,7 @@ Now we want to allow
 the Lua code being ran by @Lid{lua_pcall} to yield.
 First, we can rewrite our function like here:
 @verbatim{
-int k (lua_State *L, int status, lua_Kcontext ctx) {
+int k (lua_State *L, int status, lua_KContext ctx) {
   ...  /* code 2 */
 }
 
@@ -2631,7 +2632,7 @@ This is considered good programming practice.
 }
 
 @APIEntry{
-void lua_callk (lua_State *L, int nargs, int nresults, lua_Kcontext ctx,
+void lua_callk (lua_State *L, int nargs, int nresults, lua_KContext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults,e}
 
@@ -3117,7 +3118,7 @@ and @N{0 otherwise}.
 
 }
 
-@APIEntry{typedef @ldots lua_Kcontext;|
+@APIEntry{typedef @ldots lua_KContext;|
 
 The type for continuation-function contexts.
 It must be a numerical type.
@@ -3131,7 +3132,7 @@ Otherwise, it is defined as @id{ptrdiff_t}.
 @APIEntry{
 typedef int (*lua_KFunction) (lua_State *L,
                               int status,
-                              lua_Kcontext ctx);|
+                              lua_KContext ctx);|
 
 Type for continuation functions @see{continuations}.
 
@@ -3378,7 +3379,7 @@ int lua_pcallk (lua_State *L,
                 int nargs,
                 int nresults,
                 int errfunc,
-                lua_Kcontext ctx,
+                lua_KContext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults|1,-}
 
@@ -3894,7 +3895,7 @@ You can resume threads with status @Lid{LUA_OK}
 
 }
 
-@APIEntry{size_t lua_strtonum (lua_State *L, const char *s);|
+@APIEntry{size_t lua_stringtonum (lua_State *L, const char *s);|
 @apii{0,1,-}
 
 Converts the zero-terminated string @id{s} to a number,
@@ -4142,7 +4143,7 @@ the function calling @id{lua_yield}.
 @APIEntry{
 int lua_yieldk (lua_State *L,
                 int nresults,
-                lua_Kcontext ctx,
+                lua_KContext ctx,
                 lua_KFunction k);|
 @apii{?,?,e}
 
@@ -6831,7 +6832,7 @@ and returns a string with the concatenation of all these sequences.
 
 }
 
-@LibEntry{utf8.charpatt|
+@LibEntry{utf8.charpattern|
 The pattern (a string, not a function) @St{[\0-\x7F\xC2-\xF4][\x80-\xBF]*}
 @see{pm},
 which matches exactly one UTF-8 byte sequence,
