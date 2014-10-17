@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.131 2014/10/06 17:29:23 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.132 2014/10/16 18:23:37 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -6345,39 +6345,6 @@ about the function
 
 }
 
-@LibEntry{string.dumpfloat (n [, size [, endianness]])|
-Returns a string with the machine representation of float @id{n},
-with given size and endianness.
-The @id{size} is the string @St{f} (single precision),
-@St{d} (double precision), or @St{n},
-which means the size of a @Lid{lua_Number};
-its default is @St{n}.
-The endianness is the string @St{l} (little endian), @St{b} (big endian),
-or @St{n} (native);
-the default is the native endianness.
-
-This function may not work correctly in architectures
-with @x{mixed endian}.
-
-}
-
-@LibEntry{string.dumpinteger (n [, size [, endianness]])|
-Returns a string with the two-complement representation of integer @id{n},
-with @id{size} bytes and given endianness.
-The @id{size} can be any value from 1 to 12,
-or 0, which means the size of a @Lid{lua_Integer}
-(8 bytes in standard Lua);
-its default is zero.
-The endianness is the string @St{l} (little endian), @St{b} (big endian),
-or @St{n} (native);
-the default is the native endianness.
-
-This function may not work correctly in architectures
-with @x{mixed endian} or
-that do not use a two-complement representation for integers.
-
-}
-
 @LibEntry{string.find (s, pattern [, init [, plain]])|
 
 Looks for the first match of
@@ -6561,6 +6528,14 @@ its default value @N{is 1} and can be negative.
 
 }
 
+@LibEntry{string.pack (fmt, d1, d2, ...)|
+
+Returns a binary string containing the values d1, d2, etc.
+packed (that is, serialized in binary form)
+according to the format string fmt @see{pack}. 
+
+}
+
 @LibEntry{string.rep (s, n [, sep])|
 Returns a string that is the concatenation of @id{n} copies of
 the string @id{s} separated by the string @id{sep}.
@@ -6597,19 +6572,14 @@ the function returns the empty string.
 
 }
 
-@LibEntry{string.undumpfloat (s [, pos [, size [, endianness]]])|
-Reads the machine representation of a float starting at position
-@id{pos} in string @id{s} and returns that number.
-See @Lid{string.dumpfloat} for details about @id{size} and @id{endianness}.
+@LibEntry{string.unpack (fmt, s [, pos])|
 
-}
-
-@LibEntry{string.undumpinteger (s [, pos [, size [, endianness]]])|
-Reads the machine representation of an integer starting at position
-@id{pos} in string @id{s} and returns that integer.
-See @Lid{string.dumpinteger} for details about @id{size} and @id{endianness}.
-
-Integers are always read as signed.
+Returns the values packed in string @id{s} @seeF{string.pack}
+according to the format string @id{fmt} @see{pack}.
+An optional @id{pos} marks where
+to start reading in @id{s} (default is 1).
+After the read values,
+this function also returns the index of the first unread byte in @id{s}.
 
 }
 
@@ -6618,6 +6588,79 @@ Receives a string and returns a copy of this string with all
 lowercase letters changed to uppercase.
 All other characters are left unchanged.
 The definition of what a lowercase letter is depends on the current locale.
+
+}
+
+@sect3{pack| @title{Pack/Unpack Format Strings}
+
+The first argument to both @Lid{string.pack} and @Lid{string.unpack}
+is a format string,
+which describes the layout of the structure being created or read.
+A format string comprises a header
+followed by a sequence of conversion options.
+
+The header has an optional endianness indicator followed
+by an optional maximum alignment requirement.
+
+The endianness indicator can be @Char{<},
+which means little endian,
+or @Char{>},
+which means big endian.
+No indicator means the native endianness.
+
+The maximum alignment requirement is given by a @Char{!}
+followed by an optional integer @id{n}.
+No alignment indicator means no alignment (maximum is 1).
+A @Char{!} with no number means the native alignment.
+
+The conversion options are as follows:
+@Tab2{
+@row{@col{@St{b}}@col{a signed byte (@id{char})}}
+@row{@col{@St{B}}@col{an unsigned byte (@id{char})}}
+@row{@col{@St{h}}@col{a signed @id{short} (native size)}}
+@row{@col{@St{H}}@col{an unsigned @id{short} (native size)}}
+@row{@col{@St{l}}@col{a signed @id{long} (native size)}}
+@row{@col{@St{L}}@col{an unsigned @id{long} (native size)}}
+@row{@col{@St{j}}@col{a @id{lua_Integer}}}
+@row{@col{@St{J}}@col{an @id{lua_Unsigned}}}
+@row{@col{@St{T}}@col{an unsigned @id{size_t} (native size)}}
+@row{@col{@St{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
+(default is native size)}}
+@row{@col{@St{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
+(default is native size)}}
+@row{@col{@St{f}}@col{a @id{float} (native size)}}
+@row{@col{@St{d}}@col{a @id{double} (native size)}}
+@row{@col{@St{n}}@col{a @id{lua_Number}}}
+@row{@col{@St{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
+(default is 1)}}
+@row{@col{@St{z}}@col{a zero-terminated string}
+@row{@col{@St{s[@emph{n}]}}@col{a string preceded by its length
+coded as an unsigned integer with @id{n} bytes
+(default is a @id{size_t})}}.
+@row{@col{@St{x}}@col{one byte of padding}}
+@row{@col{@St{X@rep{op}}}@col{align according to option @id{op}
+(which is otherwise ignored)}}
+@row{@col{@St{ }}@col{(empty space} ignored}}
+}
+(A @St{[@rep{n}]} means an optional integral numeral.)
+Except for padding and spaces,
+each option corresponds to an argument (in @Lid{string.pack})
+or a result (in @Lid{string.unpack}).
+
+For options @St{i@rep{n}} and @St{I@rep{n}},
+@id{n} can be any integer between 1 and 16.
+All integral options check overflows;
+@Lid{string.pack} checks whether the given value fits in the given size;
+@Lid{string.unpack} checks whether the read value fits in a Lua integer.
+
+The alignment requirement works as follows:
+For each option,
+the format gets extra padding until the data starts
+at an offset that is a multiple of the minimum between the
+option size and the maximum alignment.
+This minimum must always be a power of 2 (1, 2, 4, 8, or 16).
+Options @St{c} and @St{z} are not aligned.
+Option @St{s} is aligned according to the size of its starting length.
 
 }
 
@@ -7932,25 +7975,6 @@ the Lua value associated to the given @id{udata}.
 @id{udata} must be a full userdata.
 
 Returns @id{udata}.
-
-}
-
-@LibEntry{debug.sizeof (t)|
-
-Returns the size of the underlying representation of a given C type,
-according to the following table:
-@Tab2{
-@row{@col{@Char{I}}@col{@id{lua_Integer}}}
-@row{@col{@Char{F}}@col{@id{lua_Number}}}
-@row{@col{@Char{d}}@col{@id{double}}}
-@row{@col{@Char{f}}@col{@id{float}}}
-@row{@col{@Char{h}}@col{@id{short int}}}
-@row{@col{@Char{i}}@col{@id{int}}}
-@row{@col{@Char{l}}@col{@id{long int}}}
-@row{@col{@Char{p}}@col{@T{void *}}}
-@row{@col{@Char{z}}@col{@id{size_t}}}
-}
-The size is given in number of bytes.
 
 }
 
