@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.133 2014/10/17 11:36:04 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.134 2014/10/20 17:07:10 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -8116,12 +8116,11 @@ by issuing a different prompt.
 
 In case of unprotected errors in the script,
 the interpreter reports the error to the standard error stream.
-If the error object is a string,
-the interpreter adds a stack traceback to it.
-Otherwise, if the error object has a metamethod @idx{__tostring},
+If the error object is not a string but 
+has a metamethod @idx{__tostring},
 the interpreter calls this metamethod to produce the final message.
-Finally, if the error object is @nil,
-the interpreter does not report the error.
+Otherwise, the interpreter converts the error object to a string
+and adds a stack traceback to it.
 
 When finishing normally,
 the interpreter closes its main Lua state
