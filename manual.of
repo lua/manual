@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.132 2014/10/16 18:23:37 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.133 2014/10/17 11:36:04 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -3895,18 +3895,20 @@ You can resume threads with status @Lid{LUA_OK}
 
 }
 
-@APIEntry{size_t lua_stringtonum (lua_State *L, const char *s);|
+@APIEntry{size_t lua_stringtonumber (lua_State *L, const char *s);|
 @apii{0,1,-}
 
 Converts the zero-terminated string @id{s} to a number,
 pushes that number into the stack,
-and returns the total size of the string
-(that is, its length plus one).
+and returns the total size of the string,
+that is, its length plus one.
 The conversion can result in an integer or a float,
 according to the lexical conventions of Lua @see{lexical}.
 The string may have leading and trailing spaces and a sign.
 If the string is not a valid numeral,
 returns 0 and pushes nothing.
+(Note that the result can be used as a boolean,
+true if the conversion succeeds.)
 
 }
 
@@ -6528,9 +6530,9 @@ its default value @N{is 1} and can be negative.
 
 }
 
-@LibEntry{string.pack (fmt, d1, d2, ...)|
+@LibEntry{string.pack (fmt, v1, v2, ...)|
 
-Returns a binary string containing the values d1, d2, etc.
+Returns a binary string containing the values v1, v2, etc.
 packed (that is, serialized in binary form)
 according to the format string fmt @see{pack}. 
 
@@ -6596,69 +6598,64 @@ The definition of what a lowercase letter is depends on the current locale.
 The first argument to both @Lid{string.pack} and @Lid{string.unpack}
 is a format string,
 which describes the layout of the structure being created or read.
-A format string comprises a header
-followed by a sequence of conversion options.
 
-The header has an optional endianness indicator followed
-by an optional maximum alignment requirement.
-
-The endianness indicator can be @Char{<},
-which means little endian,
-or @Char{>},
-which means big endian.
-No indicator means the native endianness.
-
-The maximum alignment requirement is given by a @Char{!}
-followed by an optional integer @id{n}.
-No alignment indicator means no alignment (maximum is 1).
-A @Char{!} with no number means the native alignment.
-
+A format string is a sequence of conversion options.
 The conversion options are as follows:
 @Tab2{
-@row{@col{@St{b}}@col{a signed byte (@id{char})}}
-@row{@col{@St{B}}@col{an unsigned byte (@id{char})}}
-@row{@col{@St{h}}@col{a signed @id{short} (native size)}}
-@row{@col{@St{H}}@col{an unsigned @id{short} (native size)}}
-@row{@col{@St{l}}@col{a signed @id{long} (native size)}}
-@row{@col{@St{L}}@col{an unsigned @id{long} (native size)}}
-@row{@col{@St{j}}@col{a @id{lua_Integer}}}
-@row{@col{@St{J}}@col{an @id{lua_Unsigned}}}
-@row{@col{@St{T}}@col{an unsigned @id{size_t} (native size)}}
-@row{@col{@St{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
+@row{@col{@T{<}}@col{sets little endian}}
+@row{@col{@T{>}}@col{sets big endian}}
+@row{@col{@T{![@rep{n}]}}@col{sets maximum alignment to @id{n}
+(default is native alignment)}}
+@row{@col{@T{b}}@col{a signed byte (@id{char})}}
+@row{@col{@T{B}}@col{an unsigned byte (@id{char})}}
+@row{@col{@T{h}}@col{a signed @id{short} (native size)}}
+@row{@col{@T{H}}@col{an unsigned @id{short} (native size)}}
+@row{@col{@T{l}}@col{a signed @id{long} (native size)}}
+@row{@col{@T{L}}@col{an unsigned @id{long} (native size)}}
+@row{@col{@T{j}}@col{a @id{lua_Integer}}}
+@row{@col{@T{J}}@col{a @id{lua_Unsigned}}}
+@row{@col{@T{T}}@col{a @id{size_t} (native size)}}
+@row{@col{@T{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
 (default is native size)}}
-@row{@col{@St{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
+@row{@col{@T{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
 (default is native size)}}
-@row{@col{@St{f}}@col{a @id{float} (native size)}}
-@row{@col{@St{d}}@col{a @id{double} (native size)}}
-@row{@col{@St{n}}@col{a @id{lua_Number}}}
-@row{@col{@St{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
+@row{@col{@T{f}}@col{a @id{float} (native size)}}
+@row{@col{@T{d}}@col{a @id{double} (native size)}}
+@row{@col{@T{n}}@col{a @id{lua_Number}}}
+@row{@col{@T{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
 (default is 1)}}
-@row{@col{@St{z}}@col{a zero-terminated string}
-@row{@col{@St{s[@emph{n}]}}@col{a string preceded by its length
+@row{@col{@T{z}}@col{a zero-terminated string}}
+@row{@col{@T{s[@emph{n}]}}@col{a string preceded by its length
 coded as an unsigned integer with @id{n} bytes
-(default is a @id{size_t})}}.
-@row{@col{@St{x}}@col{one byte of padding}}
-@row{@col{@St{X@rep{op}}}@col{align according to option @id{op}
+(default is a @id{size_t})}}
+@row{@col{@T{x}}@col{one byte of padding}}
+@row{@col{@T{X@rep{op}}}@col{an empty item that aligns
+according to option @id{op}
 (which is otherwise ignored)}}
-@row{@col{@St{ }}@col{(empty space} ignored}}
+@row{@col{@Char{ }}@col{(empty space) ignored}}
 }
 (A @St{[@rep{n}]} means an optional integral numeral.)
-Except for padding and spaces,
+Except for padding, spaces, and configurations
+(options @St{xX <>!}),
 each option corresponds to an argument (in @Lid{string.pack})
 or a result (in @Lid{string.unpack}).
 
-For options @St{i@rep{n}} and @St{I@rep{n}},
+For options @St{!@rep{n}}, @St{s@rep{n}}, @St{i@rep{n}}, and @St{I@rep{n}},
 @id{n} can be any integer between 1 and 16.
 All integral options check overflows;
 @Lid{string.pack} checks whether the given value fits in the given size;
 @Lid{string.unpack} checks whether the read value fits in a Lua integer.
 
-The alignment requirement works as follows:
+Before any configuration option,
+the default alignment is 1 (that is, no alignment)
+and the default endianness is the native endianness.
+
+Alignment works as follows:
 For each option,
 the format gets extra padding until the data starts
 at an offset that is a multiple of the minimum between the
 option size and the maximum alignment.
-This minimum must always be a power of 2 (1, 2, 4, 8, or 16).
+This minimum must be a power of 2 (1, 2, 4, 8, or 16).
 Options @St{c} and @St{z} are not aligned.
 Option @St{s} is aligned according to the size of its starting length.
 
