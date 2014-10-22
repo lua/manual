@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.134 2014/10/20 17:07:10 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.135 2014/10/20 18:21:42 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2166,17 +2166,18 @@ you are responsible for ensuring consistency.
 In particular,
 @emph{you are responsible for controlling stack overflow}.
 You can use the function @Lid{lua_checkstack}
-to ensure that the stack has extra slots when pushing new elements.
+to ensure that the stack has enough space for pushing new elements.
 
 Whenever Lua calls C,
-it ensures that the stack has at least @defid{LUA_MINSTACK} extra slots.
+it ensures that the stack has space for
+at least @defid{LUA_MINSTACK} extra slots.
 @id{LUA_MINSTACK} is defined as 20,
 so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
 
 When you call a Lua function
 without a fixed number of results @seeF{lua_call},
-Lua ensures that the stack has enough size for all results,
+Lua ensures that the stack has enough space for all results,
 but it does not ensure any extra space.
 So, before pushing anything in the stack after such a call
 you should use @Lid{lua_checkstack}.
@@ -2269,8 +2270,8 @@ As with variable names,
 string keys starting with an underscore followed by
 uppercase letters are reserved for Lua.
 
-The integer keys in the registry are used by the reference mechanism,
-implemented by the auxiliary library,
+The integer keys in the registry are used
+by the reference mechanism @seeC{luaL_ref}
 and by some predefined values.
 Therefore, integer keys must not be used for other purposes.
 
@@ -2295,8 +2296,8 @@ the @x{global environment}.
 @sect2{C-error|@title{Error Handling in C}
 
 Internally, Lua uses the C @id{longjmp} facility to handle errors.
-(You can also choose to use exceptions if you compile Lua as C++;
-search for @id{LUAI_THROW} in the source code.)
+(Lua will use exceptions if you compile it as C++;
+search for @id{LUAI_THROW} in the source code for details.)
 When Lua faces any error
 (such as a @x{memory allocation error}, type errors, syntax errors,
 and runtime errors)
@@ -2343,7 +2344,7 @@ Lua raises an error whenever it tries to yield across an API call,
 except for three functions:
 @Lid{lua_yieldk}, @Lid{lua_callk}, and @Lid{lua_pcallk}.
 All those functions receive a @def{continuation function}
-(as a parameter called @id{k}) to continue execution after a yield.
+(as a parameter named @id{k}) to continue execution after a yield.
 
 We need to set some terminology to explain continuations.
 We have a C function called from Lua which we will call
@@ -2491,7 +2492,7 @@ Its arguments are
 @id{ptr}, a pointer to the block being allocated/reallocated/freed;
 @id{osize}, the original size of the block or some code about what
 is being allocated;
-@id{nsize}, the new size of the block.
+and @id{nsize}, the new size of the block.
 
 When @id{ptr} is not @id{NULL},
 @id{osize} is the size of the block pointed by @id{ptr},
@@ -2535,7 +2536,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
 }
 Note that @N{Standard C} ensures
 that @T{free(NULL)} has no effect and that
-@T{realloc(NULL, size)} is equivalent to @T{malloc(size)}.
+@T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
 This code assumes that @id{realloc} does not fail when shrinking a block.
 (Although @N{Standard C} does not ensure this behavior,
 it seems to be a safe assumption.)
@@ -2617,7 +2618,7 @@ a = f("how", t.x, 14)
 Here it is @N{in C}:
 @verbatim{
 lua_getglobal(L, "f");                  /* function to be called */
-lua_pushstring(L, "how");                        /* 1st argument */
+lua_pushliteral(L, "how");                       /* 1st argument */
 lua_getglobal(L, "t");                    /* table to be indexed */
 lua_getfield(L, -1, "x");        /* push result of t.x (2nd arg) */
 lua_remove(L, -2);                  /* remove 't' from the stack */
@@ -2625,14 +2626,17 @@ lua_pushinteger(L, 14);                          /* 3rd argument */
 lua_call(L, 3, 1);     /* call 'f' with 3 arguments and 1 result */
 lua_setglobal(L, "a");                         /* set global 'a' */
 }
-Note that the code above is @Q{balanced}:
+Note that the code above is @emph{balanced}:
 at its end, the stack is back to its original configuration.
 This is considered good programming practice.
 
 }
 
 @APIEntry{
-void lua_callk (lua_State *L, int nargs, int nresults, lua_KContext ctx,
+void lua_callk (lua_State *L,
+                int nargs,
+                int nresults,
+                lua_KContext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults,e}
 
@@ -2663,15 +2667,15 @@ Like a Lua function, a @N{C function} called by Lua can also return
 many results.
 
 As an example, the following function receives a variable number
-of numerical arguments and returns their average and sum:
+of numerical arguments and returns their average and their sum:
 @verbatim{
 static int foo (lua_State *L) {
   int n = lua_gettop(L);    /* number of arguments */
-  lua_Number sum = 0;
+  lua_Number sum = 0.0;
   int i;
   for (i = 1; i <= n; i++) {
     if (!lua_isnumber(L, i)) {
-      lua_pushstring(L, "incorrect argument");
+      lua_pushliteral(L, "incorrect argument");
       lua_error(L);
     }
     sum += lua_tonumber(L, i);
@@ -2687,14 +2691,15 @@ static int foo (lua_State *L) {
 }
 
 
-@APIEntry{int lua_checkstack (lua_State *L, int extra);|
+@APIEntry{int lua_checkstack (lua_State *L, int n);|
 @apii{0,0,-}
 
-Ensures that there are at least @id{extra} free stack slots in the stack.
+Ensures that the stack has space for at least @id{n} extra slots.
 It returns false if it cannot fulfill the request,
-because it would cause the stack to be larger than a fixed maximum size
-(typically at least a few thousand elements) or
-because it cannot allocate memory for the new stack size.
+either because it would cause the stack
+to be larger than a fixed maximum size
+(typically at least several thousand elements) or
+because it cannot allocate memory for the extra space.
 This function never shrinks the stack;
 if the stack is already larger than the new size,
 it is left unchanged.
@@ -2711,7 +2716,7 @@ On several platforms, you may not need to call this function,
 because all resources are naturally released when the host program ends.
 On the other hand, long-running programs that create multiple states,
 such as daemons or web servers,
-might need to close states as soon as they are not needed.
+will probably need to close states as soon as they are not needed.
 
 }
 
@@ -2724,7 +2729,7 @@ when compared with the value at index @id{index2},
 following the semantics of the corresponding Lua operator
 (that is, it may call metamethods).
 Otherwise @N{returns 0}.
-Also @N{returns 0} if any of the indices is non valid.
+Also @N{returns 0} if any of the indices is not valid.
 
 The value of @id{op} must be one of the following constants:
 @description{
@@ -2754,9 +2759,9 @@ Concatenation is performed following the usual semantics of Lua
 @apii{0,0,-}
 
 Copies the element at index @id{fromidx}
-into the valid index @id{toidx}
-without shifting any element
-(therefore replacing the value at that position).
+into the valid index @id{toidx},
+replacing the value at that position.
+Values at other positions are not affected.
 
 }
 
@@ -2806,8 +2811,8 @@ This function does not pop the Lua function from the stack.
 @APIEntry{int lua_error (lua_State *L);|
 @apii{1,0,v}
 
-Generates a Lua error.
-The error object must be on the stack top.
+Generates a Lua error,
+using the value at the top of the stack as the error object.
 This function does a long jump,
 and therefore never returns
 @seeC{luaL_error}.
@@ -2877,7 +2882,7 @@ see @Lid{collectgarbage}.
 
 Returns the @x{memory-allocation function} of a given state.
 If @id{ud} is not @id{NULL}, Lua stores in @T{*ud} the
-opaque pointer passed to @Lid{lua_newstate}.
+opaque pointer given when the memory-allocator function was set.
 
 }
 
@@ -2918,10 +2923,10 @@ Returns the type of that value.
 
 }
 
-@APIEntry{int lua_geti (lua_State *L, int index, lua_Integer n);|
+@APIEntry{int lua_geti (lua_State *L, int index, lua_Integer i);|
 @apii{0,1,e}
 
-Pushes onto the stack the value @T{t[n]},
+Pushes onto the stack the value @T{t[i]},
 where @id{t} is the value at the given index.
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
@@ -2947,8 +2952,8 @@ Pushes onto the stack the value @T{t[k]},
 where @id{t} is the value at the given index
 and @id{k} is the value at the top of the stack.
 
-This function pops the key from the stack
-(putting the resulting value in its place).
+This function pops the key from the stack,
+pushing the resulting value in its place.
 As in Lua, this function may trigger a metamethod
 for the @Q{index} event @see{metatable}.
 
@@ -2961,8 +2966,8 @@ Returns the type of the pushed value.
 
 Returns the index of the top element in the stack.
 Because indices start @N{at 1},
-this result is equal to the number of elements in the stack
-(and so @N{0 means} an empty stack).
+this result is equal to the number of elements in the stack;
+in particular, @N{0 means} an empty stack.
 
 }
 
@@ -2990,10 +2995,10 @@ because a pseudo-index is not an actual stack position.
 
 The type of integers in Lua.
 
-By default this type is @id{long long}
+By default this type is @id{long long},
 (usually a 64-bit two-complement integer),
-but that can be changed to @id{long} or @id{int},
-usually a 32-bit two-complement integer.
+but that can be changed to @id{long} or @id{int}
+(usually a 32-bit two-complement integer).
 (See @id{LUA_INT} in @id{luaconf.h}.)
 
 Lua also defines the constants
@@ -3130,9 +3135,7 @@ Otherwise, it is defined as @id{ptrdiff_t}.
 }
 
 @APIEntry{
-typedef int (*lua_KFunction) (lua_State *L,
-                              int status,
-                              lua_KContext ctx);|
+typedef int (*lua_KFunction) (lua_State *L, int status, lua_KContext ctx);|
 
 Type for continuation functions @see{continuations}.
 
@@ -3141,8 +3144,9 @@ Type for continuation functions @see{continuations}.
 @APIEntry{void lua_len (lua_State *L, int index);|
 @apii{0,1,e}
 
-Returns the @Q{length} of the value at the given index;
-it is equivalent to the @Char{#} operator in Lua @see{len-op}.
+Returns the length of the value at the given index.
+It is equivalent to the @Char{#} operator in Lua @see{len-op} and
+may trigger a metamethod for the @Q{length} event @see{metatable}.
 The result is pushed on the stack.
 
 }
@@ -3155,7 +3159,7 @@ int lua_load (lua_State *L,
               const char *mode);|
 @apii{0,1,-}
 
-Loads a Lua chunk (without running it).
+Loads a Lua chunk without running it.
 If there are no errors,
 @id{lua_load} pushes the compiled chunk as a Lua
 function on top of the stack.
@@ -3598,7 +3602,7 @@ Returns 1 if the two values in indices @id{index1} and
 @id{index2} are primitively equal
 (that is, without calling metamethods).
 Otherwise @N{returns 0}.
-Also @N{returns 0} if any of the indices are non valid.
+Also @N{returns 0} if any of the indices are not valid.
 
 }
 
@@ -3656,10 +3660,10 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 
 }
 
-@APIEntry{void lua_rawseti (lua_State *L, int index, lua_Integer n);|
+@APIEntry{void lua_rawseti (lua_State *L, int index, lua_Integer i);|
 @apii{1,0,e}
 
-Does the equivalent of @T{t[n] = v},
+Does the equivalent of @T{t[i] = v},
 where @id{t} is the table at the given index
 and @id{v} is the value at the top of the stack.
 
@@ -6593,73 +6597,6 @@ The definition of what a lowercase letter is depends on the current locale.
 
 }
 
-@sect3{pack| @title{Pack/Unpack Format Strings}
-
-The first argument to both @Lid{string.pack} and @Lid{string.unpack}
-is a format string,
-which describes the layout of the structure being created or read.
-
-A format string is a sequence of conversion options.
-The conversion options are as follows:
-@Tab2{
-@row{@col{@T{<}}@col{sets little endian}}
-@row{@col{@T{>}}@col{sets big endian}}
-@row{@col{@T{![@rep{n}]}}@col{sets maximum alignment to @id{n}
-(default is native alignment)}}
-@row{@col{@T{b}}@col{a signed byte (@id{char})}}
-@row{@col{@T{B}}@col{an unsigned byte (@id{char})}}
-@row{@col{@T{h}}@col{a signed @id{short} (native size)}}
-@row{@col{@T{H}}@col{an unsigned @id{short} (native size)}}
-@row{@col{@T{l}}@col{a signed @id{long} (native size)}}
-@row{@col{@T{L}}@col{an unsigned @id{long} (native size)}}
-@row{@col{@T{j}}@col{a @id{lua_Integer}}}
-@row{@col{@T{J}}@col{a @id{lua_Unsigned}}}
-@row{@col{@T{T}}@col{a @id{size_t} (native size)}}
-@row{@col{@T{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
-(default is native size)}}
-@row{@col{@T{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
-(default is native size)}}
-@row{@col{@T{f}}@col{a @id{float} (native size)}}
-@row{@col{@T{d}}@col{a @id{double} (native size)}}
-@row{@col{@T{n}}@col{a @id{lua_Number}}}
-@row{@col{@T{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
-(default is 1)}}
-@row{@col{@T{z}}@col{a zero-terminated string}}
-@row{@col{@T{s[@emph{n}]}}@col{a string preceded by its length
-coded as an unsigned integer with @id{n} bytes
-(default is a @id{size_t})}}
-@row{@col{@T{x}}@col{one byte of padding}}
-@row{@col{@T{X@rep{op}}}@col{an empty item that aligns
-according to option @id{op}
-(which is otherwise ignored)}}
-@row{@col{@Char{ }}@col{(empty space) ignored}}
-}
-(A @St{[@rep{n}]} means an optional integral numeral.)
-Except for padding, spaces, and configurations
-(options @St{xX <>!}),
-each option corresponds to an argument (in @Lid{string.pack})
-or a result (in @Lid{string.unpack}).
-
-For options @St{!@rep{n}}, @St{s@rep{n}}, @St{i@rep{n}}, and @St{I@rep{n}},
-@id{n} can be any integer between 1 and 16.
-All integral options check overflows;
-@Lid{string.pack} checks whether the given value fits in the given size;
-@Lid{string.unpack} checks whether the read value fits in a Lua integer.
-
-Before any configuration option,
-the default alignment is 1 (that is, no alignment)
-and the default endianness is the native endianness.
-
-Alignment works as follows:
-For each option,
-the format gets extra padding until the data starts
-at an offset that is a multiple of the minimum between the
-option size and the maximum alignment.
-This minimum must be a power of 2 (1, 2, 4, 8, or 16).
-Options @St{c} and @St{z} are not aligned.
-Option @St{s} is aligned according to the size of its starting length.
-
-}
 
 @sect3{pm| @title{Patterns}
 
@@ -6709,7 +6646,7 @@ represents the character @emph{x} itself.
 represents the character @rep{x}.
 This is the standard way to escape the magic characters.
 Any non-alphanumeric character
-(including all punctuations, even the non magic)
+(including all punctuations, even the non-magical)
 can be preceded by a @Char{%}
 when used to represent itself in a pattern.
 }
@@ -6843,6 +6780,75 @@ For instance, if we apply the pattern @T{"()aa()"} on the
 string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 
 }
+
+}
+
+
+@sect3{pack| @title{Format Strings for Pack and Unpack}
+
+The first argument to both @Lid{string.pack} and @Lid{string.unpack}
+is a format string,
+which describes the layout of the structure being created or read.
+
+A format string is a sequence of conversion options.
+The conversion options are as follows:
+@Tab2{
+@row{@col{@T{<}}@col{sets little endian}}
+@row{@col{@T{>}}@col{sets big endian}}
+@row{@col{@T{![@rep{n}]}}@col{sets maximum alignment to @id{n}
+(default is native alignment)}}
+@row{@col{@T{b}}@col{a signed byte (@id{char})}}
+@row{@col{@T{B}}@col{an unsigned byte (@id{char})}}
+@row{@col{@T{h}}@col{a signed @id{short} (native size)}}
+@row{@col{@T{H}}@col{an unsigned @id{short} (native size)}}
+@row{@col{@T{l}}@col{a signed @id{long} (native size)}}
+@row{@col{@T{L}}@col{an unsigned @id{long} (native size)}}
+@row{@col{@T{j}}@col{a @id{lua_Integer}}}
+@row{@col{@T{J}}@col{a @id{lua_Unsigned}}}
+@row{@col{@T{T}}@col{a @id{size_t} (native size)}}
+@row{@col{@T{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
+(default is native size)}}
+@row{@col{@T{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
+(default is native size)}}
+@row{@col{@T{f}}@col{a @id{float} (native size)}}
+@row{@col{@T{d}}@col{a @id{double} (native size)}}
+@row{@col{@T{n}}@col{a @id{lua_Number}}}
+@row{@col{@T{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
+(default is 1)}}
+@row{@col{@T{z}}@col{a zero-terminated string}}
+@row{@col{@T{s[@emph{n}]}}@col{a string preceded by its length
+coded as an unsigned integer with @id{n} bytes
+(default is a @id{size_t})}}
+@row{@col{@T{x}}@col{one byte of padding}}
+@row{@col{@T{X@rep{op}}}@col{an empty item that aligns
+according to option @id{op}
+(which is otherwise ignored)}}
+@row{@col{@Char{ }}@col{(empty space) ignored}}
+}
+(A @St{[@rep{n}]} means an optional integral numeral.)
+Except for padding, spaces, and configurations
+(options @St{xX <>!}),
+each option corresponds to an argument (in @Lid{string.pack})
+or a result (in @Lid{string.unpack}).
+
+For options @St{!@rep{n}}, @St{s@rep{n}}, @St{i@rep{n}}, and @St{I@rep{n}},
+@id{n} can be any integer between 1 and 16.
+All integral options check overflows;
+@Lid{string.pack} checks whether the given value fits in the given size;
+@Lid{string.unpack} checks whether the read value fits in a Lua integer.
+
+Before any configuration option,
+the default alignment is 1 (that is, no alignment)
+and the default endianness is the native endianness.
+
+Alignment works as follows:
+For each option,
+the format gets extra padding until the data starts
+at an offset that is a multiple of the minimum between the
+option size and the maximum alignment.
+This minimum must be a power of 2 (1, 2, 4, 8, or 16).
+Options @St{c} and @St{z} are not aligned.
+Option @St{s} is aligned according to the size of its starting length.
 
 }
 
