@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.135 2014/10/20 18:21:42 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.136 2014/10/22 16:16:43 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -77,7 +77,7 @@ integer numbers and real (floating-point) numbers.
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
 including @x{embedded zeros} (@Char{\0}).
-Lua is also enconding-agnostic;
+Lua is also encoding-agnostic;
 it makes no assumptions about the contents of a string.
 
 The type @emph{number} uses two internal representations,
@@ -94,6 +94,7 @@ uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits for both integers and floats 
 (called @def{Small Lua}) is particularly attractive
 for small machines and embedded systems.
+(See @id{LUA_INT} in file @id{luaconf.h}.)
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C @see{functioncall}.
@@ -517,7 +518,7 @@ this event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
 The metamethod is looked up in @id{table}.
 
-Again like with indexing,
+Like with indexing,
 the metamethod for this event can be either a function or a table.
 If it is a function,
 it is called with @id{table}, @id{key}, and @id{value} as arguments.
@@ -1535,15 +1536,15 @@ or @nil if @id{f} does not return any values.)
 
 @sect3{arith| @title{Arithmetic Operators}
 Lua supports the following @x{arithmetic operators}:
-@Tab2{
-@row{@col{@T{+}}@col{addition}}
-@row{@col{@T{-}}@col{subtraction}}
-@row{@col{@T{*}}@col{multiplication}}
-@row{@col{@T{/}}@col{float division}}
-@row{@col{@T{//}}@col{integer division}}
-@row{@col{@T{%}}@col{modulo}}
-@row{@col{@T{^}}@col{exponentiation}}
-@row{@col{@T{-}}@col{unary minus}}
+@description{
+@item{@T{+}|addition}
+@item{@T{-}|subtraction}
+@item{@T{*}|multiplication}
+@item{@T{/}|float division}
+@item{@T{//}|integer division}
+@item{@T{%}|modulo}
+@item{@T{^}|exponentiation}
+@item{@T{-}|unary minus}
 }
 
 With the exception of divisions and exponentiation,
@@ -1584,13 +1585,13 @@ that is equal modulo @M{2@sp{64}} to the mathematical result.)
 
 @sect3{bitwise| @title{Bitwise Operators}
 Lua supports the following @x{bitwise operators}:
-@Tab2{
-@row{@col{@T{&}}@col{bitwise and}}
-@row{@col{@T{|}}@col{bitwise or}}
-@row{@col{@T{~}}@col{bitwise exclusive or}}
-@row{@col{@T{>>}}@col{right shift}}
-@row{@col{@T{<<}}@col{left shift}}
-@row{@col{@T{~}}@col{unary bitwise not}}
+@description{
+@item{@T{&}|bitwise and}
+@item{@T{|}|bitwise or}
+@item{@T{~}|bitwise exclusive or}
+@item{@T{>>}|right shift}
+@item{@T{<<}|left shift}
+@item{@T{~}|unary bitwise not}
 }
 
 All bitwise operations convert its operands to integers
@@ -1655,13 +1656,13 @@ use the @id{format} function from the string library
 
 @sect3{rel-ops| @title{Relational Operators}
 Lua supports the following @x{relational operators}:
-@Tab2{
-@row{@col{@T{==}}@col{equality}}
-@row{@col{@T{~=}}@col{inequality}}
-@row{@col{@T{<}}@col{less than}}
-@row{@col{@T{>}}@col{greater than}}
-@row{@col{@T{<=}}@col{less or equal}}
-@row{@col{@T{>=}}@col{greater or equal}}
+@description{
+@item{@T{==}|equality}
+@item{@T{~=}|inequality}
+@item{@T{<}|less than}
+@item{@T{>}|greater than}
+@item{@T{<=}|less or equal}
+@item{@T{>=}|greater or equal}
 }
 These operators always result in @false or @true.
 
@@ -2405,6 +2406,13 @@ int original_function (lua_State *L) {
   return k(L, lua_pcallk(L, n, m, h, ctx2, k), ctx1);
 }
 }
+Note the external, explicit call to the continuation:
+Lua will call the continuation only if needed, that is,
+in case of errors or resuming after an yield.
+If the called function returns normally without ever yielding,
+@Lid{lua_pcallk} (and @Lid{lua_callk}) will also return normally.
+(Of course, instead of calling the continuation in that case,
+you can do the equivalent work directly inside the original function.)
 
 Besides the Lua state,
 the continuation function has two other parameters:
@@ -2567,7 +2575,8 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
 @item{@defid{LUA_OPBNOT}| performs bitwise negation (@T{~})}
 @item{@defid{LUA_OPBAND}| performs bitwise and (@T{&})}
-@item{@defid{LUA_OPBOR}| performs bitwise or (@T{|})}
+@item{@defid{LUA_OPBOR}|  @C{must change line;
+  next '|' confuses the formatter} performs bitwise or (@T{|})}
 @item{@defid{LUA_OPBXOR}| performs bitwise exclusive or (@T{~})}
 @item{@defid{LUA_OPSHL}| performs left shift (@T{<<})}
 @item{@defid{LUA_OPSHR}| performs right shift (@T{>>})}
@@ -3201,11 +3210,12 @@ a @id{NULL} value is equivalent to the string @St{bt}.
 so the reader function must always leave the stack
 unmodified when returning.
 
-If the resulting function has one upvalue,
-this upvalue is set to the value of the @x{global environment}
+If the resulting function has upvalues,
+its first upvalue is set to the value of the @x{global environment}
 stored at index @id{LUA_RIDX_GLOBALS} in the registry @see{registry}.
 When loading main chunks,
 this upvalue will be the @id{_ENV} variable @see{globalenv}.
+Other upvalues are initialized with @nil.
 
 }
 
@@ -3300,7 +3310,7 @@ but that can be changed to a single float.
 
 }
 
-@APIEntry{int lua_numtointeger (lua_Number n, lua_Integer *p);|
+@APIEntry{int lua_numbertointeger (lua_Number n, lua_Integer *p);|
 
 Converts a Lua float to a Lua integer.
 This macro assumes that @id{n} has an integral value.
@@ -5519,7 +5529,7 @@ Currently, Lua has the following standard libraries:
 
 @item{@link{iolib|input and output};}
 
-@item{@link{iosyslib|operating system facilities};}
+@item{@link{oslib|operating system facilities};}
 
 @item{@link{debuglib|debug facilities}.}
 
@@ -5538,10 +5548,11 @@ the host program can open them individually by using
 @defid{luaopen_package} (for the package library),
 @defid{luaopen_coroutine} (for the coroutine library),
 @defid{luaopen_string} (for the string library),
+@defid{luaopen_utf8} (for the UTF8 library),
 @defid{luaopen_table} (for the table library),
 @defid{luaopen_math} (for the mathematical library),
 @defid{luaopen_io} (for the I/O library),
-@defid{luaopen_os} (for the Operating System library),
+@defid{luaopen_os} (for the operating system library),
 and @defid{luaopen_debug} (for the debug library).
 These functions are declared in @defid{lualib.h}.
 
@@ -5703,12 +5714,15 @@ If the resulting function has upvalues,
 the first upvalue is set to the value of @id{env},
 if that parameter is given,
 or to the value of the @x{global environment}.
+Other upvalues are initialized with @nil.
 (When you load a main chunk,
 the resulting function will always have exactly one upvalue,
 the @id{_ENV} variable @see{globalenv}.
 However,
 when you load a binary chunk created from a function @seeF{string.dump},
-the resulting function can have arbitrary upvalues.)
+the resulting function can have an arbitrary number of upvalues.)
+All upvalues are fresh, that is,
+they are not shared with any other function.
 
 @id{source} is used as the source of the chunk for error messages
 and debug information @see{debugI}.
@@ -6349,6 +6363,13 @@ the binary representation is created without debug information
 about the function
 (local variable names, lines, etc.).
 
+Functions with upvalues have only their number of upvalues saved.
+When (re)loaded,
+those upvalues receive fresh instances containing @nil.
+(You can use the debug library to serialize
+and reload the upvalues of a function
+in a way adequate to your needs.)
+
 }
 
 @LibEntry{string.find (s, pattern [, init [, plain]])|
@@ -6792,38 +6813,39 @@ which describes the layout of the structure being created or read.
 
 A format string is a sequence of conversion options.
 The conversion options are as follows:
-@Tab2{
-@row{@col{@T{<}}@col{sets little endian}}
-@row{@col{@T{>}}@col{sets big endian}}
-@row{@col{@T{![@rep{n}]}}@col{sets maximum alignment to @id{n}
-(default is native alignment)}}
-@row{@col{@T{b}}@col{a signed byte (@id{char})}}
-@row{@col{@T{B}}@col{an unsigned byte (@id{char})}}
-@row{@col{@T{h}}@col{a signed @id{short} (native size)}}
-@row{@col{@T{H}}@col{an unsigned @id{short} (native size)}}
-@row{@col{@T{l}}@col{a signed @id{long} (native size)}}
-@row{@col{@T{L}}@col{an unsigned @id{long} (native size)}}
-@row{@col{@T{j}}@col{a @id{lua_Integer}}}
-@row{@col{@T{J}}@col{a @id{lua_Unsigned}}}
-@row{@col{@T{T}}@col{a @id{size_t} (native size)}}
-@row{@col{@T{i[@rep{n}]}}@col{a signed @id{int} with @id{n} bytes
-(default is native size)}}
-@row{@col{@T{I[@rep{n}]}}@col{an unsigned @id{int} with @id{n} bytes
-(default is native size)}}
-@row{@col{@T{f}}@col{a @id{float} (native size)}}
-@row{@col{@T{d}}@col{a @id{double} (native size)}}
-@row{@col{@T{n}}@col{a @id{lua_Number}}}
-@row{@col{@T{c[@rep{n}]}}@col{a fixed-sized string with @id{n} bytes
-(default is 1)}}
-@row{@col{@T{z}}@col{a zero-terminated string}}
-@row{@col{@T{s[@emph{n}]}}@col{a string preceded by its length
+@description{
+@item{@T{<}|sets little endian}
+@item{@T{>}|sets big endian}
+@item{@T{=}|sets native endian}
+@item{@T{![@rep{n}]}|sets maximum alignment to @id{n}
+(default is native alignment)}
+@item{@T{b}|a signed byte (@id{char})}
+@item{@T{B}|an unsigned byte (@id{char})}
+@item{@T{h}|a signed @id{short} (native size)}
+@item{@T{H}|an unsigned @id{short} (native size)}
+@item{@T{l}|a signed @id{long} (native size)}
+@item{@T{L}|an unsigned @id{long} (native size)}
+@item{@T{j}|a @id{lua_Integer}}
+@item{@T{J}|a @id{lua_Unsigned}}
+@item{@T{T}|a @id{size_t} (native size)}
+@item{@T{i[@rep{n}]}|a signed @id{int} with @id{n} bytes
+(default is native size)}
+@item{@T{I[@rep{n}]}|an unsigned @id{int} with @id{n} bytes
+(default is native size)}
+@item{@T{f}|a @id{float} (native size)}
+@item{@T{d}|a @id{double} (native size)}
+@item{@T{n}|a @id{lua_Number}}
+@item{@T{c[@rep{n}]}|a fixed-sized string with @id{n} bytes
+(default is 1)}
+@item{@T{z}|a zero-terminated string}
+@item{@T{s[@emph{n}]}|a string preceded by its length
 coded as an unsigned integer with @id{n} bytes
-(default is a @id{size_t})}}
-@row{@col{@T{x}}@col{one byte of padding}}
-@row{@col{@T{X@rep{op}}}@col{an empty item that aligns
+(default is a @id{size_t})}
+@item{@T{x}|one byte of padding}
+@item{@T{X@rep{op}}|an empty item that aligns
 according to option @id{op}
-(which is otherwise ignored)}}
-@row{@col{@Char{ }}@col{(empty space) ignored}}
+(which is otherwise ignored)}
+@item{@Char{ }|(empty space) ignored}
 }
 (A @St{[@rep{n}]} means an optional integral numeral.)
 Except for padding, spaces, and configurations
@@ -6837,9 +6859,10 @@ All integral options check overflows;
 @Lid{string.pack} checks whether the given value fits in the given size;
 @Lid{string.unpack} checks whether the read value fits in a Lua integer.
 
-Before any configuration option,
-the default alignment is 1 (that is, no alignment)
-and the default endianness is the native endianness.
+Any format string starts as if prefixed by @St{!1=},
+that is,
+with maximum alignment of 1 (no alignment)
+and native endianness.
 
 Alignment works as follows:
 For each option,
@@ -6849,6 +6872,9 @@ option size and the maximum alignment.
 This minimum must be a power of 2 (1, 2, 4, 8, or 16).
 Options @St{c} and @St{z} are not aligned.
 Option @St{s} is aligned according to the size of its starting length.
+
+All padding is filled with zeros by @Lid{string.pack}
+(and ignored by @Lid{string.unpack}).
 
 }
 
@@ -7568,7 +7594,7 @@ Otherwise it returns @nil plus a string describing the error.
 
 }
 
-@sect2{iosyslib| @title{Operating System Facilities}
+@sect2{oslib| @title{Operating System Facilities}
 
 This library is implemented through table @defid{os}.
 
