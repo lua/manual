@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.136 2014/10/22 16:16:43 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.137 2014/11/03 20:42:27 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -3164,7 +3164,7 @@ The result is pushed on the stack.
 int lua_load (lua_State *L,
               lua_Reader reader,
               void *data,
-              const char *source,
+              const char *chunkname,
               const char *mode);|
 @apii{0,1,-}
 
@@ -3197,7 +3197,7 @@ The @id{lua_load} function uses a user-supplied @id{reader} function
 to read the chunk @seeC{lua_Reader}.
 The @id{data} argument is an opaque value passed to the reader function.
 
-The @id{source} argument gives a name to the chunk,
+The @id{chunkname} argument gives a name to the chunk,
 which is used for error messages and in debug information @see{debugI}.
 
 @id{lua_load} automatically detects whether the chunk is text or binary
@@ -4246,7 +4246,7 @@ The fields of @Lid{lua_Debug} have the following meaning:
 @description{
 
 @item{@id{source}|
-the source of the chunk that created the function.
+the name of the chunk that created the function.
 If @T{source} starts with a @Char{@At},
 it means that the function was defined in a file where
 the file name follows the @Char{@At}.
@@ -4415,7 +4415,7 @@ This function returns 0 on error
 
 }
 
-@APIEntry{const char *lua_getlocal (lua_State *L, lua_Debug *ar, int n);|
+@APIEntry{const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);|
 @apii{0,0|1,-}
 
 Gets information about a local variable of
@@ -4562,7 +4562,7 @@ A hook is disabled by setting @id{mask} to zero.
 
 }
 
-@APIEntry{const char *lua_setlocal (lua_State *L, lua_Debug *ar, int n);|
+@APIEntry{const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);|
 @apii{0|1,0,-}
 
 Sets the value of a local variable of a given activation record.
@@ -5022,11 +5022,13 @@ pushes nothing and returns @id{LUA_TNIL}.
 
 }
 
-@APIEntry{void luaL_getmetatable (lua_State *L, const char *tname);|
+@APIEntry{int luaL_getmetatable (lua_State *L, const char *tname);|
 @apii{0,1,-}
 
 Pushes onto the stack the metatable associated with name @id{tname}
 in the registry @seeC{luaL_newmetatable}.
+If there is no metatable associated with @id{tname},
+returns false and pushes @nil.
 
 }
 
@@ -5393,8 +5395,8 @@ The standard representation for @x{file handles},
 which is used by the standard I/O library.
 
 A file handle is implemented as a full userdata,
-with a metatable called @id{LUA_FILEHANDLE}.
-@id{LUA_FILEHANDLE} is a macro with the actual metatable's name.
+with a metatable called @id{LUA_FILEHANDLE}
+(where @id{LUA_FILEHANDLE} is a macro with the actual metatable's name).
 The metatable is created by the I/O library
 @seeF{luaL_newmetatable}.
 
@@ -5695,14 +5697,14 @@ up to the first integer key absent from the table.
 
 }
 
-@LibEntry{load (ld [, source [, mode [, env]]])|
+@LibEntry{load (chunk [, chunkname [, mode [, env]]])|
 
 Loads a chunk.
 
-If @id{ld} is a string, the chunk is this string.
-If @id{ld} is a function,
+If @id{chunk} is a string, the chunk is this string.
+If @id{chunk} is a function,
 @id{load} calls it repeatedly to get the chunk pieces.
-Each call to @id{ld} must return a string that concatenates
+Each call to @id{chunk} must return a string that concatenates
 with previous results.
 A return of an empty string, @nil, or no value signals the end of the chunk.
 
@@ -5724,10 +5726,10 @@ the resulting function can have an arbitrary number of upvalues.)
 All upvalues are fresh, that is,
 they are not shared with any other function.
 
-@id{source} is used as the source of the chunk for error messages
+@id{chunkname} is used as the name of the chunk for error messages
 and debug information @see{debugI}.
 When absent,
-it defaults to @id{ld}, if @id{ld} is a string,
+it defaults to @id{chunk}, if @id{chunk} is a string,
 or to @St{=(load)} otherwise.
 
 The string @id{mode} controls whether the chunk can be text or binary
@@ -6849,7 +6851,7 @@ according to option @id{op}
 }
 (A @St{[@rep{n}]} means an optional integral numeral.)
 Except for padding, spaces, and configurations
-(options @St{xX <>!}),
+(options @St{xX <=>!}),
 each option corresponds to an argument (in @Lid{string.pack})
 or a result (in @Lid{string.unpack}).
 
@@ -6868,10 +6870,10 @@ Alignment works as follows:
 For each option,
 the format gets extra padding until the data starts
 at an offset that is a multiple of the minimum between the
-option size and the maximum alignment.
-This minimum must be a power of 2 (1, 2, 4, 8, or 16).
-Options @St{c} and @St{z} are not aligned.
-Option @St{s} is aligned according to the size of its starting length.
+option size and the maximum alignment;
+this minimum must be a power of 2.
+Options @St{c} and @St{z} are not aligned;
+option @St{s} follows the alignment of its starting integer.
 
 All padding is filled with zeros by @Lid{string.pack}
 (and ignored by @Lid{string.unpack}).
@@ -6951,8 +6953,8 @@ The default for @id{i} is 1 when @id{n} is non-negative
 and @T{#s + 1} otherwise,
 so that @T{utf8.offset(s, -n)} gets the offset of the
 @id{n}-th character from the end of the string.
-If the specified character is not in the subject
-or right after its end,
+If the specified character is neither in the subject
+nor right after its end,
 the function returns @nil.
 
 As a special case,
@@ -6974,7 +6976,7 @@ Remember that, whenever an operation needs the length of a table,
 the table must be a proper sequence
 or have a @idx{__len} metamethod @see{len-op}.
 All functions ignore non-numeric keys
-in tables given as arguments.
+in the tables given as arguments.
 
 
 @LibEntry{table.concat (list [, sep [, i [, j]]])|
@@ -7078,7 +7080,7 @@ and float results for float (or mixed) arguments.
 Rounding functions
 (@Lid{math.ceil}, @Lid{math.floor}, and @Lid{math.modf})
 return an integer when the result fits in the range of an integer,
-otherwise they return a float.
+or a float otherwise.
 
 @LibEntry{math.abs (x)|
 
@@ -7216,7 +7218,7 @@ in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.
-(The interval size must fit in a Lua integer.)
+(The value @M{m-n} cannot be negative and must fit in a Lua integer.)
 The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
 
 This function is an interface to the underling
