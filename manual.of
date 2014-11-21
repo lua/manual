@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.137 2014/11/03 20:42:27 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.138 2014/11/19 14:52:22 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -392,18 +392,18 @@ Behavior similar to the @Q{add} operation.
 }
 
 @item{@Q{idiv}|
-the @T{//} (integer division) operation.
+the @T{//} (floor division) operation.
 @Lidx{__idiv}
-Behavior similar to the @Q{add} operation,
-except that Lua will try a metamethod
-if any operator is neither an integer
-nor a value coercible to an integer @see{coercion}.
+Behavior similar to the @Q{add} operation.
 }
 
 @item{@Q{band}|
 the @T{&} (bitwise and) operation.
 @Lidx{__band}
-Behavior similar to the @Q{idiv} operation.
+Behavior similar to the @Q{add} operation,
+except that Lua will try a metamethod
+if any operator is neither an integer
+nor a value coercible to an integer @see{coercion}.
 }
 
 @item{@Q{bor}|
@@ -1541,13 +1541,13 @@ Lua supports the following @x{arithmetic operators}:
 @item{@T{-}|subtraction}
 @item{@T{*}|multiplication}
 @item{@T{/}|float division}
-@item{@T{//}|integer division}
+@item{@T{//}|floor division}
 @item{@T{%}|modulo}
 @item{@T{^}|exponentiation}
 @item{@T{-}|unary minus}
 }
 
-With the exception of divisions and exponentiation,
+With the exception of float division and exponentiation,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1566,11 +1566,9 @@ and the result is always a float.
 Exponentiation uses the @ANSI{pow},
 so that it works for non-integer exponents too.
 
-Integer division (@T{//}) converts its operands to integers
-@see{coercion}
-and its result is always an integer.
-The result is always rounded towards minus infinite
-(floor division).
+Floor division (@T{//}) is a division 
+that rounds the quotient towards minus infinite,
+that is, the floor of the division of its operands.
 
 Modulo is defined as the remainder of a division
 that rounds the quotient towards minus infinite (floor division).
@@ -1610,12 +1608,12 @@ result in zero (as all bits are shifted out).
 @sect3{coercion| @title{Coercions and Conversions}
 Lua provides some automatic conversions between some
 types and representations at run time.
-Most arithmetic operations applied to mixed numbers
+Bitwise operators always convert float operands to integers.
+Float division and exponentiation
+always convert integer operands to floats.
+All other arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
 this is called the @def{usual rule}.
-Float division always converts integer operands to floats;
-integer division and bitwise operators
-always convert float operands to integers.
 The C API also converts both integers to floats and
 floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
@@ -2569,7 +2567,7 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPSUB}| performs subtraction (@T{-})}
 @item{@defid{LUA_OPMUL}| performs multiplication (@T{*})}
 @item{@defid{LUA_OPDIV}| performs float division (@T{/})}
-@item{@defid{LUA_OPIDIV}| performs integer division (@T{//})}
+@item{@defid{LUA_OPIDIV}| performs floor division (@T{//})}
 @item{@defid{LUA_OPMOD}| performs modulo (@T{%})}
 @item{@defid{LUA_OPPOW}| performs exponentiation (@T{^})}
 @item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
