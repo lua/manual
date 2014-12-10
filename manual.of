@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.138 2014/11/19 14:52:22 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.139 2014/11/21 18:27:10 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1151,7 +1151,7 @@ even if it does not use that variable.
 
 A chunk can be stored in a file or in a string inside the host program.
 To execute a chunk,
-Lua first \emph{loads} it,
+Lua first @emph{loads} it,
 precompiling the chunk's code into instructions for a virtual machine,
 and then Lua executes the compiled code
 with an interpreter for the virtual machine.
@@ -6563,11 +6563,21 @@ according to the format string fmt @see{pack}.
 
 }
 
+@LibEntry{string.packsize (fmt)|
+
+Returns the size of a string resulting from @Lid{string.pack}
+with the given format.
+The format string cannot have the variable-length options
+@Char{s} or @Char{z} @see{pack}.
+
+}
+
 @LibEntry{string.rep (s, n [, sep])|
 Returns a string that is the concatenation of @id{n} copies of
 the string @id{s} separated by the string @id{sep}.
 The default value for @id{sep} is the empty string
 (that is, no separator).
+Returns the empty string if @id{n} is not positive.
 
 }
 
@@ -6807,7 +6817,8 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 
 @sect3{pack| @title{Format Strings for Pack and Unpack}
 
-The first argument to both @Lid{string.pack} and @Lid{string.unpack}
+The first argument to @Lid{string.pack},
+@Lid{string.packsize}, and @Lid{string.unpack}
 is a format string,
 which describes the layout of the structure being created or read.
 
@@ -6835,8 +6846,7 @@ The conversion options are as follows:
 @item{@T{f}|a @id{float} (native size)}
 @item{@T{d}|a @id{double} (native size)}
 @item{@T{n}|a @id{lua_Number}}
-@item{@T{c[@rep{n}]}|a fixed-sized string with @id{n} bytes
-(default is 1)}
+@item{@T{c@rep{n}}|a fixed-sized string with @id{n} bytes}
 @item{@T{z}|a zero-terminated string}
 @item{@T{s[@emph{n}]}|a string preceded by its length
 coded as an unsigned integer with @id{n} bytes
@@ -7114,7 +7124,7 @@ returns the arc tangent of @id{y}.
 
 @LibEntry{math.ceil (x)|
 
-Returns the smaller integral value larger than or equal to @id{x}.
+Returns the smallest integral value larger than or equal to @id{x}.
 
 }
 
@@ -8299,7 +8309,7 @@ changed the way it handles versioned names.
 Now, the version should come after the module name
 (as is usual in most other tools).
 For compatibility, that searcher still tries the old format
-if if cannot find an open function according to the new style.
+if it cannot find an open function according to the new style.
 (@N{Lua 5.2} already worked that way,
 but it did not document the change.)
 }
