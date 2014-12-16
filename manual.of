@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.139 2014/11/21 18:27:10 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.140 2014/12/10 11:58:42 roberto Exp $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -92,9 +92,9 @@ Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
 The option with 32 bits for both integers and floats 
-(called @def{Small Lua}) is particularly attractive
+is particularly attractive
 for small machines and embedded systems.
-(See @id{LUA_INT} in file @id{luaconf.h}.)
+(See macro @id{LUA_32BITS} in file @id{luaconf.h}.)
 
 Lua can call (and manipulate) functions written in Lua and
 functions written in C @see{functioncall}.
@@ -1585,7 +1585,7 @@ that is equal modulo @M{2@sp{64}} to the mathematical result.)
 Lua supports the following @x{bitwise operators}:
 @description{
 @item{@T{&}|bitwise and}
-@item{@T{|}|bitwise or}
+@item{@T{@SpecialOr}|bitwise or}
 @item{@T{~}|bitwise exclusive or}
 @item{@T{>>}|right shift}
 @item{@T{<<}|left shift}
@@ -2573,8 +2573,7 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
 @item{@defid{LUA_OPBNOT}| performs bitwise negation (@T{~})}
 @item{@defid{LUA_OPBAND}| performs bitwise and (@T{&})}
-@item{@defid{LUA_OPBOR}|  @C{must change line;
-  next '|' confuses the formatter} performs bitwise or (@T{|})}
+@item{@defid{LUA_OPBOR}| performs bitwise or (@T{|})}
 @item{@defid{LUA_OPBXOR}| performs bitwise exclusive or (@T{~})}
 @item{@defid{LUA_OPSHL}| performs left shift (@T{<<})}
 @item{@defid{LUA_OPSHR}| performs right shift (@T{>>})}
@@ -5689,9 +5688,9 @@ so that the construction
 @verbatim{
 for i,v in ipairs(t) do @rep{body} end
 }
-will iterate over the pairs
+will iterate over the key@En{}value pairs
 (@T{1,t[1]}), (@T{2,t[2]}), @ldots,
-up to the first integer key absent from the table.
+up to the first nil value.
 
 }
 
@@ -8271,7 +8270,7 @@ The @id{bit32} library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
 (Keep in mind that @id{bit32} operates on 32-bit integers,
-while the bitwise operators in Standard Lua operate on 64-bit integers.)
+while the bitwise operators in standard Lua operate on 64-bit integers.)
 }
 
 @item{
