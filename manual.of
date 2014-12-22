@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.140 2014/12/10 11:58:42 roberto Exp $}
+@Ci{$Id: manual.of,v 1.141 2014/12/16 16:21:31 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -6554,11 +6554,11 @@ its default value @N{is 1} and can be negative.
 
 }
 
-@LibEntry{string.pack (fmt, v1, v2, ...)|
+@LibEntry{string.pack (fmt, v1, v2, @Cdots)|
 
-Returns a binary string containing the values v1, v2, etc.
+Returns a binary string containing the values @id{v1}, @id{v2}, etc.
 packed (that is, serialized in binary form)
-according to the format string fmt @see{pack}. 
+according to the format string @id{fmt} @see{pack}. 
 
 }
 
@@ -6944,7 +6944,7 @@ It raises an error if it meets any invalid byte sequence.
 
 @LibEntry{utf8.len (s [, i [, j]])|
 Returns the number of UTF-8 characters in string @id{s}
-that start between positions @id{i} and @{j} (both inclusive).
+that start between positions @id{i} and @id{j} (both inclusive).
 The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
 If it finds any invalid byte sequence,
 returns a false value plus the position of the first invalid byte. 
@@ -7655,7 +7655,9 @@ because of its reliance on @CId{gmtime} and @CId{localtime}.
 
 @LibEntry{os.difftime (t2, t1)|
 
-Returns the number of seconds from time @id{t1} to time @id{t2}.
+Returns the difference, in seconds,
+from time @id{t1} to time @id{t2}
+(where the times are values returned by @Lid{os.time}).
 In @x{POSIX}, @x{Windows}, and some other systems,
 this value is exactly @id{t2}@M{-}@id{t1}.
 
