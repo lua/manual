@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.141 2014/12/16 16:21:31 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.142 2014/12/22 13:31:36 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1547,7 +1547,7 @@ Lua supports the following @x{arithmetic operators}:
 @item{@T{-}|unary minus}
 }
 
-With the exception of float division and exponentiation,
+With the exception of exponentiation and float division,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
@@ -1560,7 +1560,7 @@ for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
 
-Float division (@T{/}) and exponentiation
+Exponentiation and float division (@T{/})
 always convert their operands to floats
 and the result is always a float.
 Exponentiation uses the @ANSI{pow},
@@ -1609,7 +1609,7 @@ result in zero (as all bits are shifted out).
 Lua provides some automatic conversions between some
 types and representations at run time.
 Bitwise operators always convert float operands to integers.
-Float division and exponentiation
+Exponentiation and float division
 always convert integer operands to floats.
 All other arithmetic operations applied to mixed numbers
 (integers and floats) convert the integer operand to a float;
@@ -2406,7 +2406,7 @@ int original_function (lua_State *L) {
 }
 Note the external, explicit call to the continuation:
 Lua will call the continuation only if needed, that is,
-in case of errors or resuming after an yield.
+in case of errors or resuming after a yield.
 If the called function returns normally without ever yielding,
 @Lid{lua_pcallk} (and @Lid{lua_callk}) will also return normally.
 (Of course, instead of calling the continuation in that case,
@@ -2421,7 +2421,7 @@ it only passes this value from the original function to the
 continuation function.)
 For @Lid{lua_pcallk},
 the status is the same value that would be returned by @Lid{lua_pcallk},
-except that it is @Lid{LUA_YIELD} when being executed after an yield
+except that it is @Lid{LUA_YIELD} when being executed after a yield
 (instead of @Lid{LUA_OK}).
 For @Lid{lua_yieldk} and @Lid{lua_callk},
 the status is always @Lid{LUA_YIELD} when Lua calls the continuation.
@@ -4593,7 +4593,7 @@ when the index is greater than the number of upvalues.
 @APIEntry{void *lua_upvalueid (lua_State *L, int funcindex, int n);|
 @apii{0,0,-}
 
-Returns an unique identifier for the upvalue numbered @id{n}
+Returns a unique identifier for the upvalue numbered @id{n}
 from the closure at index @id{funcindex}.
 Parameters @id{funcindex} and @id{n} are as in the @Lid{lua_getupvalue}
 @seeC{lua_getupvalue}
@@ -5182,6 +5182,7 @@ creates a new table to be used as a metatable for userdata,
 adds to this new table the pair @T{__name = tname},
 adds to the registry the pair @T{[tname] = new table},
 and returns 1.
+(The entry @id{__name} is used by some error-reporting functions.)
 
 In both cases pushes onto the stack the final value associated
 with @id{tname} in the registry.
@@ -5335,7 +5336,7 @@ Type for arrays of functions to be registered by
 @Lid{luaL_setfuncs}.
 @id{name} is the function name and @id{func} is a pointer to
 the function.
-Any array of @Lid{luaL_Reg} must end with an sentinel entry
+Any array of @Lid{luaL_Reg} must end with a sentinel entry
 in which both @id{name} and @id{func} are @id{NULL}.
 
 }
@@ -6728,26 +6729,27 @@ which matches any single character in the class;
 
 @item{
 a single character class followed by @Char{*},
-which matches 0 or more repetitions of characters in the class.
+which matches zero or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 }
 
 @item{
 a single character class followed by @Char{+},
-which matches 1 or more repetitions of characters in the class.
+which matches one or more repetitions of characters in the class.
 These repetition items will always match the longest possible sequence;
 }
 
 @item{
 a single character class followed by @Char{-},
-which also matches 0 or more repetitions of characters in the class.
+which also matches zero or more repetitions of characters in the class.
 Unlike @Char{*},
 these repetition items will always match the shortest possible sequence;
 }
 
 @item{
 a single character class followed by @Char{?},
-which matches 0 or 1 occurrence of a character in the class;
+which matches zero or one occurrence of a character in the class.
+It always matches one occurrence if possible;
 }
 
 @item{
@@ -7891,7 +7893,9 @@ This function accesses not only explicit local variables,
 but also parameters, temporaries, etc.
 
 The first parameter or local variable has @N{index 1}, and so on,
-until the last active variable.
+following the order that they are declared in the code,
+counting only the variables that are active
+in the current scope of the function.
 Negative indices refer to vararg parameters;
 @num{-1} is the first vararg parameter.
 The function returns @nil if there is no variable with the given index,
@@ -7900,7 +7904,7 @@ and raises an error when called with a level out of range.
 
 Variable names starting with @Char{(} (open parenthesis) @C{)}
 represent variables with no known names
-(internal variables like loop control variables,
+(internal variables such as loop control variables,
 and variables from chunks saved without debug information).
 
 The parameter @id{f} may also be a function.
@@ -8034,7 +8038,7 @@ to start the traceback
 
 @LibEntry{debug.upvalueid (f, n)|
 
-Returns an unique identifier (as a light userdata)
+Returns a unique identifier (as a light userdata)
 for the upvalue numbered @id{n}
 from the given function.
 
