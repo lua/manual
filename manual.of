@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.143 2015/01/02 13:07:38 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.144 2015/01/05 16:33:48 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1845,7 +1845,8 @@ do
   a = t
 end
 }
-The order of the assignments, however, is undefined.
+
+The order of the assignments in a constructor is undefined.
 (This order would be relevant only when there are repeated keys.)
 
 If the last field in the list has the form @id{exp}
