@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.142 2014/12/22 13:31:36 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.143 2015/01/02 13:07:38 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -324,7 +324,7 @@ the access to a metamethod does not invoke other metamethods.
 You can emulate how Lua queries a metamethod for an object @id{obj}
 with the following code:
 @verbatim{
-rawget(getmetatable(obj) or {}, event_name)
+rawget(getmetatable(obj) or {}, "__" .. event_name)
 }
 
 For the unary operators (negation, length, and bitwise not),
@@ -629,12 +629,12 @@ When a marked object becomes garbage,
 it is not collected immediately by the garbage collector.
 Instead, Lua puts it in a list.
 After the collection,
-Lua goes through that list:
+Lua goes through that list.
 For each object in the list,
-it checks the object's @idx{__gc} metamethod;
-if it is a function,
-Lua calls it with the object as its single argument.
-If the metamethod is not a function,
+it checks the object's @idx{__gc} metamethod:
+If it is a function,
+Lua calls it with the object as its single argument;
+if the metamethod is not a function,
 Lua simply ignores it.
 
 At the end of each garbage-collection cycle,
@@ -1845,6 +1845,8 @@ do
   a = t
 end
 }
+The order of the assignments, however, is undefined.
+(This order would be relevant only when there are repeated keys.)
 
 If the last field in the list has the form @id{exp}
 and the expression is a function call or a vararg expression,
@@ -2316,7 +2318,7 @@ never returning
 
 The panic function runs as if it were a @x{message handler} @see{error};
 in particular, the error message is at the top of the stack.
-However, there is no guarantees about stack space.
+However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
 
@@ -2376,7 +2378,7 @@ int original_function (lua_State *L) {
 }
 }
 Now we want to allow
-the Lua code being ran by @Lid{lua_pcall} to yield.
+the Lua code being run by @Lid{lua_pcall} to yield.
 First, we can rewrite our function like here:
 @verbatim{
 int k (lua_State *L, int status, lua_KContext ctx) {
@@ -2394,7 +2396,7 @@ the new function @id{k} is a
 which should do all the work that the original function
 was doing after calling @Lid{lua_pcall}.
 Now, we must inform Lua that it must call @id{k} if the Lua code
-begin running by @Lid{lua_pcall} gets interrupted in some way
+being executed by @Lid{lua_pcall} gets interrupted in some way
 (errors or yielding),
 so we rewrite the code as here,
 replacing @Lid{lua_pcall} by @Lid{lua_pcallk}:
