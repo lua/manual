@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.144 2015/01/05 16:33:48 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.145 2015/01/05 16:37:40 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -3392,7 +3392,7 @@ error while running a @idx{__gc} metamethod.
 int lua_pcallk (lua_State *L,
                 int nargs,
                 int nresults,
-                int errfunc,
+                int msgh,
                 lua_KContext ctx,
                 lua_KFunction k);|
 @apii{nargs + 1,nresults|1,-}
