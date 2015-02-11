@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.145 2015/01/05 16:37:40 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.146 2015/01/06 11:23:01 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -64,15 +64,15 @@ There are eight @x{basic types} in Lua:
 @def{nil}, @def{boolean}, @def{number},
 @def{string}, @def{function}, @def{userdata},
 @def{thread}, and @def{table}.
-@emph{Nil} is the type of the value @nil,
+The type @emph{nil} has one single value, @nil,
 whose main property is to be different from any other value;
 it usually represents the absence of a useful value.
-@emph{Boolean} is the type of the values @false and @true.
+The type @emph{boolean} has two values, @false and @true.
 Both @nil and @false make a condition false;
 any other value makes it true.
-@emph{Number} represents both
+The type @emph{number} represents both
 integer numbers and real (floating-point) numbers.
-@emph{String} represents immutable sequences of bytes.
+The type @emph{string} represents immutable sequences of bytes.
 @index{eight-bit clean}
 Lua is 8-bit clean:
 strings can contain any 8-bit value,
@@ -402,7 +402,7 @@ the @T{&} (bitwise and) operation.
 @Lidx{__band}
 Behavior similar to the @Q{add} operation,
 except that Lua will try a metamethod
-if any operator is neither an integer
+if any operand is neither an integer
 nor a value coercible to an integer @see{coercion}.
 }
 
@@ -441,7 +441,7 @@ the @T{..} (concatenation) operation.
 @Lidx{__concat}
 Behavior similar to the @Q{add} operation,
 except that Lua will try a metamethod
-if any operator is neither a string nor a number
+if any operand is neither a string nor a number
 (which is always coercible to a string).
 }
 
@@ -1567,11 +1567,11 @@ Exponentiation uses the @ANSI{pow},
 so that it works for non-integer exponents too.
 
 Floor division (@T{//}) is a division 
-that rounds the quotient towards minus infinite,
+that rounds the quotient towards minus infinity,
 that is, the floor of the division of its operands.
 
 Modulo is defined as the remainder of a division
-that rounds the quotient towards minus infinite (floor division).
+that rounds the quotient towards minus infinity (floor division).
 
 In case of overflows in integer arithmetic,
 all operations @emphx{wrap around},
@@ -3451,15 +3451,9 @@ This function receives a pointer to a C function
 and pushes onto the stack a Lua value of type @id{function} that,
 when called, invokes the corresponding @N{C function}.
 
-Any function to be registered in Lua must
+Any function to be callable by Lua must
 follow the correct protocol to receive its parameters
 and return its results @seeC{lua_CFunction}.
-
-@id{lua_pushcfunction} is defined as a macro:
-@verbatim{
-#define lua_pushcfunction(L,f)  lua_pushcclosure(L,f,0)
-}
-Note that @id{f} is used twice.
 
 }
 
@@ -3485,7 +3479,7 @@ The conversion specifiers can only be
 @Char{%%} (inserts the character @Char{%}),
 @Char{%s} (inserts a zero-terminated string, with no size restrictions),
 @Char{%f} (inserts a @Lid{lua_Number}),
-@Char{%L} (inserts a @Lid{lua_Integer}),
+@Char{%I} (inserts a @Lid{lua_Integer}),
 @Char{%p} (inserts a pointer as a hexadecimal numeral),
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
@@ -3751,7 +3745,7 @@ and then pops the top element.
 @APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs);|
 @apii{?,?,-}
 
-Starts and resumes a coroutine in a given thread.
+Starts and resumes a coroutine in the given thread @id{L}.
 
 To start a coroutine,
 you push onto the thread stack the main function plus any arguments;
@@ -4068,7 +4062,7 @@ Returns the type of the value in the given valid index,
 or @id{LUA_TNONE} for a non-valid (but acceptable) index.
 The types returned by @Lid{lua_type} are coded by the following constants
 defined in @id{lua.h}:
-@defid{LUA_TNIL},
+@defid{LUA_TNIL} (0),
 @defid{LUA_TNUMBER},
 @defid{LUA_TBOOLEAN},
 @defid{LUA_TSTRING},
@@ -5026,9 +5020,9 @@ pushes nothing and returns @id{LUA_TNIL}.
 @apii{0,1,-}
 
 Pushes onto the stack the metatable associated with name @id{tname}
-in the registry @seeC{luaL_newmetatable}.
-If there is no metatable associated with @id{tname},
-returns false and pushes @nil.
+in the registry @seeC{luaL_newmetatable}
+(@nil if there is no metatable associated with that name).
+Returns the type of the pushed value.
 
 }
 
@@ -6421,16 +6415,19 @@ may produce the string:
 }
 
 Options
-@id{A} and @id{a} (when available),
-@id{E}, @id{e}, @id{f},
+@id{A}, @id{a}, @id{E}, @id{e}, @id{f},
 @id{G}, and @id{g} all expect a number as argument.
 Options @id{c}, @id{d},
 @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
 expect an integer.
-Option @id{q} expects a string;
-option @id{s} expects a string without @x{embedded zeros}.
-If the argument to option @id{s} is not a string,
+Option @id{q} expects a string.
+Option @id{s} expects a string without @x{embedded zeros};
+if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
+
+When Lua is compiled with a C89 compiler,
+options @id{A} and @id{a} (hexadecimal floats)
+do not support any modifier (flags, width, length).
 
 }
 
@@ -7021,7 +7018,7 @@ multiple assignment:
 @T{a2[t],@Cdots = a1[f],@Cdots,a1[e]}.
 The default for @id{a2} is @id{a1}.
 The destination range can overlap with the source range.
-Index @id{f} must be positive.
+The number of elements to be moved must fit in a Lua integer.
 
 }
 
@@ -7880,7 +7877,7 @@ adds a field named @id{activelines} with the table of
 valid lines.
 
 For instance, the expression @T{debug.getinfo(1,"n").name} returns
-a table with a name for the current function,
+a name for the current function,
 if a reasonable name can be found,
 and the expression @T{debug.getinfo(print)}
 returns a table with all available information
@@ -8320,6 +8317,12 @@ For compatibility, that searcher still tries the old format
 if it cannot find an open function according to the new style.
 (@N{Lua 5.2} already worked that way,
 but it did not document the change.)
+}
+
+@item{
+The call @T{collectgarbage("count")} now returns only one result.
+(You can compute that second result from the fractional part
+of the first result.)
 }
 
 }
