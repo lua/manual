@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.147 2015/02/11 13:37:57 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.148 2015/06/02 19:14:19 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -8281,7 +8281,8 @@ The @id{bit32} library has been deprecated.
 It is easy to require a compatible external library or,
 better yet, to replace its functions with appropriate bitwise operations.
 (Keep in mind that @id{bit32} operates on 32-bit integers,
-while the bitwise operators in standard Lua operate on 64-bit integers.)
+while the bitwise operators in @N{Lua 5.3} operate on Lua integers,
+which by default have @N{64 bits}.)
 }
 
 @item{
@@ -8297,7 +8298,7 @@ its @id{__ipairs} metamethod has been deprecated.
 
 @item{
 Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
-For compatibility, Lua will continue to ignore this character.
+For compatibility, Lua will continue to accept (and ignore) this character.
 }
 
 @item{
