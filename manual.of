@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.146 2015/01/06 11:23:01 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.147 2015/02/11 13:37:57 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -81,6 +81,7 @@ Lua is also encoding-agnostic;
 it makes no assumptions about the contents of a string.
 
 The type @emph{number} uses two internal representations,
+or two @x{subtypes},
 one called @def{integer} and the other called @def{float}.
 Lua has explicit rules about when each representation is used,
 but it also converts between them automatically as needed @see{coercion}.
@@ -91,7 +92,7 @@ or to assume complete control over the representation of each number.
 Standard Lua uses 64-bit integers and double-precision (64-bit) floats,
 but you can also compile Lua so that it
 uses 32-bit integers and/or single-precision (32-bit) floats.
-The option with 32 bits for both integers and floats 
+The option with 32 bits for both integers and floats
 is particularly attractive
 for small machines and embedded systems.
 (See macro @id{LUA_32BITS} in file @id{luaconf.h}.)
@@ -126,8 +127,8 @@ even those that do not support threads natively.
 The type @emph{table} implements @x{associative arrays},
 that is, @x{arrays} that can be indexed not only with numbers,
 but with any Lua value except @nil and @x{NaN}.
-(@emphx{Not a Number} is a special numeric value used to represent
-undefined or unrepresentable results, such as @T{0/0}.)
+(@emphx{Not a Number} is a special numerical value used to represent
+undefined or unrepresentable numerical results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
 Any key with value @nil is not considered part of the table.
@@ -144,7 +145,7 @@ There are several convenient ways to create tables in Lua
 @see{tableconstructor}.
 
 We use the term @def{sequence} to denote a table where
-the set of all positive numeric keys is equal to {1..@M{n}}
+the set of all positive numerical keys is equal to {1..@M{n}}
 for some non-negative integer @M{n},
 which is called the @x{length} of the sequence @see{len-op}.
 
@@ -280,7 +281,7 @@ that defines the behavior of the original value
 under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
-For instance, when a non-numeric value is the operand of an addition,
+For instance, when a non-numerical value is the operand of an addition,
 Lua checks for a function in the field @St{__add} of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
@@ -295,7 +296,7 @@ using the @Lid{getmetatable} function.
 
 You can replace the metatable of tables
 using the @Lid{setmetatable} function.
-You cannot change the metatable of other types from Lua
+You cannot change the metatable of other types from Lua code
 (except by using the @link{debuglib|debug library});
 you must use the @N{C API} for that.
 
@@ -321,11 +322,6 @@ for instance, the key for operation @Q{add} is the
 string @St{__add}.
 Note that queries for metamethods are always raw;
 the access to a metamethod does not invoke other metamethods.
-You can emulate how Lua queries a metamethod for an object @id{obj}
-with the following code:
-@verbatim{
-rawget(getmetatable(obj) or {}, "__" .. event_name)
-}
 
 For the unary operators (negation, length, and bitwise not),
 the metamethod is computed and called with a dummy second operand,
@@ -481,7 +477,7 @@ The result of the call is always converted to a boolean.
 
 @item{@Q{le}|
 the @T{<=} (less equal) operation.
-@Lidx{__lt}
+@Lidx{__le}
 Unlike other operations,
 The less-equal operation can use two different events.
 First, Lua looks for the @St{__le} metamethod in both operands,
@@ -491,6 +487,8 @@ then it will try the @St{__lt} event,
 assuming that @T{a <= b} is equivalent to @T{not (b < a)}.
 As with the other comparison operators,
 the result is always a boolean.
+(This use of the @St{__lt} event can be removed in future versions;
+it is also slower than a real @St{__le} metamethod.)
 }
 
 @item{@Q{index}|
@@ -546,6 +544,11 @@ followed by the arguments of the original call (@id{args}).
 }
 
 }
+
+It is a good practice to add all needed metamethods to a table
+before setting it as a metatable of some object.
+In particular, the @St{__gc} metamethod works only when this order
+is followed @see{finalizers}.
 
 }
 
@@ -622,8 +625,6 @@ and the metatable has a field indexed by the string @St{__gc}.
 Note that if you set a metatable without a @idx{__gc} field
 and later create that field in the metatable,
 the object will not be marked for finalization.
-However, after an object has been marked,
-you can freely change the @idx{__gc} field of its metatable.
 
 When a marked object becomes garbage,
 it is not collected immediately by the garbage collector.
@@ -658,7 +659,7 @@ Moreover, if the finalizer marks a finalizing object for finalization again,
 its finalizer will be called again in the next cycle where the
 object is unreachable.
 In any case,
-the object memory is freed only in the GC cycle where
+the object memory is freed only in a GC cycle where
 the object is unreachable and not marked for finalization.
 
 When you close a state @seeF{lua_close},
@@ -679,8 +680,8 @@ if the only references to an object are weak references,
 then the garbage collector will collect that object.
 
 A weak table can have weak keys, weak values, or both.
-A table with weak keys allows the collection of its keys,
-but prevents the collection of its values.
+A table with weak values allows the collection of its values,
+but prevents the collection of its keys.
 A table with both weak keys and weak values allows the collection of
 both keys and values.
 In any case, if either the key or the value is collected,
@@ -753,10 +754,10 @@ You execute a coroutine by calling @Lid{coroutine.resume}.
 When you first call @Lid{coroutine.resume},
 passing as its first argument
 a thread returned by @Lid{coroutine.create},
-the coroutine starts its execution,
-at the first line of its main function.
+the coroutine starts its execution by
+calling its main function.
 Extra arguments passed to @Lid{coroutine.resume} are passed
-as arguments to the coroutine's main function.
+as arguments to that function.
 After the coroutine starts running,
 it runs until it terminates or @emph{yields}.
 
@@ -999,7 +1000,7 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
-A numeric constant with a fractional dot or an exponent 
+A numerical constant with a fractional dot or an exponent 
 denotes a float;
 otherwise it denotes an integer.
 Examples of valid integer constants are
@@ -1306,9 +1307,9 @@ because now @Rw{return} is the last statement in its (inner) block.
 
 @index{for statement}
 The @Rw{for} statement has two forms:
-one numeric and one generic.
+one numerical and one generic.
 
-The numeric @Rw{for} loop repeats a block of code while a
+The numerical @Rw{for} loop repeats a block of code while a
 control variable runs through an arithmetic progression.
 It has the following syntax:
 @Produc{
@@ -1641,8 +1642,9 @@ The conversion from strings to numbers goes as follows:
 First, the string is converted to an integer or a float,
 following its syntax and the rules of the Lua lexer.
 (The string may have also leading and trailing spaces and a sign.)
-Then, the resulting number is converted to the required type
-(float or integer) according to the previous rules.
+Then, the resulting number (float or integer)
+is converted to the type (float or integer) required by the context
+(e.g., the operation that forced the conversion).
 
 The conversion from numbers to strings uses a
 non-specified human-readable format.
@@ -1668,11 +1670,7 @@ Equality (@T{==}) first compares the type of its operands.
 If the types are different, then the result is @false.
 Otherwise, the values of the operands are compared.
 Strings are compared in the obvious way.
-Numbers follow the usual rule for binary operations:
-if both operands are integers,
-they are compared as integers;
-otherwise, they are converted to floats
-and compared as such.
+Numbers are equal if they denote the same mathematical value.
 
 Tables, userdata, and threads
 are compared by reference:
@@ -1697,14 +1695,18 @@ The operator @T{~=} is exactly the negation of equality (@T{==}).
 
 The order operators work as follows.
 If both arguments are numbers,
-then they are compared following
-the usual rule for binary operations.
+then they are compared according to their mathematical values
+(regardless of their subtypes).
 Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
 Otherwise, Lua tries to call the @Q{lt} or the @Q{le}
 metamethod @see{metatable}.
 A comparison @T{a > b} is translated to @T{b < a}
 and @T{a >= b} is translated to @T{b <= a}.
+
+Following the @x{IEEE 754} standard,
+@x{NaN} is considered neither smaller than,
+nor equal to, nor greater than any value (including itself).
 
 }
 
@@ -1764,7 +1766,7 @@ Unless a @idx{__len} metamethod is given,
 the length of a table @id{t} is only defined if the
 table is a @def{sequence},
 that is,
-the set of its positive numeric keys is equal to @M{{1..n}}
+the set of its positive numerical keys is equal to @M{{1..n}}
 for some non-negative integer @M{n}.
 In that case, @M{n} is its length.
 Note that a table like
@@ -1774,8 +1776,8 @@ Note that a table like
 is not a sequence, because it has the key @T{4}
 but does not have the key @T{3}.
 (So, there is no @M{n} such that the set @M{{1..n}} is equal
-to the set of positive numeric keys of that table.)
-Note, however, that non-numeric keys do not interfere
+to the set of positive numerical keys of that table.)
+Note, however, that non-numerical keys do not interfere
 with whether a table is a sequence.
 
 }
@@ -2192,25 +2194,20 @@ Any function in the API that receives stack indices
 works only with @emphx{valid indices} or @emphx{acceptable indices}.
 
 A @def{valid index} is an index that refers to a
-real position within the stack, that is,
-its position lies @N{between 1} and the stack top
-(@T{1 @leq abs(index) @leq top}).
+position that stores a modifiable Lua value.
+It comprises stack indices @N{between 1} and the stack top
+(@T{1 @leq abs(index) @leq top})
 @index{stack index}
-Usually, functions that can modify the value at an index
-require valid indices.
-
-Unless otherwise noted,
-any function that accepts valid indices also accepts @def{pseudo-indices},
-which represent some Lua values that are accessible to @N{C code}
-but which are not in the stack.
-Pseudo-indices are used to access the registry
+plus @def{pseudo-indices},
+which represent some positions that are accessible to @N{C code}
+but that are not in the stack.
+Pseudo-indices are used to access the registry @see{registry}
 and the upvalues of a @N{C function} @see{c-closure}.
 
-Functions that do not need a specific stack position,
-but only a value in the stack (e.g., query functions),
+Functions that do not need a specific mutable position,
+but only a value (e.g., query functions),
 can be called with acceptable indices.
 An @def{acceptable index} can be any valid index,
-including the pseudo-indices,
 but it also can be any positive index after the stack top
 within the space allocated for the stack,
 that is, indices up to the stack size.
@@ -2244,7 +2241,7 @@ Whenever a @N{C function} is called,
 its upvalues are located at specific pseudo-indices.
 These pseudo-indices are produced by the macro
 @Lid{lua_upvalueindex}.
-The first value associated with a function is at position
+The first upvalue associated with a function is at index
 @T{lua_upvalueindex(1)}, and so on.
 Any access to @T{lua_upvalueindex(@rep{n})},
 where @rep{n} is greater than the number of upvalues of the
@@ -2259,8 +2256,7 @@ Lua provides a @def{registry},
 a predefined table that can be used by any @N{C code} to
 store whatever Lua values it needs to store.
 The registry table is always located at pseudo-index
-@defid{LUA_REGISTRYINDEX},
-which is a valid index.
+@defid{LUA_REGISTRYINDEX}.
 Any @N{C library} can store data into this table,
 but it must take care to choose keys
 that are different from those used
@@ -2480,7 +2476,8 @@ tells whether the function may raise errors:
 @APIEntry{int lua_absindex (lua_State *L, int idx);|
 @apii{0,0,-}
 
-Converts the @x{acceptable index} @id{idx} into an @x{absolute index}
+Converts the @x{acceptable index} @id{idx}
+into an equivalent @x{absolute index}
 (that is, one that does not depend on the stack top).
 
 }
@@ -3008,7 +3005,7 @@ By default this type is @id{long long},
 (usually a 64-bit two-complement integer),
 but that can be changed to @id{long} or @id{int}
 (usually a 32-bit two-complement integer).
-(See @id{LUA_INT} in @id{luaconf.h}.)
+(See @id{LUA_INT_TYPE} in @id{luaconf.h}.)
 
 Lua also defines the constants
 @defid{LUA_MININTEGER} and @defid{LUA_MAXINTEGER},
@@ -3300,13 +3297,13 @@ the table during its traversal.
 
 }
 
-@APIEntry{typedef double lua_Number;|
+@APIEntry{typedef @ldots lua_Number;|
 
 The type of floats in Lua.
 
 By default this type is double,
-but that can be changed to a single float.
-(See @id{LUA_REAL} in @id{luaconf.h}.)
+but that can be changed to a single float or a long double.
+(See @id{LUA_FLOAT_TYPE} in @id{luaconf.h}.)
 
 }
 
@@ -3348,7 +3345,7 @@ then the error message returned on the stack
 is exactly the original error message.
 Otherwise, @id{msgh} is the stack index of a
 @emph{message handler}.
-(In the current implementation, this index cannot be a pseudo-index.)
+(This index cannot be a pseudo-index.)
 In case of runtime errors,
 this function will be called with the error message
 and its return value will be the message
@@ -3522,9 +3519,8 @@ light userdata with the same @N{C address}.
 @APIEntry{const char *lua_pushliteral (lua_State *L, const char *s);|
 @apii{0,1,e}
 
-This macro is equivalent to @Lid{lua_pushlstring},
-but can be used only when @id{s} is a literal string.
-It automatically provides the string length.
+This macro is equivalent to @Lid{lua_pushstring},
+but should be used only when @id{s} is a literal string.
 
 }
 
@@ -3680,9 +3676,9 @@ that is, it does not invoke metamethods.
 @APIEntry{void lua_rawsetp (lua_State *L, int index, const void *p);|
 @apii{1,0,e}
 
-Does the equivalent of @T{t[k] = v},
+Does the equivalent of @T{t[p] = v},
 where @id{t} is the table at the given index,
-@id{k} is the pointer @id{p} represented as a light userdata,
+@id{p} is encoded as a light userdata,
 and @id{v} is the value at the top of the stack.
 
 This function pops the value from the stack.
@@ -3737,7 +3733,7 @@ because a pseudo-index is not an actual stack position.
 
 Moves the top element into the given valid index
 without shifting any element
-(therefore replacing the value at the given index),
+(therefore replacing the value at that given index),
 and then pops the top element.
 
 }
@@ -3780,12 +3776,16 @@ this parameter can be @id{NULL}.
 @APIEntry{void lua_rotate (lua_State *L, int idx, int n);|
 @apii{0,0,-}
 
-Rotates the stack elements from @id{idx} to the top @id{n} positions
-in the direction of the top, for a positive @id{n},
+Rotates the stack elements between the valid index @id{idx}
+and the top of the stack.
+The elements are rotated @id{n} positions in the direction of the top,
+for a positive @id{n},
 or @T{-n} positions in the direction of the bottom,
 for a negative @id{n}.
 The absolute value of @id{n} must not be greater than the size
 of the slice being rotated.
+This function cannot be called with a pseudo-index,
+because a pseudo-index is not an actual stack position.
 
 }
 
@@ -4023,7 +4023,7 @@ otherwise, @id{lua_topointer} returns @id{NULL}.
 Different objects will give different pointers.
 There is no way to convert the pointer back to its original value.
 
-Typically this function is used only for debug information.
+Typically this function is used only for hashing and debug information.
 
 }
 
@@ -4458,22 +4458,22 @@ it returns 0.
 @APIEntry{const char *lua_getupvalue (lua_State *L, int funcindex, int n);|
 @apii{0,0|1,-}
 
-Gets information about a closure's upvalue.
+Gets information about the @id{n}-th upvalue
+of the closure at index @id{funcindex}.
+It pushes the upvalue's value onto the stack
+and returns its name.
+Returns @id{NULL} (and pushes nothing)
+when the index @id{n} is greater than the number of upvalues.
+
+For @N{C functions}, this function uses the empty string @T{""}
+as a name for all upvalues.
 (For Lua functions,
 upvalues are the external local variables that the function uses,
 and that are consequently included in its closure.)
-@Lid{lua_getupvalue} gets the index @id{n} of an upvalue,
-pushes the upvalue's value onto the stack,
-and returns its name.
-@id{funcindex} points to the closure in the stack.
-(Upvalues have no particular order,
-as they are active through the whole function.
-So, they are numbered in an arbitrary order.)
 
-Returns @id{NULL} (and pushes nothing)
-when the index is greater than the number of upvalues.
-For @N{C functions}, this function uses the empty string @T{""}
-as a name for all upvalues.
+Upvalues have no particular order,
+as they are active through the whole function.
+They are numbered in an arbitrary order.
 
 }
 
@@ -4504,10 +4504,10 @@ that is, they cannot call @Lid{lua_yieldk},
 @Lid{lua_pcallk}, or @Lid{lua_callk} with a non-null @id{k}.
 
 Hook functions can yield under the following conditions:
-Only count and line events can yield
-and they cannot yield any value;
-to yield a hook function must finish its execution
-calling @Lid{lua_yield} with @id{nresults} equal to zero.
+Only count and line events can yield;
+to yield, a hook function must finish its execution
+calling @Lid{lua_yield} with @id{nresults} equal to zero
+(that is, with no values).
 
 }
 
@@ -4560,15 +4560,15 @@ A hook is disabled by setting @id{mask} to zero.
 @apii{0|1,0,-}
 
 Sets the value of a local variable of a given activation record.
-Parameters @id{ar} and @id{n} are as in @Lid{lua_getlocal}
-@seeC{lua_getlocal}.
-@Lid{lua_setlocal} assigns the value at the top of the stack
+It assigns the value at the top of the stack
 to the variable and returns its name.
 It also pops the value from the stack.
 
 Returns @id{NULL} (and pops nothing)
 when the index is greater than
 the number of active local variables.
+
+Parameters @id{ar} and @id{n} are as in function @Lid{lua_getlocal}.
 
 }
 
@@ -4579,11 +4579,11 @@ Sets the value of a closure's upvalue.
 It assigns the value at the top of the stack
 to the upvalue and returns its name.
 It also pops the value from the stack.
-Parameters @id{funcindex} and @id{n} are as in the @Lid{lua_getupvalue}
-@seeC{lua_getupvalue}.
 
 Returns @id{NULL} (and pops nothing)
-when the index is greater than the number of upvalues.
+when the index @id{n} is greater than the number of upvalues.
+
+Parameters @id{funcindex} and @id{n} are as in function @Lid{lua_getupvalue}.
 
 }
 
@@ -4592,15 +4592,15 @@ when the index is greater than the number of upvalues.
 
 Returns a unique identifier for the upvalue numbered @id{n}
 from the closure at index @id{funcindex}.
-Parameters @id{funcindex} and @id{n} are as in the @Lid{lua_getupvalue}
-@seeC{lua_getupvalue}
-(but @id{n} cannot be greater than the number of upvalues).
 
 These unique identifiers allow a program to check whether different
 closures share upvalues.
 Lua closures that share an upvalue
 (that is, that access a same external local variable)
 will return identical ids for those upvalue indices.
+
+Parameters @id{funcindex} and @id{n} are as in function @Lid{lua_getupvalue},
+but @id{n} cannot be greater than the number of upvalues.
 
 }
 
@@ -5767,8 +5767,8 @@ In particular,
 you can use @T{next(t)} to check whether a table is empty.
 
 The order in which the indices are enumerated is not specified,
-@emph{even for numeric indices}.
-(To traverse a table in numeric order,
+@emph{even for numerical indices}.
+(To traverse a table in numerical order,
 use a numerical @Rw{for}.)
 
 The behavior of @id{next} is undefined if,
@@ -5910,8 +5910,6 @@ the function returns @nil.
 @LibEntry{tostring (v)|
 Receives a value of any type and
 converts it to a string in a human-readable format.
-Floats always produce strings with some
-floating-point indication (either a decimal dot or an exponent).
 (For complete control of how numbers are converted,
 use @Lid{string.format}.)
 
@@ -5954,15 +5952,15 @@ except that it sets a new @x{message handler} @id{msgh}.
 
 @sect2{corolib| @title{Coroutine Manipulation}
 
-The operations related to coroutines comprise a sub-library of
-the basic library and come inside the table @defid{coroutine}.
+This library comprise the operations to manipulate coroutines,
+which come inside the table @defid{coroutine}.
 See @See{coroutine} for a general description of coroutines.
 
 
 @LibEntry{coroutine.create (f)|
 
 Creates a new coroutine, with body @id{f}.
-@id{f} must be a Lua function.
+@id{f} must be a function.
 Returns this new coroutine,
 an object with type @T{"thread"}.
 
@@ -6022,7 +6020,7 @@ or if it has stopped with an error.
 @LibEntry{coroutine.wrap (f)|
 
 Creates a new coroutine, with body @id{f}.
-@id{f} must be a Lua function.
+@id{f} must be a function.
 Returns a function that resumes the coroutine each time it is called.
 Any arguments passed to the function behave as the
 extra arguments to @id{resume}.
@@ -6425,7 +6423,7 @@ Option @id{s} expects a string without @x{embedded zeros};
 if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
 
-When Lua is compiled with a C89 compiler,
+When Lua is compiled with a non-C99 compiler,
 options @id{A} and @id{a} (hexadecimal floats)
 do not support any modifier (flags, width, length).
 
@@ -6984,7 +6982,7 @@ It provides all its functions inside the table @defid{table}.
 Remember that, whenever an operation needs the length of a table,
 the table must be a proper sequence
 or have a @idx{__len} metamethod @see{len-op}.
-All functions ignore non-numeric keys
+All functions ignore non-numerical keys
 in the tables given as arguments.
 
 
@@ -7762,14 +7760,21 @@ because of its reliance on @CId{setlocale}.
 @LibEntry{os.time ([table])|
 
 Returns the current time when called without arguments,
-or a time representing the date and time specified by the given table.
+or a time representing the local date and time specified by the given table.
 This table must have fields @id{year}, @id{month}, and @id{day},
 and may have fields
 @id{hour} (default is 12),
 @id{min} (default is 0),
 @id{sec} (default is 0),
 and @id{isdst} (default is @nil).
+Other fields are ignored.
 For a description of these fields, see the @Lid{os.date} function.
+
+The values in these fields do not need to be inside their valid ranges.
+For instance, if @id{sec} is -10,
+it means -10 seconds from the time specified by the other fields;
+if @id{hour} is 1000,
+it means +1000 hours from the time specified by the other fields.
 
 The returned value is a number, whose meaning depends on your system.
 In @x{POSIX}, @x{Windows}, and some other systems,
@@ -8208,7 +8213,7 @@ all these compatibility options will be removed in the future.
 
 Lua versions can always change the C API in ways that
 do not imply source-code changes in a program,
-such as the numeric values for constants
+such as the numerical values for constants
 or the implementation of functions as macros.
 Therefore,
 you should not assume that binaries are compatible between
