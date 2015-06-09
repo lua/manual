@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.148 2015/06/02 19:14:19 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.149 2015/06/02 19:27:17 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -127,7 +127,7 @@ even those that do not support threads natively.
 The type @emph{table} implements @x{associative arrays},
 that is, @x{arrays} that can be indexed not only with numbers,
 but with any Lua value except @nil and @x{NaN}.
-(@emphx{Not a Number} is a special numerical value used to represent
+(@emphx{Not a Number} is a special value used to represent
 undefined or unrepresentable numerical results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
@@ -145,7 +145,7 @@ There are several convenient ways to create tables in Lua
 @see{tableconstructor}.
 
 We use the term @def{sequence} to denote a table where
-the set of all positive numerical keys is equal to {1..@M{n}}
+the set of all positive numeric keys is equal to {1..@M{n}}
 for some non-negative integer @M{n},
 which is called the @x{length} of the sequence @see{len-op}.
 
@@ -281,7 +281,7 @@ that defines the behavior of the original value
 under certain special operations.
 You can change several aspects of the behavior
 of operations over a value by setting specific fields in its metatable.
-For instance, when a non-numerical value is the operand of an addition,
+For instance, when a non-numeric value is the operand of an addition,
 Lua checks for a function in the field @St{__add} of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
@@ -925,7 +925,7 @@ into the string contents.
 Strings in Lua can contain any 8-bit value, including @x{embedded zeros},
 which can be specified as @Char{\0}.
 More generally,
-we can specify any byte in a literal string by its numerical value.
+we can specify any byte in a literal string by its numeric value.
 This can be done
 with the escape sequence @T{\x@rep{XX}},
 where @rep{XX} is a sequence of exactly two hexadecimal digits,
@@ -991,7 +991,7 @@ alo
 123"]==]
 }
 
-A @def{numerical constant} (or @def{numeral})
+A @def{numeric constant} (or @def{numeral})
 can be written with an optional fractional part
 and an optional decimal exponent,
 marked by a letter @Char{e} or @Char{E}.
@@ -1000,7 +1000,7 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
-A numerical constant with a fractional dot or an exponent 
+A numeric constant with a fractional dot or an exponent 
 denotes a float;
 otherwise it denotes an integer.
 Examples of valid integer constants are
@@ -1766,7 +1766,7 @@ Unless a @idx{__len} metamethod is given,
 the length of a table @id{t} is only defined if the
 table is a @def{sequence},
 that is,
-the set of its positive numerical keys is equal to @M{{1..n}}
+the set of its positive numeric keys is equal to @M{{1..n}}
 for some non-negative integer @M{n}.
 In that case, @M{n} is its length.
 Note that a table like
@@ -1776,8 +1776,8 @@ Note that a table like
 is not a sequence, because it has the key @T{4}
 but does not have the key @T{3}.
 (So, there is no @M{n} such that the set @M{{1..n}} is equal
-to the set of positive numerical keys of that table.)
-Note, however, that non-numerical keys do not interfere
+to the set of positive numeric keys of that table.)
+Note, however, that non-numeric keys do not interfere
 with whether a table is a sequence.
 
 }
@@ -2673,7 +2673,7 @@ Like a Lua function, a @N{C function} called by Lua can also return
 many results.
 
 As an example, the following function receives a variable number
-of numerical arguments and returns their average and their sum:
+of numeric arguments and returns their average and their sum:
 @verbatim{
 static int foo (lua_State *L) {
   int n = lua_gettop(L);    /* number of arguments */
@@ -3132,7 +3132,7 @@ and @N{0 otherwise}.
 @APIEntry{typedef @ldots lua_KContext;|
 
 The type for continuation-function contexts.
-It must be a numerical type.
+It must be a numeric type.
 This type is defined as @id{intptr_t}
 when @id{intptr_t} is available,
 so that it can store pointers too.
@@ -5767,7 +5767,7 @@ In particular,
 you can use @T{next(t)} to check whether a table is empty.
 
 The order in which the indices are enumerated is not specified,
-@emph{even for numerical indices}.
+@emph{even for numeric indices}.
 (To traverse a table in numerical order,
 use a numerical @Rw{for}.)
 
@@ -6325,24 +6325,24 @@ The string library assumes one-byte character encodings.
 
 
 @LibEntry{string.byte (s [, i [, j]])|
-Returns the internal numerical codes of the characters @T{s[i]},
+Returns the internal numeric codes of the characters @T{s[i]},
 @T{s[i+1]}, @ldots, @T{s[j]}.
 The default value for @id{i} @N{is 1};
 the default value for @id{j} @N{is @id{i}}.
 These indices are corrected
 following the same rules of function @Lid{string.sub}.
 
-Numerical codes are not necessarily portable across platforms.
+Numeric codes are not necessarily portable across platforms.
 
 }
 
 @LibEntry{string.char (@Cdots)|
 Receives zero or more integers.
 Returns a string with length equal to the number of arguments,
-in which each character has the internal numerical code equal
+in which each character has the internal numeric code equal
 to its corresponding argument.
 
-Numerical codes are not necessarily portable across platforms.
+Numeric codes are not necessarily portable across platforms.
 
 }
 
@@ -6374,7 +6374,7 @@ Looks for the first match of
 If it finds a match, then @id{find} returns the indices @N{of @T{s}}
 where this occurrence starts and ends;
 otherwise, it returns @nil.
-A third, optional numerical argument @id{init} specifies
+A third, optional numeric argument @id{init} specifies
 where to start the search;
 its default value @N{is 1} and can be negative.
 A value of @true as a fourth, optional argument @id{plain}
@@ -6547,7 +6547,7 @@ the captures from the pattern;
 otherwise it returns @nil.
 If @id{pattern} specifies no captures,
 then the whole match is returned.
-A third, optional numerical argument @id{init} specifies
+A third, optional numeric argument @id{init} specifies
 where to start the search;
 its default value @N{is 1} and can be negative.
 
@@ -6982,7 +6982,7 @@ It provides all its functions inside the table @defid{table}.
 Remember that, whenever an operation needs the length of a table,
 the table must be a proper sequence
 or have a @idx{__len} metamethod @see{len-op}.
-All functions ignore non-numerical keys
+All functions ignore non-numeric keys
 in the tables given as arguments.
 
 
@@ -7162,7 +7162,7 @@ that rounds the quotient towards zero. (integer/float)
 @LibEntry{math.huge|
 
 The float value @idx{HUGE_VAL},
-a value larger than any other numerical value.
+a value larger than any other numeric value.
 
 }
 
@@ -7496,14 +7496,10 @@ reads a numeral and returns it as a float or an integer,
 following the lexical conventions of Lua.
 (The numeral may have leading spaces and a sign.)
 This format always reads the longest input sequence that
-is a valid prefix for a number;
-if that prefix does not form a valid number
+is a valid prefix for a numeral;
+if that prefix does not form a valid numeral
 (e.g., an empty string, @St{0x}, or @St{3.4e-}),
 it is discarded and the function returns @nil.
-}
-
-@item{@St{i}|
-reads an integral number and returns it as an integer.
 }
 
 @item{@St{a}|
@@ -8213,7 +8209,7 @@ all these compatibility options will be removed in the future.
 
 Lua versions can always change the C API in ways that
 do not imply source-code changes in a program,
-such as the numerical values for constants
+such as the numeric values for constants
 or the implementation of functions as macros.
 Therefore,
 you should not assume that binaries are compatible between
