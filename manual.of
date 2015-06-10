@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.149 2015/06/02 19:27:17 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.150 2015/06/09 15:57:04 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2803,8 +2803,9 @@ with the given @id{data}
 to write them.
 
 If @id{strip} is true,
-the binary representation is created without debug information
-about the function.
+the binary representation may not include all debug information
+about the function,
+to save space.
 
 The value returned is the error code returned by the last
 call to the writer;
@@ -5952,7 +5953,7 @@ except that it sets a new @x{message handler} @id{msgh}.
 
 @sect2{corolib| @title{Coroutine Manipulation}
 
-This library comprise the operations to manipulate coroutines,
+This library comprises the operations to manipulate coroutines,
 which come inside the table @defid{coroutine}.
 See @See{coroutine} for a general description of coroutines.
 
@@ -6354,9 +6355,9 @@ of the given function,
 so that a later @Lid{load} on this string returns
 a copy of the function (but with new upvalues).
 If @id{strip} is a true value,
-the binary representation is created without debug information
-about the function
-(local variable names, lines, etc.).
+the binary representation may not include all debug information
+about the function,
+to save space.
 
 Functions with upvalues have only their number of upvalues saved.
 When (re)loaded,
@@ -6675,7 +6676,7 @@ represents the character @emph{x} itself.
 represents the character @rep{x}.
 This is the standard way to escape the magic characters.
 Any non-alphanumeric character
-(including all punctuations, even the non-magical)
+(including all punctuation characters, even the non-magical)
 can be preceded by a @Char{%}
 when used to represent itself in a pattern.
 }
