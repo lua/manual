@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.150 2015/06/09 15:57:04 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.151 2015/06/10 21:08:57 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -298,7 +298,7 @@ You can replace the metatable of tables
 using the @Lid{setmetatable} function.
 You cannot change the metatable of other types from Lua code
 (except by using the @link{debuglib|debug library});
-you must use the @N{C API} for that.
+you should use the @N{C API} for that.
 
 Tables and full userdata have individual metatables
 (although multiple tables and userdata can share their metatables).
@@ -479,7 +479,7 @@ The result of the call is always converted to a boolean.
 the @T{<=} (less equal) operation.
 @Lidx{__le}
 Unlike other operations,
-The less-equal operation can use two different events.
+the less-equal operation can use two different events.
 First, Lua looks for the @St{__le} metamethod in both operands,
 like in the @Q{lt} operation.
 If it cannot find such a metamethod,
@@ -870,7 +870,8 @@ except as delimiters between @x{names} and @x{keywords}.
 (also called @def{identifiers})
 in Lua can be any string of letters,
 digits, and underscores,
-not beginning with a digit.
+not beginning with a digit and
+not being a reserved word.
 Identifiers are used to name variables, table fields, and labels.
 
 The following @def{keywords} are reserved
@@ -1586,7 +1587,7 @@ that is equal modulo @M{2@sp{64}} to the mathematical result.)
 Lua supports the following @x{bitwise operators}:
 @description{
 @item{@T{&}|bitwise and}
-@item{@T{@SpecialOr}|bitwise or}
+@item{@T{@VerBar}|bitwise or}
 @item{@T{~}|bitwise exclusive or}
 @item{@T{>>}|right shift}
 @item{@T{<<}|left shift}
@@ -2245,7 +2246,9 @@ The first upvalue associated with a function is at index
 @T{lua_upvalueindex(1)}, and so on.
 Any access to @T{lua_upvalueindex(@rep{n})},
 where @rep{n} is greater than the number of upvalues of the
-current function (but not greater than 256),
+current function
+(but not greater than 256,
+which is one plus the maximum number of upvalues in a closure),
 produces an acceptable but invalid index.
 
 }
@@ -2469,6 +2472,7 @@ by looking only at its arguments
 The third field, @T{x},
 tells whether the function may raise errors:
 @Char{-} means the function never raises any error;
+@Char{m} means the function may raise memory errors;
 @Char{e} means the function may raise errors;
 @Char{v} means the function may raise an error on purpose.
 
@@ -2608,7 +2612,8 @@ The function results are pushed onto the stack when the function returns.
 The number of results is adjusted to @id{nresults},
 unless @id{nresults} is @defid{LUA_MULTRET}.
 In this case, all results from the function are pushed.
-Lua takes care that the returned values fit into the stack space.
+Lua takes care that the returned values fit into the stack space,
+but it does not ensure any extra space in the stack.
 The function results are pushed onto the stack in direct order
 (the first result is pushed first),
 so that after the call the last result is on the top of the stack.
@@ -2700,14 +2705,15 @@ static int foo (lua_State *L) {
 @APIEntry{int lua_checkstack (lua_State *L, int n);|
 @apii{0,0,-}
 
-Ensures that the stack has space for at least @id{n} extra slots.
+Ensures that the stack has space for at least @id{n} extra slots
+(that is, that you can safely push up to @id{n} values into it).
 It returns false if it cannot fulfill the request,
 either because it would cause the stack
 to be larger than a fixed maximum size
 (typically at least several thousand elements) or
 because it cannot allocate memory for the extra space.
 This function never shrinks the stack;
-if the stack is already larger than the new size,
+if the stack already has space for the extra slots,
 it is left unchanged.
 
 }
@@ -2772,7 +2778,7 @@ Values at other positions are not affected.
 }
 
 @APIEntry{void lua_createtable (lua_State *L, int narr, int nrec);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
 Parameter @id{narr} is a hint for how many elements the table
@@ -2790,7 +2796,7 @@ Otherwise you can use the function @Lid{lua_newtable}.
                         lua_Writer writer,
                         void *data,
                         int strip);|
-@apii{0,0,e}
+@apii{0,0,-}
 
 Dumps a function as a binary chunk.
 Receives a Lua function on the top of the stack
@@ -3231,7 +3237,7 @@ passes to the allocator in every call.
 }
 
 @APIEntry{void lua_newtable (lua_State *L);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a new empty table and pushes it onto the stack.
 It is equivalent to @T{lua_createtable(L, 0, 0)}.
@@ -3239,7 +3245,7 @@ It is equivalent to @T{lua_createtable(L, 0, 0)}.
 }
 
 @APIEntry{lua_State *lua_newthread (lua_State *L);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a new thread, pushes it on the stack,
 and returns a pointer to a @Lid{lua_State} that represents this new thread.
@@ -3254,7 +3260,7 @@ like any Lua object.
 }
 
 @APIEntry{void *lua_newuserdata (lua_State *L, size_t size);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 This function allocates a new block of memory with the given size,
 pushes onto the stack a new full userdata with the block address,
@@ -3415,7 +3421,7 @@ Pushes a boolean value with value @id{b} onto the stack.
 }
 
 @APIEntry{void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);|
-@apii{n,1,e}
+@apii{n,1,m}
 
 Pushes a new @N{C closure} onto the stack.
 
@@ -3456,7 +3462,7 @@ and return its results @seeC{lua_CFunction}.
 }
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
@@ -3518,7 +3524,7 @@ light userdata with the same @N{C address}.
 }
 
 @APIEntry{const char *lua_pushliteral (lua_State *L, const char *s);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 This macro is equivalent to @Lid{lua_pushstring},
 but should be used only when @id{s} is a literal string.
@@ -3526,7 +3532,7 @@ but should be used only when @id{s} is a literal string.
 }
 
 @APIEntry{const char *lua_pushlstring (lua_State *L, const char *s, size_t len);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Pushes the string pointed to by @id{s} with size @id{len}
 onto the stack.
@@ -3555,7 +3561,7 @@ Pushes a float with value @id{n} onto the stack.
 }
 
 @APIEntry{const char *lua_pushstring (lua_State *L, const char *s);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Pushes the zero-terminated string pointed to by @id{s}
 onto the stack.
@@ -3589,7 +3595,7 @@ onto the stack.
 const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
 instead of a variable number of arguments.
@@ -3654,7 +3660,7 @@ for other values, it @N{is 0}.
 }
 
 @APIEntry{void lua_rawset (lua_State *L, int index);|
-@apii{2,0,e}
+@apii{2,0,m}
 
 Similar to @Lid{lua_settable}, but does a raw assignment
 (i.e., without metamethods).
@@ -3662,7 +3668,7 @@ Similar to @Lid{lua_settable}, but does a raw assignment
 }
 
 @APIEntry{void lua_rawseti (lua_State *L, int index, lua_Integer i);|
-@apii{1,0,e}
+@apii{1,0,m}
 
 Does the equivalent of @T{t[i] = v},
 where @id{t} is the table at the given index
@@ -3675,7 +3681,7 @@ that is, it does not invoke metamethods.
 }
 
 @APIEntry{void lua_rawsetp (lua_State *L, int index, const void *p);|
-@apii{1,0,e}
+@apii{1,0,m}
 
 Does the equivalent of @T{t[p] = v},
 where @id{t} is the table at the given index,
@@ -3967,11 +3973,11 @@ indicates whether the operation succeeded.
 }
 
 @APIEntry{const char *lua_tolstring (lua_State *L, int index, size_t *len);|
-@apii{0,0,e}
+@apii{0,0,m}
 
 Converts the Lua value at the given index to a @N{C string}.
 If @id{len} is not @id{NULL},
-it also sets @T{*len} with the string length.
+it sets @T{*len} with the string length.
 The Lua value must be a string or a number;
 otherwise, the function returns @id{NULL}.
 If the value is a number,
@@ -3980,7 +3986,7 @@ then @id{lua_tolstring} also
 (This change confuses @Lid{lua_next}
 when @id{lua_tolstring} is applied to keys during a table traversal.)
 
-@id{lua_tolstring} returns a fully aligned pointer
+@id{lua_tolstring} returns a pointer
 to a string inside the Lua state.
 This string always has a zero (@Char{\0})
 after its last character (as @N{in C}),
@@ -4029,7 +4035,7 @@ Typically this function is used only for hashing and debug information.
 }
 
 @APIEntry{const char *lua_tostring (lua_State *L, int index);|
-@apii{0,0,e}
+@apii{0,0,m}
 
 Equivalent to @Lid{lua_tolstring} with @id{len} equal to @id{NULL}.
 
@@ -4664,7 +4670,7 @@ in alphabetical order.
 
 
 @APIEntry{void luaL_addchar (luaL_Buffer *B, char c);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Adds the byte @id{c} to the buffer @id{B}
 @seeC{luaL_Buffer}.
@@ -4672,7 +4678,7 @@ Adds the byte @id{c} to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Adds the string pointed to by @id{s} with length @id{l} to
 the buffer @id{B}
@@ -4682,7 +4688,7 @@ The string can contain @x{embedded zeros}.
 }
 
 @APIEntry{void luaL_addsize (luaL_Buffer *B, size_t n);|
-@apii{?,?,e}
+@apii{?,?,-}
 
 Adds to the buffer @id{B} @seeC{luaL_Buffer}
 a string of length @id{n} previously copied to the
@@ -4691,7 +4697,7 @@ buffer area @seeC{luaL_prepbuffer}.
 }
 
 @APIEntry{void luaL_addstring (luaL_Buffer *B, const char *s);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Adds the zero-terminated string pointed to by @id{s}
 to the buffer @id{B}
@@ -4700,7 +4706,7 @@ to the buffer @id{B}
 }
 
 @APIEntry{void luaL_addvalue (luaL_Buffer *B);|
-@apii{1,?,e}
+@apii{1,?,m}
 
 Adds the value at the top of the stack
 to the buffer @id{B}
@@ -4810,7 +4816,7 @@ the buffer must be declared as a variable
 }
 
 @APIEntry{char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Equivalent to the sequence
 @Lid{luaL_buffinit}, @Lid{luaL_prepbuffsize}.
@@ -4988,7 +4994,7 @@ as @T{return luaL_error(@rep{args})}.
 }
 
 @APIEntry{int luaL_execresult (lua_State *L, int stat);|
-@apii{0,3,e}
+@apii{0,3,m}
 
 This function produces the return values for
 process-related functions in the standard library
@@ -4998,7 +5004,7 @@ process-related functions in the standard library
 
 @APIEntry{
 int luaL_fileresult (lua_State *L, int stat, const char *fname);|
-@apii{0,1|3,e}
+@apii{0,1|3,m}
 
 This function produces the return values for
 file-related functions in the standard library
@@ -5007,7 +5013,7 @@ file-related functions in the standard library
 }
 
 @APIEntry{int luaL_getmetafield (lua_State *L, int obj, const char *e);|
-@apii{0,0|1,e}
+@apii{0,0|1,m}
 
 Pushes onto the stack the field @id{e} from the metatable
 of the object at index @id{obj} and returns the type of pushed value.
@@ -5018,7 +5024,7 @@ pushes nothing and returns @id{LUA_TNIL}.
 }
 
 @APIEntry{int luaL_getmetatable (lua_State *L, const char *tname);|
-@apii{0,1,-}
+@apii{0,1,m}
 
 Pushes onto the stack the metatable associated with name @id{tname}
 in the registry @seeC{luaL_newmetatable}
@@ -5044,7 +5050,7 @@ const char *luaL_gsub (lua_State *L,
                        const char *s,
                        const char *p,
                        const char *r);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a copy of string @id{s} by replacing
 any occurrence of the string @id{p}
@@ -5141,7 +5147,7 @@ it does not run it.
 
 
 @APIEntry{void luaL_newlib (lua_State *L, const luaL_Reg l[]);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a new table and registers there
 the functions in list @id{l}.
@@ -5156,7 +5162,7 @@ not a pointer to it.
 }
 
 @APIEntry{void luaL_newlibtable (lua_State *L, const luaL_Reg l[]);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates a new table with a size optimized
 to store all entries in the array @id{l}
@@ -5171,7 +5177,7 @@ not a pointer to it.
 }
 
 @APIEntry{int luaL_newmetatable (lua_State *L, const char *tname);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 If the registry already has the key @id{tname},
 returns 0.
@@ -5239,6 +5245,9 @@ Otherwise, raises an error.
 
 If @id{l} is not @id{NULL},
 fills the position @T{*l} with the result's length.
+If the result is @id{NULL}
+(only possible when returning @id{d} and @T{d == NULL}),
+its length is considered zero.
 
 }
 
@@ -5268,7 +5277,7 @@ Otherwise, raises an error.
 }
 
 @APIEntry{char *luaL_prepbuffer (luaL_Buffer *B);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Equivalent to @Lid{luaL_prepbuffsize}
 with the predefined size @defid{LUAL_BUFFERSIZE}.
@@ -5276,7 +5285,7 @@ with the predefined size @defid{LUAL_BUFFERSIZE}.
 }
 
 @APIEntry{char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz);|
-@apii{?,?,e}
+@apii{?,?,m}
 
 Returns an address to a space of size @id{sz}
 where you can copy a string to be added to buffer @id{B}
@@ -5288,7 +5297,7 @@ it to the buffer.
 }
 
 @APIEntry{void luaL_pushresult (luaL_Buffer *B);|
-@apii{?,1,e}
+@apii{?,1,m}
 
 Finishes the use of buffer @id{B} leaving the final string on
 the top of the stack.
@@ -5296,14 +5305,14 @@ the top of the stack.
 }
 
 @APIEntry{void luaL_pushresultsize (luaL_Buffer *B, size_t sz);|
-@apii{?,1,e}
+@apii{?,1,m}
 
 Equivalent to the sequence @Lid{luaL_addsize}, @Lid{luaL_pushresult}.
 
 }
 
 @APIEntry{int luaL_ref (lua_State *L, int t);|
-@apii{1,0,e}
+@apii{1,0,m}
 
 Creates and returns a @def{reference},
 in the table at index @id{t},
@@ -5357,7 +5366,7 @@ Leaves a copy of the module on the stack.
 }
 
 @APIEntry{void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);|
-@apii{nup,0,e}
+@apii{nup,0,m}
 
 Registers all functions in the array @id{l}
 @seeC{luaL_Reg} into the table on the top of the stack
@@ -5407,13 +5416,13 @@ this function receives the file handle as its sole argument and
 must return either @Rw{true} (in case of success)
 or @nil plus an error message (in case of error).
 Once Lua calls this field,
-the field value is changed to @id{NULL}
+it changes the field value to @id{NULL}
 to signal that the handle is closed.
 
 }
 
 @APIEntry{void *luaL_testudata (lua_State *L, int arg, const char *tname);|
-@apii{0,0,e}
+@apii{0,0,m}
 
 This function works like @Lid{luaL_checkudata},
 except that, when the test fails,
@@ -5441,7 +5450,7 @@ and uses the result of the call as its result.
 @APIEntry{
 void luaL_traceback (lua_State *L, lua_State *L1, const char *msg,
                      int level);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Creates and pushes a traceback of the stack @id{L1}.
 If @id{msg} is not @id{NULL} it is appended
@@ -5473,7 +5482,7 @@ If @id{ref} is @Lid{LUA_NOREF} or @Lid{LUA_REFNIL},
 }
 
 @APIEntry{void luaL_where (lua_State *L, int lvl);|
-@apii{0,1,e}
+@apii{0,1,m}
 
 Pushes onto the stack a string identifying the current position
 of the control at level @id{lvl} in the call stack.
@@ -5873,7 +5882,8 @@ and @id{select} returns the total number of extra arguments it received.
 @LibEntry{setmetatable (table, metatable)|
 
 Sets the metatable for the given table.
-(You cannot change the metatable of other types from Lua, only @N{from C}.)
+(To change the metatable of other types from Lua code,
+you must use the @link{debuglib|debug library}.)
 If @id{metatable} is @nil,
 removes the metatable of the given table.
 If the original metatable has a @T{"__metatable"} field,
@@ -5936,8 +5946,9 @@ and @St{userdata}.
 }
 
 @LibEntry{_VERSION|
+
 A global variable (not a function) that
-holds a string containing the current interpreter version.
+holds a string containing the running Lua version.
 The current value of this variable is @St{Lua 5.3}.
 
 }
@@ -6578,6 +6589,9 @@ The default value for @id{sep} is the empty string
 (that is, no separator).
 Returns the empty string if @id{n} is not positive.
 
+(Note that it is very easy to exhaust the memory of your machine
+with a single call to this function.)
+
 }
 
 @LibEntry{string.reverse (s)|
@@ -7055,12 +7069,19 @@ If @id{comp} is given,
 then it must be a function that receives two list elements
 and returns true when the first element must come
 before the second in the final order
-(so that @T{not comp(list[i+1],list[i])} will be true after the sort).
+(so that, after the sort,
+@T{i < j} implies @T{not comp(list[j],list[i])}).
 If @id{comp} is not given,
 then the standard Lua operator @T{<} is used instead.
 
+Note that the @id{comp} function must define
+a strict partial order over the elements in the list;
+that is, it must be asymmetric and transitive.
+Otherwise, no valid sort may be possible.
+
 The sort algorithm is not stable;
-that is, elements considered equal by the given order
+that is, elements not comparable by the given order
+(e.g., equal elements)
 may have their relative positions changed by the sort.
 
 }
@@ -7226,12 +7247,11 @@ in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.
-(The value @M{m-n} cannot be negative and must fit in a Lua integer.)
+(The value @M{n-m} cannot be negative and must fit in a Lua integer.)
 The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
 
 This function is an interface to the underling
 pseudo-random generator function provided by C.
-No guarantees can be given for its statistical properties.
 
 }
 
@@ -7347,7 +7367,7 @@ instead of returning an error code.
 
 }
 
-@LibEntry{io.lines ([filename @Cdots])|
+@LibEntry{io.lines ([filename, @Cdots])|
 
 Opens the given file name in read mode
 and returns an iterator function that
@@ -7627,7 +7647,7 @@ then the date is formatted in Coordinated Universal Time.
 After this optional character,
 if @id{format} is the string @St{*t},
 then @id{date} returns a table with the following fields:
-@id{year} (four digits), @id{month} (1@En{}12), @id{day} (1@En{}31),
+@id{year}, @id{month} (1@En{}12), @id{day} (1@En{}31),
 @id{hour} (0@En{}23), @id{min} (0@En{}59), @id{sec} (0@En{}61),
 @id{wday} (weekday, Sunday @N{is 1}),
 @id{yday} (day of the year),
@@ -7641,8 +7661,8 @@ formatted according to the same rules as the @ANSI{strftime}.
 
 When called without arguments,
 @id{date} returns a reasonable date and time representation that depends on
-the host system and on the current locale
-(that is, @T{os.date()} is equivalent to @T{os.date("%c")}).
+the host system and on the current locale.
+(More specifically, @T{os.date()} is equivalent to @T{os.date("%c")}.)
 
 On non-POSIX systems,
 this function may be not @x{thread safe}
