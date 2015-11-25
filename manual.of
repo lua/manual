@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.151 2015/06/10 21:08:57 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.152 2015/11/13 15:12:33 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2786,7 +2786,7 @@ will have as a sequence;
 parameter @id{nrec} is a hint for how many other elements
 the table will have.
 Lua may use these hints to preallocate memory for the new table.
-This pre-allocation is useful for performance when you know in advance
+This preallocation is useful for performance when you know in advance
 how many elements the table will have.
 Otherwise you can use the function @Lid{lua_newtable}.
 
@@ -6431,9 +6431,11 @@ Options @id{c}, @id{d},
 @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
 expect an integer.
 Option @id{q} expects a string.
-Option @id{s} expects a string without @x{embedded zeros};
+Option @id{s} expects a string;
 if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
+If the option has any modifier (flags, width, length),
+the string argument should not contain @x{embedded zeros}.
 
 When Lua is compiled with a non-C99 compiler,
 options @id{A} and @id{a} (hexadecimal floats)
