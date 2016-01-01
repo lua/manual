@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.152 2015/11/13 15:12:33 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.153 2015/11/25 16:57:42 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -3462,7 +3462,7 @@ and return its results @seeC{lua_CFunction}.
 }
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
-@apii{0,1,m}
+@apii{0,1,e}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
@@ -3491,6 +3491,10 @@ The conversion specifiers can only be
 }
 
 }
+
+Unlike other push functions,
+this function checks for the stack space it needs,
+including the slot for its result.
 
 }
 
@@ -4188,9 +4192,9 @@ when the coroutine eventually resumes,
 it continues executing the continuation function.
 However, there is one special case,
 which is when this function is called
-from inside a line hook @see{debugI}.
+from inside a line or a count hook @see{debugI}.
 In that case, @id{lua_yieldk} should be called with no continuation
-(probably in the form of @Lid{lua_yield}),
+(probably in the form of @Lid{lua_yield}) and no results,
 and the hook should return immediately after the call.
 Lua will yield and,
 when the coroutine resumes again,
@@ -6411,6 +6415,7 @@ The only differences are that the options/modifiers
 @T{*}, @id{h}, @id{L}, @id{l}, @id{n},
 and @id{p} are not supported
 and that there is an extra option, @id{q}.
+
 The @id{q} option formats a string between double quotes,
 using escape sequences when necessary to ensure that
 it can safely be read back by the Lua interpreter.
@@ -6430,16 +6435,15 @@ Options
 Options @id{c}, @id{d},
 @id{i}, @id{o}, @id{u}, @id{X}, and @id{x}
 expect an integer.
-Option @id{q} expects a string.
+When Lua is compiled with a C89 compiler,
+options @id{A} and @id{a} (hexadecimal floats)
+do not support any modifier (flags, width, length).
+
 Option @id{s} expects a string;
 if its argument is not a string,
 it is converted to one following the same rules of @Lid{tostring}.
 If the option has any modifier (flags, width, length),
 the string argument should not contain @x{embedded zeros}.
-
-When Lua is compiled with a non-C99 compiler,
-options @id{A} and @id{a} (hexadecimal floats)
-do not support any modifier (flags, width, length).
 
 }
 
