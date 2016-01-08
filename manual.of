@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.153 2015/11/25 16:57:42 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.154 2016/01/01 15:28:34 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2472,8 +2472,11 @@ by looking only at its arguments
 The third field, @T{x},
 tells whether the function may raise errors:
 @Char{-} means the function never raises any error;
-@Char{m} means the function may raise memory errors;
-@Char{e} means the function may raise errors;
+@Char{m} means the function may raise out-of-memory errors
+and errors running a @idx{__gc} metamethod;
+@Char{e} means the function may raise any errors
+(it can run arbitrary Lua code,
+either directly or through metamethods);
 @Char{v} means the function may raise an error on purpose.
 
 
@@ -2833,7 +2836,7 @@ and therefore never returns
 }
 
 @APIEntry{int lua_gc (lua_State *L, int what, int data);|
-@apii{0,0,e}
+@apii{0,0,m}
 
 Controls the garbage collector.
 
@@ -3187,7 +3190,7 @@ The return values of @id{lua_load} are:
 syntax error during precompilation;}
 
 @item{@Lid{LUA_ERRMEM}|
-@x{memory allocation error};}
+@x{memory allocation (out-of-memory) error};}
 
 @item{@Lid{LUA_ERRGCMM}|
 error while running a @idx{__gc} metamethod.
