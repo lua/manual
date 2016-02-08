@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.154 2016/01/01 15:28:34 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.155 2016/01/08 16:48:20 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -286,13 +286,20 @@ Lua checks for a function in the field @St{__add} of the value's metatable.
 If it finds one,
 Lua calls this function to perform the addition.
 
-The keys in a metatable are derived from the @def{event} names;
+The key for each event in a metatable is a string
+with the event name prefixed by two underscores;
 the corresponding values are called @def{metamethods}.
-In the previous example, the event is @T{"add"}
+In the previous example, the key is @St{__add}
 and the metamethod is the function that performs the addition.
 
 You can query the metatable of any value
 using the @Lid{getmetatable} function.
+Lua queries metamethods in metatables using a raw access @seeF{rawget}.
+So, to retrieve the metamethod for event @id{env} in object @id{o},
+Lua does the equivalent to the following code:
+@verbatim{
+rawget(getmetatable(@rep{o}) or {}, "__@rep{env}")
+}
 
 You can replace the metatable of tables
 using the @Lid{setmetatable} function.
@@ -314,16 +321,7 @@ order comparisons, concatenation, length operation, calls, and indexing.
 A metatable also can define a function to be called
 when a userdata or a table is @link{GC|garbage collected}.
 
-A detailed list of events controlled by metatables is given next.
-Each operation is identified by its corresponding event name.
-The key for each event is a string with its name prefixed by
-two underscores, @Char{__};
-for instance, the key for operation @Q{add} is the
-string @St{__add}.
-Note that queries for metamethods are always raw;
-the access to a metamethod does not invoke other metamethods.
-
-For the unary operators (negation, length, and bitwise not),
+For the unary operators (negation, length, and bitwise NOT),
 the metamethod is computed and called with a dummy second operand,
 equal to the first one.
 This extra operand is only to simplify Lua's internals
@@ -331,16 +329,18 @@ This extra operand is only to simplify Lua's internals
 and may be removed in future versions.
 (For most uses this extra operand is irrelevant.)
 
+A detailed list of events controlled by metatables is given next.
+Each operation is identified by its corresponding key.
+
 @description{
 
-@item{@Q{add}|
-the @T{+} operation.
-@Lidx{__add}
+@item{@idx{__add}|
+the addition (@T{+}) operation.
 If any operand for an addition is not a number
 (nor a string coercible to a number),
 Lua will try to call a metamethod.
 First, Lua will check the first operand (even if it is valid).
-If that operand does not define a metamethod for the @St{__add} event,
+If that operand does not define a metamethod for @idx{__add},
 then Lua will check the second operand.
 If Lua can find a metamethod,
 it calls the metamethod with the two operands as arguments,
@@ -351,99 +351,84 @@ Otherwise,
 it raises an error.
 }
 
-@item{@Q{sub}|
-the @T{-} operation.
-@Lidx{__sub}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__sub}|
+the subtraction (@T{-}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{mul}|
-the @T{*} operation.
-@Lidx{__mul}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__mul}|
+the multiplication (@T{*}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{div}|
-the @T{/} operation.
-@Lidx{__div}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__div}|
+the division (@T{/}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{mod}|
-the @T{%} operation.
-@Lidx{__mod}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__mod}|
+the modulo (@T{%}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{pow}|
-the @T{^} (exponentiation) operation.
-@Lidx{__pow}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__pow}|
+the exponentiation (@T{^}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{unm}|
-the @T{-} (unary minus) operation.
-@Lidx{__unm}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__unm}|
+the negation (unary @T{-}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{idiv}|
-the @T{//} (floor division) operation.
-@Lidx{__idiv}
-Behavior similar to the @Q{add} operation.
+@item{@idx{__idiv}|
+the floor division (@T{//}) operation.
+Behavior similar to the addition operation.
 }
 
-@item{@Q{band}|
-the @T{&} (bitwise and) operation.
-@Lidx{__band}
-Behavior similar to the @Q{add} operation,
+@item{@idx{__band}|
+the bitwise AND (@T{&}) operation.
+Behavior similar to the addition operation,
 except that Lua will try a metamethod
 if any operand is neither an integer
 nor a value coercible to an integer @see{coercion}.
 }
 
-@item{@Q{bor}|
-the @T{|} (bitwise or) operation.
-@Lidx{__bor}
-Behavior similar to the @Q{band} operation.
+@item{@idx{__bor}|
+the bitwise OR (@T{|}) operation.
+Behavior similar to the bitwise AND operation.
 }
 
-@item{@Q{bxor}|
-the @T{~} (bitwise exclusive or) operation.
-@Lidx{__bxor}
-Behavior similar to the @Q{band} operation.
+@item{@idx{__bxor}|
+the bitwise exclusive OR (binary @T{~}) operation.
+Behavior similar to the bitwise AND operation.
 }
 
-@item{@Q{bnot}|
-the @T{~} (bitwise unary not) operation.
-@Lidx{__bnot}
-Behavior similar to the @Q{band} operation.
+@item{@idx{__bnot}|
+the bitwise NOT (unary @T{~}) operation.
+Behavior similar to the bitwise AND operation.
 }
 
-@item{@Q{shl}|
-the @T{<<} (bitwise left shift) operation.
-@Lidx{__shl}
-Behavior similar to the @Q{band} operation.
+@item{@idx{__shl}|
+the bitwise left shift (@T{<<}) operation.
+Behavior similar to the bitwise AND operation.
 }
 
-@item{@Q{shr}|
-the @T{>>} (bitwise right shift) operation.
-@Lidx{__shr}
-Behavior similar to the @Q{band} operation.
+@item{@idx{__shr}|
+the bitwise right shift (@T{>>}) operation.
+Behavior similar to the bitwise AND operation.
 }
 
-@item{@Q{concat}|
-the @T{..} (concatenation) operation.
-@Lidx{__concat}
-Behavior similar to the @Q{add} operation,
+@item{@idx{__concat}|
+the concatenation (@T{..}) operation.
+Behavior similar to the addition operation,
 except that Lua will try a metamethod
 if any operand is neither a string nor a number
 (which is always coercible to a string).
 }
 
-@item{@Q{len}|
-the @T{#} (length) operation.
-@Lidx{__len}
+@item{@idx{__len}|
+the length (@T{#}) operation.
 If the object is not a string,
 Lua will try its metamethod.
 If there is a metamethod,
@@ -456,44 +441,40 @@ then Lua uses the table length operation @see{len-op}.
 Otherwise, Lua raises an error.
 }
 
-@item{@Q{eq}|
-the @T{==} (equal) operation.
-@Lidx{__eq}
-Behavior similar to the @Q{add} operation,
+@item{@idx{__eq}|
+the equal (@T{==}) operation.
+Behavior similar to the addition operation,
 except that Lua will try a metamethod only when the values
 being compared are either both tables or both full userdata
 and they are not primitively equal.
 The result of the call is always converted to a boolean.
 }
 
-@item{@Q{lt}|
-the @T{<} (less than) operation.
-@Lidx{__lt}
-Behavior similar to the @Q{add} operation,
+@item{@idx{__lt}|
+the less than (@T{<}) operation.
+Behavior similar to the addition operation,
 except that Lua will try a metamethod only when the values
 being compared are neither both numbers nor both strings.
 The result of the call is always converted to a boolean.
 }
 
-@item{@Q{le}|
-the @T{<=} (less equal) operation.
-@Lidx{__le}
+@item{@idx{__le}|
+the less equal (@T{<=}) operation.
 Unlike other operations,
 the less-equal operation can use two different events.
-First, Lua looks for the @St{__le} metamethod in both operands,
-like in the @Q{lt} operation.
+First, Lua looks for the @idx{__le} metamethod in both operands,
+like in the less than operation.
 If it cannot find such a metamethod,
-then it will try the @St{__lt} event,
+then it will try the @idx{__lt} metamethod,
 assuming that @T{a <= b} is equivalent to @T{not (b < a)}.
 As with the other comparison operators,
 the result is always a boolean.
-(This use of the @St{__lt} event can be removed in future versions;
-it is also slower than a real @St{__le} metamethod.)
+(This use of the @idx{__lt} event can be removed in future versions;
+it is also slower than a real @idx{__le} metamethod.)
 }
 
-@item{@Q{index}|
+@item{@idx{__index}|
 The indexing access @T{table[key]}.
-@Lidx{__index}
 This event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
 The metamethod is looked up in @id{table}.
@@ -501,16 +482,18 @@ The metamethod is looked up in @id{table}.
 Despite the name,
 the metamethod for this event can be either a function or a table.
 If it is a function,
-it is called with @id{table} and @id{key} as arguments.
+it is called with @id{table} and @id{key} as arguments,
+and the result of the call
+(adjusted to one value)
+is the result of the operation.
 If it is a table,
 the final result is the result of indexing this table with @id{key}.
 (This indexing is regular, not raw,
 and therefore can trigger another metamethod.)
 }
 
-@item{@Q{newindex}|
+@item{@idx{__newindex}|
 The indexing assignment @T{table[key] = value}.
-@Lidx{__newindex}
 Like the index event,
 this event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
@@ -525,30 +508,39 @@ Lua does an indexing assignment to this table with the same key and value.
 (This assignment is regular, not raw,
 and therefore can trigger another metamethod.)
 
-Whenever there is a @Q{newindex} metamethod,
+Whenever there is a @idx{__newindex} metamethod,
 Lua does not perform the primitive assignment.
 (If necessary,
 the metamethod itself can call @Lid{rawset}
 to do the assignment.)
 }
 
-@item{@Q{call}|
+@item{@idx{__call}|
 The call operation @T{func(args)}.
-@Lidx{__call}
 This event happens when Lua tries to call a non-function value
 (that is, @id{func} is not a function).
 The metamethod is looked up in @id{func}.
 If present,
 the metamethod is called with @id{func} as its first argument,
 followed by the arguments of the original call (@id{args}).
+All results of the call
+are the result of the operation.
+(This is the only metamethod that allows multiple results.)
 }
 
 }
 
 It is a good practice to add all needed metamethods to a table
 before setting it as a metatable of some object.
-In particular, the @St{__gc} metamethod works only when this order
+In particular, the @idx{__gc} metamethod works only when this order
 is followed @see{finalizers}.
+
+Because metatables are regular tables,
+they can contain arbitrary fields,
+not only the event names defined above.
+Some functions in the standard library
+(e.g., @Lid{tostring})
+use other fields in metatables for their own purposes.
 
 }
 
@@ -1490,7 +1482,7 @@ bitwise operators @see{bitwise},
 relational operators @see{rel-ops}, logical operators @see{logic},
 and the concatenation operator @see{concat}.
 Unary operators comprise the unary minus @see{arith},
-the unary bitwise not @see{bitwise},
+the unary bitwise NOT @see{bitwise},
 the unary logical @Rw{not} @see{logic},
 and the unary @def{length operator} @see{len-op}.
 
@@ -1586,12 +1578,12 @@ that is equal modulo @M{2@sp{64}} to the mathematical result.)
 @sect3{bitwise| @title{Bitwise Operators}
 Lua supports the following @x{bitwise operators}:
 @description{
-@item{@T{&}|bitwise and}
-@item{@T{@VerBar}|bitwise or}
-@item{@T{~}|bitwise exclusive or}
+@item{@T{&}|bitwise AND}
+@item{@T{@VerBar}|bitwise OR}
+@item{@T{~}|bitwise exclusive OR}
 @item{@T{>>}|right shift}
 @item{@T{<<}|left shift}
-@item{@T{~}|unary bitwise not}
+@item{@T{~}|unary bitwise NOT}
 }
 
 All bitwise operations convert its operands to integers
@@ -2578,10 +2570,10 @@ The value of @id{op} must be one of the following constants:
 @item{@defid{LUA_OPMOD}| performs modulo (@T{%})}
 @item{@defid{LUA_OPPOW}| performs exponentiation (@T{^})}
 @item{@defid{LUA_OPUNM}| performs mathematical negation (unary @T{-})}
-@item{@defid{LUA_OPBNOT}| performs bitwise negation (@T{~})}
-@item{@defid{LUA_OPBAND}| performs bitwise and (@T{&})}
-@item{@defid{LUA_OPBOR}| performs bitwise or (@T{|})}
-@item{@defid{LUA_OPBXOR}| performs bitwise exclusive or (@T{~})}
+@item{@defid{LUA_OPBNOT}| performs bitwise NOT (@T{~})}
+@item{@defid{LUA_OPBAND}| performs bitwise AND (@T{&})}
+@item{@defid{LUA_OPBOR}| performs bitwise OR (@T{|})}
+@item{@defid{LUA_OPBXOR}| performs bitwise exclusive OR (@T{~})}
 @item{@defid{LUA_OPSHL}| performs left shift (@T{<<})}
 @item{@defid{LUA_OPSHR}| performs right shift (@T{>>})}
 
@@ -3614,7 +3606,7 @@ instead of a variable number of arguments.
 
 Returns 1 if the two values in indices @id{index1} and
 @id{index2} are primitively equal
-(that is, without calling metamethods).
+(that is, without calling the @idx{__eq} metamethod).
 Otherwise @N{returns 0}.
 Also @N{returns 0} if any of the indices are not valid.
 
@@ -3633,8 +3625,8 @@ Similar to @Lid{lua_gettable}, but does a raw access
 
 Pushes onto the stack the value @T{t[n]},
 where @id{t} is the table at the given index.
-The access is raw;
-that is, it does not invoke metamethods.
+The access is raw,
+that is, it does not invoke the @idx{__index} metamethod.
 
 Returns the type of the pushed value.
 
@@ -3647,7 +3639,7 @@ Pushes onto the stack the value @T{t[k]},
 where @id{t} is the table at the given index and
 @id{k} is the pointer @id{p} represented as a light userdata.
 The access is raw;
-that is, it does not invoke metamethods.
+that is, it does not invoke the @idx{__index} metamethod.
 
 Returns the type of the pushed value.
 
@@ -3682,8 +3674,8 @@ where @id{t} is the table at the given index
 and @id{v} is the value at the top of the stack.
 
 This function pops the value from the stack.
-The assignment is raw;
-that is, it does not invoke metamethods.
+The assignment is raw,
+that is, it does not invoke the @idx{__newindex} metamethod.
 
 }
 
@@ -3696,8 +3688,8 @@ where @id{t} is the table at the given index,
 and @id{v} is the value at the top of the stack.
 
 This function pops the value from the stack.
-The assignment is raw;
-that is, it does not invoke metamethods.
+The assignment is raw,
+that is, it does not invoke @idx{__newindex} metamethod.
 
 }
 
@@ -4532,7 +4524,7 @@ Sets the debugging hook function.
 
 Argument @id{f} is the hook function.
 @id{mask} specifies on which events the hook will be called:
-it is formed by a bitwise or of the constants
+it is formed by a bitwise OR of the constants
 @defid{LUA_MASKCALL},
 @defid{LUA_MASKRET},
 @defid{LUA_MASKLINE},
@@ -5193,7 +5185,7 @@ creates a new table to be used as a metatable for userdata,
 adds to this new table the pair @T{__name = tname},
 adds to the registry the pair @T{[tname] = new table},
 and returns 1.
-(The entry @id{__name} is used by some error-reporting functions.)
+(The entry @idx{__name} is used by some error-reporting functions.)
 
 In both cases pushes onto the stack the final value associated
 with @id{tname} in the registry.
@@ -5447,7 +5439,7 @@ returned by the function.
 If @id{len} is not @id{NULL},
 the function also sets @T{*len} with the string length.
 
-If the value has a metatable with a @T{"__tostring"} field,
+If the value has a metatable with a @idx{__tostring} field,
 then @id{luaL_tolstring} calls the corresponding metamethod
 with the value as argument,
 and uses the result of the call as its result.
@@ -5690,7 +5682,7 @@ nor vice versa.
 
 If @id{object} does not have a metatable, returns @nil.
 Otherwise,
-if the object's metatable has a @T{"__metatable"} field,
+if the object's metatable has a @idx{__metatable} field,
 returns the associated value.
 Otherwise, returns the metatable of the given object.
 
@@ -5844,14 +5836,14 @@ use @Lid{string.format} and @Lid{io.write}.
 
 @LibEntry{rawequal (v1, v2)|
 Checks whether @id{v1} is equal to @id{v2},
-without invoking any metamethod.
+without invoking the @idx{__eq} metamethod.
 Returns a boolean.
 
 }
 
 @LibEntry{rawget (table, index)|
 Gets the real value of @T{table[index]},
-without invoking any metamethod.
+without invoking the @idx{__index} metamethod.
 @id{table} must be a table;
 @id{index} may be any value.
 
@@ -5860,14 +5852,14 @@ without invoking any metamethod.
 @LibEntry{rawlen (v)|
 Returns the length of the object @id{v},
 which must be a table or a string,
-without invoking any metamethod.
+without invoking the @idx{__len} metamethod.
 Returns an integer.
 
 }
 
 @LibEntry{rawset (table, index, value)|
 Sets the real value of @T{table[index]} to @id{value},
-without invoking any metamethod.
+without invoking the @idx{__newindex} metamethod.
 @id{table} must be a table,
 @id{index} any value different from @nil and @x{NaN},
 and @id{value} any Lua value.
@@ -5893,7 +5885,7 @@ Sets the metatable for the given table.
 you must use the @link{debuglib|debug library}.)
 If @id{metatable} is @nil,
 removes the metatable of the given table.
-If the original metatable has a @T{"__metatable"} field,
+If the original metatable has a @idx{__metatable} field,
 raises an error.
 
 This function returns @id{table}.
@@ -5931,7 +5923,7 @@ converts it to a string in a human-readable format.
 (For complete control of how numbers are converted,
 use @Lid{string.format}.)
 
-If the metatable of @id{v} has a @T{"__tostring"} field,
+If the metatable of @id{v} has a @idx{__tostring} field,
 then @id{tostring} calls the corresponding value
 with @id{v} as argument,
 and uses the result of the call as its result.
@@ -8318,7 +8310,7 @@ for setting and getting elements.
 
 @item{
 The @Lid{ipairs} iterator now respects metamethods and
-its @id{__ipairs} metamethod has been deprecated.
+its @idx{__ipairs} metamethod has been deprecated.
 }
 
 
