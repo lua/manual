@@ -1,31 +1,44 @@
-@Ci{$Id: manual.of,v 1.156 2016/02/08 12:42:33 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.157 2016/02/26 13:24:21 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
 @sect1{@title{Introduction}
 
-Lua is an extension programming language designed to support
-general procedural programming with data description
-facilities.
-Lua also offers good support for object-oriented programming,
-functional programming, and data-driven programming.
-Lua is intended to be used as a powerful, lightweight,
-embeddable scripting language for any program that needs one.
+Lua is a powerful, efficient, lightweight, embeddable scripting language.
+It offers strong support for procedural programming,
+object-oriented programming, functional programming, data-driven
+programming, and data description.
+
+Lua combines simple procedural syntax with powerful data description
+constructs based on associative arrays and extensible semantics.
+Lua is dynamically typed,
+runs by interpreting bytecode for a register-based
+virtual machine,
+and has automatic memory management with
+incremental garbage collection,
+making it ideal for configuration, scripting,
+and rapid prototyping.
+
 Lua is implemented as a library, written in @emphx{clean C},
 the common subset of @N{Standard C} and C++.
+The Lua distribution includes a host program called @id{lua},
+which uses the Lua library to offer a complete,
+standalone Lua interpreter,
+for interactive or batch use.
+Lua is intended to be used both as a powerful, lightweight,
+embeddable scripting language for any program that needs one,
+and as a powerful but lightweight and efficient stand-alone language.
 
 As an extension language, Lua has no notion of a @Q{main} program:
-it only works @emph{embedded} in a host client,
+it works @emph{embedded} in a host client,
 called the @emph{embedding program} or simply the @emphx{host}.
+(Frequently, this host is the stand-alone @id{lua} program.)
 The host program can invoke functions to execute a piece of Lua code,
 can write and read Lua variables,
 and can register @N{C functions} to be called by Lua code.
 Through the use of @N{C functions}, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
-The Lua distribution includes a sample host program called @id{lua},
-which uses the Lua library to offer a complete, standalone Lua interpreter,
-for interactive or batch use.
 
 Lua is free software,
 and is provided as usual with no guarantees,
@@ -260,8 +273,8 @@ It is up to the Lua program or its host to handle such error objects.
 When you use @Lid{xpcall} or @Lid{lua_pcall},
 you may give a @def{message handler}
 to be called in case of errors.
-This function is called with the original error message
-and returns a new error message.
+This function is called with the original error object
+and returns a new error object.
 It is called before the error unwinds the stack,
 so that it can gather more information about the error,
 for instance by inspecting the stack and creating a stack traceback.
@@ -761,7 +774,7 @@ In case of normal termination,
 @Lid{coroutine.resume} returns @true,
 plus any values returned by the coroutine main function.
 In case of errors, @Lid{coroutine.resume} returns @false
-plus an error message.
+plus an error object.
 
 A coroutine yields by calling @Lid{coroutine.yield}.
 When a coroutine yields,
@@ -2309,7 +2322,7 @@ never returning
 (e.g., doing a long jump to your own recovery point outside Lua).
 
 The panic function runs as if it were a @x{message handler} @see{error};
-in particular, the error message is at the top of the stack.
+in particular, the error object is at the top of the stack.
 However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
@@ -3336,25 +3349,25 @@ If there are no errors during the call,
 @Lid{lua_pcall} behaves exactly like @Lid{lua_call}.
 However, if there is any error,
 @Lid{lua_pcall} catches it,
-pushes a single value on the stack (the error message),
+pushes a single value on the stack (the error object),
 and returns an error code.
 Like @Lid{lua_call},
 @Lid{lua_pcall} always removes the function
 and its arguments from the stack.
 
 If @id{msgh} is 0,
-then the error message returned on the stack
-is exactly the original error message.
+then the error object returned on the stack
+is exactly the original error object.
 Otherwise, @id{msgh} is the stack index of a
 @emph{message handler}.
 (This index cannot be a pseudo-index.)
 In case of runtime errors,
-this function will be called with the error message
-and its return value will be the message
+this function will be called with the error object
+and its return value will be the object
 returned on the stack by @Lid{lua_pcall}.
 
 Typically, the message handler is used to add more debug
-information to the error message, such as a stack traceback.
+information to the error object, such as a stack traceback.
 Such information cannot be gathered after the return of @Lid{lua_pcall},
 since by then the stack has unwound.
 
@@ -3765,7 +3778,7 @@ or an error code in case of errors @seeC{lua_pcall}.
 In case of errors,
 the stack is not unwound,
 so you can use the debug API over it.
-The error message is on the top of the stack.
+The error object is on the top of the stack.
 
 To resume a coroutine,
 you remove any results from the last @Lid{lua_yield},
@@ -6729,6 +6742,12 @@ represents all alphanumeric characters plus the underscore,
 @T{[0-7]} represents the octal digits,
 and @T{[0-7%l%-]} represents the octal digits plus
 the lowercase letters plus the @Char{-} character.
+
+You can put a closing square bracket in a set
+by positioning it as the first character in the set.
+You can put an hyphen in a set
+by positioning it as the first or the last character in the set.
+(You can also use an escape for both cases.)
 
 The interaction between ranges and classes is not defined.
 Therefore, patterns like @T{[%a-z]} or @T{[a-%%]}
