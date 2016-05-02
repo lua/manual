@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.157 2016/02/26 13:24:21 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.158 2016/04/08 20:56:36 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1006,7 +1006,7 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
-A numeric constant with a fractional dot or an exponent 
+A numeric constant with a radix point or an exponent 
 denotes a float;
 otherwise it denotes an integer.
 Examples of valid integer constants are
@@ -1651,6 +1651,11 @@ following its syntax and the rules of the Lua lexer.
 Then, the resulting number (float or integer)
 is converted to the type (float or integer) required by the context
 (e.g., the operation that forced the conversion).
+
+All conversions from strings to numbers 
+accept both a dot and the current locale mark
+as the radix character.
+(The Lua lexer, however, accepts only a dot.)
 
 The conversion from numbers to strings uses a
 non-specified human-readable format.
@@ -7691,8 +7696,8 @@ if @id{format} is the string @St{*t},
 then @id{date} returns a table with the following fields:
 @id{year}, @id{month} (1@En{}12), @id{day} (1@En{}31),
 @id{hour} (0@En{}23), @id{min} (0@En{}59), @id{sec} (0@En{}61),
-@id{wday} (weekday, Sunday @N{is 1}),
-@id{yday} (day of the year),
+@id{wday} (weekday, 1@En{}7, Sunday @N{is 1}),
+@id{yday} (day of the year, 1@En{}366),
 and @id{isdst} (daylight saving flag, a boolean).
 This last field may be absent
 if the information is not available.
@@ -8224,6 +8229,12 @@ Otherwise, it interprets the line as a statement.
 If you write an incomplete statement,
 the interpreter waits for its completion
 by issuing a different prompt.
+
+If the global variable @defid{_PROMPT} contains a string,
+then its value is used as the prompt.
+Similarly, if the global variable @defid{_PROMPT2} contains a string,
+its value is used as the secondary prompt
+(issued during incomplete statements).
 
 In case of unprotected errors in the script,
 the interpreter reports the error to the standard error stream.
