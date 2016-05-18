@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.159 2016/05/02 16:33:56 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.160 2016/05/03 15:51:04 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -308,10 +308,10 @@ and the metamethod is the function that performs the addition.
 You can query the metatable of any value
 using the @Lid{getmetatable} function.
 Lua queries metamethods in metatables using a raw access @seeF{rawget}.
-So, to retrieve the metamethod for event @id{env} in object @id{o},
+So, to retrieve the metamethod for event @id{ev} in object @id{o},
 Lua does the equivalent to the following code:
 @verbatim{
-rawget(getmetatable(@rep{o}) or {}, "__@rep{env}")
+rawget(getmetatable(@rep{o}) or {}, "__@rep{ev}")
 }
 
 You can replace the metatable of tables
