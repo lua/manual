@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.160 2016/05/03 15:51:04 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.161 2016/05/18 18:20:41 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -976,7 +976,7 @@ and the system file functions may have problems with
 some control characters.
 So, it is safer to represent
 non-text data as a quoted literal with
-explicit escape sequences for non-text characters.
+explicit escape sequences for the non-text characters.
 
 
 For convenience,
@@ -1008,7 +1008,9 @@ plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
 A numeric constant with a radix point or an exponent 
 denotes a float;
-otherwise it denotes an integer.
+otherwise,
+if its value fits in an integer,
+it denotes an integer.
 Examples of valid integer constants are
 @verbatim{
 3   345   0xff   0xBEBADA
