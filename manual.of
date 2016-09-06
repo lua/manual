@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.161 2016/05/18 18:20:41 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.162 2016/05/30 15:57:03 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -283,6 +283,9 @@ so, an error inside the message handler
 will call the message handler again.
 If this loop goes on for too long,
 Lua breaks it and returns an appropriate message.
+(The message handler is called only for regular runtime errors.
+It is not called for memory-allocation errors
+nor for errors while running finalizers.)
 
 }
 
@@ -906,7 +909,7 @@ The following strings denote other @x{tokens}:
 ;     :     ,     .     ..    ...
 }
 
-@def{Literal strings}
+A @def{short literal string}
 can be delimited by matching single or double quotes,
 and can contain the following C-like escape sequences:
 @Char{\a} (bell),
@@ -919,7 +922,7 @@ and can contain the following C-like escape sequences:
 @Char{\\} (backslash),
 @Char{\"} (quotation mark [double quote]),
 and @Char{\'} (apostrophe [single quote]).
-A backslash followed by a real newline
+A backslash followed by a line break
 results in a newline in the string.
 The escape sequence @Char{\z} skips the following span
 of white-space characters,
@@ -927,11 +930,11 @@ including line breaks;
 it is particularly useful to break and indent a long literal string
 into multiple lines without adding the newlines and spaces
 into the string contents.
+A short literal string cannot contain unescaped line breaks
+nor escapes not forming a valid escape sequence.
 
-Strings in Lua can contain any 8-bit value, including @x{embedded zeros},
-which can be specified as @Char{\0}.
-More generally,
-we can specify any byte in a literal string by its numeric value.
+We can specify any byte in a short literal string by its numeric value
+(including @x{embedded zeros}).
 This can be done
 with the escape sequence @T{\x@rep{XX}},
 where @rep{XX} is a sequence of exactly two hexadecimal digits,
@@ -969,16 +972,6 @@ Any kind of end-of-line sequence
 or newline followed by carriage return)
 is converted to a simple newline.
 
-Any byte in a literal string not
-explicitly affected by the previous rules represents itself.
-However, Lua opens files for parsing in text mode,
-and the system file functions may have problems with
-some control characters.
-So, it is safer to represent
-non-text data as a quoted literal with
-explicit escape sequences for the non-text characters.
-
-
 For convenience,
 when the opening long bracket is immediately followed by a newline,
 the newline is not included in the string.
@@ -996,6 +989,15 @@ a = [==[
 alo
 123"]==]
 }
+
+Any byte in a literal string not
+explicitly affected by the previous rules represents itself.
+However, Lua opens files for parsing in text mode,
+and the system file functions may have problems with
+some control characters.
+So, it is safer to represent
+non-text data as a quoted literal with
+explicit escape sequences for the non-text characters.
 
 A @def{numeric constant} (or @def{numeral})
 can be written with an optional fractional part
@@ -2312,8 +2314,7 @@ Internally, Lua uses the C @id{longjmp} facility to handle errors.
 (Lua will use exceptions if you compile it as C++;
 search for @id{LUAI_THROW} in the source code for details.)
 When Lua faces any error
-(such as a @x{memory allocation error}, type errors, syntax errors,
-and runtime errors)
+(such as a @x{memory allocation error} or a type error)
 it @emph{raises} an error;
 that is, it does a long jump.
 A @emphx{protected environment} uses @id{setjmp}
@@ -3245,7 +3246,8 @@ Creates a new thread running in a new, independent state.
 Returns @id{NULL} if it cannot create the thread or the state
 (due to lack of memory).
 The argument @id{f} is the @x{allocator function};
-Lua does all memory allocation for this state through this function.
+Lua does all memory allocation for this state
+through this function @seeF{lua_Alloc}.
 The second argument, @id{ud}, is an opaque pointer that Lua
 passes to the allocator in every call.
 
@@ -3400,7 +3402,9 @@ error while running the @x{message handler}.
 
 @item{@defid{LUA_ERRGCMM}|
 error while running a @idx{__gc} metamethod.
-(This error typically has no relation with the function being called.)
+For such errors, Lua does not call the @x{message handler}
+(as this kind of error typically has no relation
+with the function being called).
 }
 
 }
@@ -5286,6 +5290,9 @@ fills the position @T{*l} with the result's length.
 If the result is @id{NULL}
 (only possible when returning @id{d} and @T{d == NULL}),
 its length is considered zero.
+
+This function uses @Lid{lua_tolstring} to get its result,
+so all conversions and caveats of that function apply here.
 
 }
 
@@ -7787,14 +7794,16 @@ Deletes the file (or empty directory, on @x{POSIX} systems)
 with the given name.
 If this function fails, it returns @nil,
 plus a string describing the error and the error code.
+Otherwise, it returns true.
 
 }
 
 @LibEntry{os.rename (oldname, newname)|
 
-Renames file or directory named @id{oldname} to @id{newname}.
+Renames the file or directory named @id{oldname} to @id{newname}.
 If this function fails, it returns @nil,
 plus a string describing the error and the error code.
+Otherwise, it returns true.
 
 }
 
