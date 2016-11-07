@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.162 2016/05/30 15:57:03 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.163 2016/09/06 18:19:41 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -2147,17 +2147,39 @@ However, you can change this behavior by compiling Lua
 with the macro @defid{LUA_USE_APICHECK} defined.
 
 
+@sect2{@title{The Lua State and Threads}
+
+The Lua library is fully reentrant:
+it has no global variables.
+It keeps all information it needs in a dynamic structure,
+called the @def{Lua state}.
+
+Each Lua state has one or more threads,
+which correspond to independent, cooperative lines of execution.
+The type @Lid{lua_State} (despite its name) refers to a thread.
+(Indirectly, through the thread, it also refers to the
+Lua state associated to the thread.)
+
+A pointer to a thread must be passed as the first argument to
+every function in the library, except to @Lid{lua_newstate},
+which creates a Lua state from scratch and returns a pointer
+to the @emph{main thread} in the new state.
+
+}
+
 @sect2{@title{The Stack}
 
 Lua uses a @emph{virtual stack} to pass values to and from C.
 Each element in this stack represents a Lua value
 (@nil, number, string, etc.).
+Functions in the API can access this stack through the
+Lua state parameter that they receive.
 
 Whenever Lua calls C, the called function gets a new stack,
 which is independent of previous stacks and of stacks of
 @N{C functions} that are still active.
 This stack initially contains any arguments to the @N{C function}
-and it is where the @N{C function} pushes its results
+and it is where the @N{C function} must push its results
 to be returned to the caller @seeC{lua_CFunction}.
 
 For convenience,
@@ -2321,6 +2343,13 @@ A @emphx{protected environment} uses @id{setjmp}
 to set a recovery point;
 any error jumps to the most recent active recovery point.
 
+Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
+
+Most functions in the API can raise an error,
+for instance due to a @x{memory allocation error}.
+The documentation for each function indicates whether
+it can raise errors.
+
 If an error happens outside any protected environment,
 Lua calls a @def{panic function} (see @Lid{lua_atpanic})
 and then calls @T{abort},
@@ -2329,18 +2358,26 @@ Your panic function can avoid this exit by
 never returning
 (e.g., doing a long jump to your own recovery point outside Lua).
 
+The panic function,
+as its name implies,
+is a mechanism of last resort.
+Programs should avoid it.
+As a general rule,
+when a C function is called by Lua with a Lua state,
+it can do whatever it wants on that Lua state,
+as it should be already protected.
+However,
+when C code operates on other Lua states
+(e.g., a Lua parameter to the function,
+a Lua state stored in the registry, or
+the result of @Lid{lua_newthread}),
+it should use them only in API calls that cannot raise errors.
+
 The panic function runs as if it were a @x{message handler} @see{error};
 in particular, the error object is at the top of the stack.
 However, there is no guarantee about stack space.
 To push anything on the stack,
 the panic function must first check the available space @see{stacksize}.
-
-Most functions in the API can raise an error,
-for instance due to a @x{memory allocation error}.
-The documentation for each function indicates whether
-it can raise errors.
-
-Inside a @N{C function} you can raise an error by calling @Lid{lua_error}.
 
 }
 
@@ -3003,7 +3040,7 @@ in particular, @N{0 means} an empty stack.
 @APIEntry{int lua_getuservalue (lua_State *L, int index);|
 @apii{0,1,-}
 
-Pushes onto the stack the Lua value associated with the userdata
+Pushes onto the stack the Lua value associated with the full userdata
 at the given index.
 
 Returns the type of the pushed value.
@@ -3898,7 +3935,7 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 @apii{1,0,-}
 
 Pops a value from the stack and sets it as
-the new value associated to the userdata at the given index.
+the new value associated to the full userdata at the given index.
 
 }
 
@@ -6655,7 +6692,8 @@ If @id{j} is absent, then it is assumed to be equal to @num{-1}
 In particular,
 the call @T{string.sub(s,1,j)} returns a prefix of @id{s}
 with length @id{j},
-and @T{string.sub(s, -i)} returns a suffix of @id{s}
+and @T{string.sub(s, -i)} (for a positive @id{i})
+returns a suffix of @id{s}
 with length @id{i}.
 
 If, after the translation of negative indices,
@@ -8020,7 +8058,7 @@ represent variables with no known names
 @LibEntry{debug.getuservalue (u)|
 
 Returns the Lua value associated to @id{u}.
-If @id{u} is not a userdata,
+If @id{u} is not a full userdata,
 returns @nil.
 
 }
