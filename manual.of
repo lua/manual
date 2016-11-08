@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.163 2016/09/06 18:19:41 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.164 2016/11/07 15:22:08 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -149,18 +149,13 @@ Conversely, any key that is not part of a table has
 an associated value @nil.
 
 Tables are the sole data-structuring mechanism in Lua;
-they can be used to represent ordinary arrays, sequences,
+they can be used to represent ordinary arrays, lists,
 symbol tables, sets, records, graphs, trees, etc.
 To represent @x{records}, Lua uses the field name as an index.
 The language supports this representation by
 providing @id{a.name} as syntactic sugar for @T{a["name"]}.
 There are several convenient ways to create tables in Lua
 @see{tableconstructor}.
-
-We use the term @def{sequence} to denote a table where
-the set of all positive numeric keys is equal to {1..@M{n}}
-for some non-negative integer @M{n},
-which is called the @x{length} of the sequence @see{len-op}.
 
 Like indices,
 the values of table fields can be of any type.
@@ -1770,30 +1765,46 @@ Otherwise, the @idx{__concat} metamethod is called @see{metatable}.
 @sect3{len-op| @title{The Length Operator}
 
 The length operator is denoted by the unary prefix operator @T{#}.
+
 The length of a string is its number of bytes
 (that is, the usual meaning of string length when each
 character is one byte).
 
+The length operator applied on a table
+returns a @x{border} in that table.
+A @def{border} in a table @id{t} is any natural number
+that satisfies the following condition:
+@verbatim{
+(border == 0 or t[border] ~= nil) and t[border + 1] == nil
+}
+In words,
+a border is any (natural) index in a table
+where a non-nil value is followed by a nil value
+(or zero, when index 1 is nil).
+
+A table with exactly one border is called a @def{sequence}.
+For instance, the table @T{{10, 20, 30, 40, 50}} is a sequence,
+as it has only one border (5).
+The table @T{{10, 20, 30, nil, 50}} has two borders (3 and 5),
+and therefore it is not a sequence.
+The table @T{{nil, 20, 30, nil, 50, nil}} has three borders (0, 3 and 5),
+so it also is not a sequence.
+The table @T{{}} is a sequence with border 0.
+Note that non-natural keys do not interfere
+with whether a table is a sequence.
+
+When @id{t} is a sequence,
+@T{#t} returns its only border,
+which corresponds to the intuitive notion of the length of the sequence.
+When @id{t} is not a sequence,
+@T{#t} can return any of its borders.
+(The exact one depends on details of
+the internal representation of the table,
+which in turn can depend on how the table was populated and
+the addresses of its non-numeric keys.)
+
 A program can modify the behavior of the length operator for
 any value but strings through the @idx{__len} metamethod @see{metatable}.
-
-Unless a @idx{__len} metamethod is given,
-the length of a table @id{t} is only defined if the
-table is a @def{sequence},
-that is,
-the set of its positive numeric keys is equal to @M{{1..n}}
-for some non-negative integer @M{n}.
-In that case, @M{n} is its length.
-Note that a table like
-@verbatim{
-{10, 20, nil, 40}
-}
-is not a sequence, because it has the key @T{4}
-but does not have the key @T{3}.
-(So, there is no @M{n} such that the set @M{{1..n}} is equal
-to the set of positive numeric keys of that table.)
-Note, however, that non-numeric keys do not interfere
-with whether a table is a sequence.
 
 }
 
@@ -6221,8 +6232,8 @@ The path used by @Lid{require} to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
-using the environment variable @defid{LUA_CPATH_5_3}
-or the environment variable @defid{LUA_CPATH}
+using the environment variable @defid{LUA_CPATH_5_3},
+or the environment variable @defid{LUA_CPATH},
 or a default path defined in @id{luaconf.h}.
 
 }
@@ -7086,8 +7097,7 @@ This library provides generic functions for table manipulation.
 It provides all its functions inside the table @defid{table}.
 
 Remember that, whenever an operation needs the length of a table,
-the table must be a proper sequence
-or have a @idx{__len} metamethod @see{len-op}.
+all caveats about the length operator apply @see{len-op}.
 All functions ignore non-numeric keys
 in the tables given as arguments.
 
@@ -7172,9 +7182,8 @@ a strict partial order over the elements in the list;
 that is, it must be asymmetric and transitive.
 Otherwise, no valid sort may be possible.
 
-The sort algorithm is not stable;
-that is, elements not comparable by the given order
-(e.g., equal elements)
+The sort algorithm is not stable:
+elements considered equal by the given order
 may have their relative positions changed by the sort.
 
 }
@@ -7394,7 +7403,7 @@ or @nil if @id{x} is not a number.
 @LibEntry{math.ult (m, n)|
 
 Returns a boolean,
-true if integer @id{m} is below integer @id{n} when
+true if and only if integer @id{m} is below integer @id{n} when
 they are compared as @x{unsigned integers}.
 
 }
