@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.164 2016/11/07 15:22:08 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.165 2016/11/08 16:08:10 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -712,7 +712,7 @@ before the change takes effect.
 
 Only objects that have an explicit construction
 are removed from weak tables.
-Values, such as numbers and @x{light C functions},
+Values, such as numbers and @x{light @N{C functions}},
 are not subject to garbage collection,
 and therefore are not removed from weak tables
 (unless their associated values are collected).
@@ -891,7 +891,7 @@ Lua is a case-sensitive language:
 @id{and} is a reserved word, but @id{And} and @id{AND}
 are two different, valid names.
 As a convention,
-programs should avoid creating 
+programs should avoid creating
 names that start with an underscore followed by
 one or more uppercase letters (such as @Lid{_VERSION}).
 
@@ -1003,7 +1003,7 @@ which start with @T{0x} or @T{0X}.
 Hexadecimal constants also accept an optional fractional part
 plus an optional binary exponent,
 marked by a letter @Char{p} or @Char{P}.
-A numeric constant with a radix point or an exponent 
+A numeric constant with a radix point or an exponent
 denotes a float;
 otherwise,
 if its value fits in an integer,
@@ -1572,7 +1572,7 @@ and the result is always a float.
 Exponentiation uses the @ANSI{pow},
 so that it works for non-integer exponents too.
 
-Floor division (@T{//}) is a division 
+Floor division (@T{//}) is a division
 that rounds the quotient towards minus infinity,
 that is, the floor of the division of its operands.
 
@@ -1623,7 +1623,7 @@ this is called the @def{usual rule}.
 The C API also converts both integers to floats and
 floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
-besides strings. 
+besides strings.
 
 Lua also converts strings to numbers,
 whenever a number is expected.
@@ -1651,7 +1651,7 @@ Then, the resulting number (float or integer)
 is converted to the type (float or integer) required by the context
 (e.g., the operation that forced the conversion).
 
-All conversions from strings to numbers 
+All conversions from strings to numbers
 accept both a dot and the current locale mark
 as the radix character.
 (The Lua lexer, however, accepts only a dot.)
@@ -1801,7 +1801,7 @@ When @id{t} is not a sequence,
 (The exact one depends on details of
 the internal representation of the table,
 which in turn can depend on how the table was populated and
-the addresses of its non-numeric keys.)
+the memory addresses of its non-numeric keys.)
 
 A program can modify the behavior of the length operator for
 any value but strings through the @idx{__len} metamethod @see{metatable}.
@@ -2157,9 +2157,6 @@ the Lua API functions do not check their arguments for validity or consistency.
 However, you can change this behavior by compiling Lua
 with the macro @defid{LUA_USE_APICHECK} defined.
 
-
-@sect2{@title{The Lua State and Threads}
-
 The Lua library is fully reentrant:
 it has no global variables.
 It keeps all information it needs in a dynamic structure,
@@ -2176,7 +2173,6 @@ every function in the library, except to @Lid{lua_newstate},
 which creates a Lua state from scratch and returns a pointer
 to the @emph{main thread} in the new state.
 
-}
 
 @sect2{@title{The Stack}
 
@@ -2190,7 +2186,8 @@ Whenever Lua calls C, the called function gets a new stack,
 which is independent of previous stacks and of stacks of
 @N{C functions} that are still active.
 This stack initially contains any arguments to the @N{C function}
-and it is where the @N{C function} must push its results
+and it is where the @N{C function} can store temporary
+Lua values and must push its results
 to be returned to the caller @seeC{lua_CFunction}.
 
 For convenience,
@@ -2374,7 +2371,7 @@ as its name implies,
 is a mechanism of last resort.
 Programs should avoid it.
 As a general rule,
-when a C function is called by Lua with a Lua state,
+when a @N{C function} is called by Lua with a Lua state,
 it can do whatever it wants on that Lua state,
 as it should be already protected.
 However,
@@ -2395,7 +2392,7 @@ the panic function must first check the available space @see{stacksize}.
 @sect2{continuations|@title{Handling Yields in C}
 
 Internally, Lua uses the C @id{longjmp} facility to yield a coroutine.
-Therefore, if a C function @id{foo} calls an API function
+Therefore, if a @N{C function} @id{foo} calls an API function
 and this API function yields
 (directly or indirectly by calling another function that yields),
 Lua cannot return to @id{foo} any more,
@@ -2409,7 +2406,7 @@ All those functions receive a @def{continuation function}
 (as a parameter named @id{k}) to continue execution after a yield.
 
 We need to set some terminology to explain continuations.
-We have a C function called from Lua which we will call
+We have a @N{C function} called from Lua which we will call
 the @emph{original function}.
 This original function then calls one of those three functions in the C API,
 which we will call the @emph{callee function},
@@ -2675,7 +2672,7 @@ when the function is called.
 The function results are pushed onto the stack when the function returns.
 The number of results is adjusted to @id{nresults},
 unless @id{nresults} is @defid{LUA_MULTRET}.
-In this case, all results from the function are pushed.
+In this case, all results from the function are pushed;
 Lua takes care that the returned values fit into the stack space,
 but it does not ensure any extra space in the stack.
 The function results are pushed onto the stack in direct order
@@ -3508,7 +3505,7 @@ associated with the function.
 The maximum value for @id{n} is 255.
 
 When @id{n} is zero,
-this function creates a @def{light C function},
+this function creates a @def{light N{C function}},
 which is just a pointer to the @N{C function}.
 In that case, it never raises a memory error.
 
@@ -3518,7 +3515,7 @@ In that case, it never raises a memory error.
 @apii{0,1,-}
 
 Pushes a @N{C function} onto the stack.
-This function receives a pointer to a C function
+This function receives a pointer to a @N{C function}
 and pushes onto the stack a Lua value of type @id{function} that,
 when called, invokes the corresponding @N{C function}.
 
@@ -3787,7 +3784,7 @@ The reader function may return pieces of any size greater than zero.
 @APIEntry{void lua_register (lua_State *L, const char *name, lua_CFunction f);|
 @apii{0,0,e}
 
-Sets the C function @id{f} as the new value of global @id{name}.
+Sets the @N{C function} @id{f} as the new value of global @id{name}.
 It is defined as a macro:
 @verbatim{
 #define lua_register(L,n,f) \
@@ -4247,7 +4244,7 @@ that will be passed as results to @Lid{lua_resume}.
 
 When the coroutine is resumed again,
 Lua calls the given @x{continuation function} @id{k} to continue
-the execution of the C function that yielded @see{continuations}.
+the execution of the @N{C function} that yielded @see{continuations}.
 This continuation function receives the same stack
 from the previous function,
 with the @id{n} results removed and
@@ -4808,7 +4805,7 @@ If it is not, raises an error with a standard message @seeF{luaL_argerror}.
 @apii{0,0,v}
 
 Raises an error reporting a problem with argument @id{arg}
-of the C function that called it,
+of the @N{C function} that called it,
 using a standard message
 that includes @id{extramsg} as a comment:
 @verbatim{
@@ -5197,7 +5194,8 @@ The string @id{mode} works as in function @Lid{lua_load}.
 
 This function returns the same results as @Lid{lua_load},
 but it has an extra error code @defid{LUA_ERRFILE}
-if it cannot open/read the file or the file has a wrong mode.
+for file-related errors
+(e.g., it cannot open or read the file).
 
 As @Lid{lua_load}, this function only loads the chunk;
 it does not run it.
@@ -6076,7 +6074,7 @@ an object with type @T{"thread"}.
 Returns true when the running coroutine can yield.
 
 A running coroutine is yieldable if it is not the main thread and
-it is not inside a non-yieldable C function.
+it is not inside a non-yieldable @N{C function}.
 
 }
 
@@ -6664,7 +6662,7 @@ its default value @N{is 1} and can be negative.
 
 Returns a binary string containing the values @id{v1}, @id{v2}, etc.
 packed (that is, serialized in binary form)
-according to the format string @id{fmt} @see{pack}. 
+according to the format string @id{fmt} @see{pack}.
 
 }
 
@@ -7064,7 +7062,7 @@ Returns the number of UTF-8 characters in string @id{s}
 that start between positions @id{i} and @id{j} (both inclusive).
 The default for @id{i} is @num{1} and for @id{j} is @num{-1}.
 If it finds any invalid byte sequence,
-returns a false value plus the position of the first invalid byte. 
+returns a false value plus the position of the first invalid byte.
 
 }
 
@@ -8220,7 +8218,7 @@ When called without arguments,
 when the standard input (@id{stdin}) is a terminal,
 and as @T{lua -} otherwise.
 
-When called without option @T{-E}, 
+When called without option @T{-E},
 the interpreter checks for an environment variable @defid{LUA_INIT_5_3}
 (or @defid{LUA_INIT} if the versioned name is not defined)
 before running any argument.
@@ -8296,7 +8294,7 @@ its value is used as the secondary prompt
 
 In case of unprotected errors in the script,
 the interpreter reports the error to the standard error stream.
-If the error object is not a string but 
+If the error object is not a string but
 has a metamethod @idx{__tostring},
 the interpreter calls this metamethod to produce the final message.
 Otherwise, the interpreter converts the error object to a string
