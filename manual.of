@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.165 2016/11/08 16:08:10 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.166 2016/12/22 15:46:25 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -1787,8 +1787,9 @@ For instance, the table @T{{10, 20, 30, 40, 50}} is a sequence,
 as it has only one border (5).
 The table @T{{10, 20, 30, nil, 50}} has two borders (3 and 5),
 and therefore it is not a sequence.
-The table @T{{nil, 20, 30, nil, 50, nil}} has three borders (0, 3 and 5),
-so it also is not a sequence.
+The table @T{{nil, 20, 30, nil, nil, 60, nil}}
+has three borders (0, 3, and 6),
+so it is not a sequence, too.
 The table @T{{}} is a sequence with border 0.
 Note that non-natural keys do not interfere
 with whether a table is a sequence.
@@ -1802,6 +1803,10 @@ When @id{t} is not a sequence,
 the internal representation of the table,
 which in turn can depend on how the table was populated and
 the memory addresses of its non-numeric keys.)
+
+The computation of the length of a table
+has a guaranteed worst time of @M{O(log n)},
+where @M{n} is the largest natural key in the table.
 
 A program can modify the behavior of the length operator for
 any value but strings through the @idx{__len} metamethod @see{metatable}.
@@ -3505,7 +3510,7 @@ associated with the function.
 The maximum value for @id{n} is 255.
 
 When @id{n} is zero,
-this function creates a @def{light N{C function}},
+this function creates a @def{light @N{C function}},
 which is just a pointer to the @N{C function}.
 In that case, it never raises a memory error.
 
