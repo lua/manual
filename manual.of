@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.166 2016/12/22 15:46:25 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.167 2017/01/09 15:18:11 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -138,8 +138,8 @@ Lua supports coroutines on all systems,
 even those that do not support threads natively.
 
 The type @emph{table} implements @x{associative arrays},
-that is, @x{arrays} that can be indexed not only with numbers,
-but with any Lua value except @nil and @x{NaN}.
+that is, @x{arrays} that can have as indices not only numbers,
+but any Lua value except @nil and @x{NaN}.
 (@emphx{Not a Number} is a special value used to represent
 undefined or unrepresentable numerical results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
@@ -302,6 +302,8 @@ with the event name prefixed by two underscores;
 the corresponding values are called @def{metamethods}.
 In the previous example, the key is @St{__add}
 and the metamethod is the function that performs the addition.
+Unless stated otherwise,
+metamethods should be function values.
 
 You can query the metatable of any value
 using the @Lid{getmetatable} function.
@@ -485,7 +487,7 @@ it is also slower than a real @idx{__le} metamethod.)
 }
 
 @item{@idx{__index}|
-The indexing access @T{table[key]}.
+The indexing access operation @T{table[key]}.
 This event happens when @id{table} is not a table or
 when @id{key} is not present in @id{table}.
 The metamethod is looked up in @id{table}.
@@ -1055,13 +1057,8 @@ Square brackets are used to index a table:
 @Produc{
 @producname{var}@producbody{prefixexp @bnfter{[} exp @bnfter{]}}
 }
-The meaning of accesses to table fields can be changed via metatables.
-An access to an indexed variable @T{t[i]} is equivalent to
-a call @T{gettable_event(t,i)}.
-(See @See{metatable} for a complete description of the
-@id{gettable_event} function.
-This function is not defined or callable in Lua.
-We use it here only for explanatory purposes.)
+The meaning of accesses to table fields can be changed via metatables
+@see{metatable}.
 
 The syntax @id{var.Name} is just syntactic sugar for
 @T{var["Name"]}:
@@ -1216,18 +1213,13 @@ x, y, z = y, z, x
 }
 cyclically permutes the values of @id{x}, @id{y}, and @id{z}.
 
-The meaning of assignments to global variables
-and table fields can be changed via metatables.
-An assignment to an indexed variable @T{t[i] = val} is equivalent to
-@T{settable_event(t,i,val)}.
-(See @See{metatable} for a complete description of the
-@id{settable_event} function.
-This function is not defined or callable in Lua.
-We use it here only for explanatory purposes.)
-
 An assignment to a global name @T{x = val}
 is equivalent to the assignment
 @T{_ENV.x = val} @see{globalenv}.
+
+The meaning of assignments to table fields and
+global variables (which are actually table fields, too)
+can be changed via metatables @see{metatable}.
 
 }
 
@@ -1688,9 +1680,12 @@ two objects are considered equal only if they are the same object.
 Every time you create a new object
 (a table, userdata, or thread),
 this new object is different from any previously existing object.
-Closures with the same reference are always equal.
+A closure is always equal to itself.
 Closures with any detectable difference
 (different behavior, different definition) are always different.
+Closures created at different times but no detectable differences
+may be classified as equal or not
+(depending on internal cashing details).
 
 You can change the way that Lua compares tables and userdata
 by using the @Q{eq} metamethod @see{metatable}.
@@ -8210,7 +8205,8 @@ lua [options] [script [args]]
 The options are:
 @description{
 @item{@T{-e @rep{stat}}| executes string @rep{stat};}
-@item{@T{-l @rep{mod}}| @Q{requires} @rep{mod};}
+@item{@T{-l @rep{mod}}| @Q{requires} @rep{mod} and assigns the
+  result to global @@rep{mod};}
 @item{@T{-i}| enters interactive mode after running @rep{script};}
 @item{@T{-v}| prints version information;}
 @item{@T{-E}| ignores environment variables;}
