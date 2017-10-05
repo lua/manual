@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.167 2017/01/09 15:18:11 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.168 2017/05/08 18:16:14 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -140,7 +140,8 @@ even those that do not support threads natively.
 The type @emph{table} implements @x{associative arrays},
 that is, @x{arrays} that can have as indices not only numbers,
 but any Lua value except @nil and @x{NaN}.
-(@emphx{Not a Number} is a special value used to represent
+(@emphx{Not a Number} is a special floating-point value
+used by the @x{IEEE 754} standard to represent
 undefined or unrepresentable numerical results, such as @T{0/0}.)
 Tables can be @emph{heterogeneous};
 that is, they can contain values of all types (except @nil).
@@ -1027,7 +1028,6 @@ the comment is a @def{short comment},
 which runs until the end of the line.
 Otherwise, it is a @def{long comment},
 which runs until the corresponding closing long bracket.
-Long comments are frequently used to disable code temporarily.
 
 }
 
@@ -1069,7 +1069,7 @@ The syntax @id{var.Name} is just syntactic sugar for
 An access to a global variable @id{x}
 is equivalent to @id{_ENV.x}.
 Due to the way that chunks are compiled,
-@id{_ENV} is never a global name @see{globalenv}.
+the variable @id{_ENV} itself is never global @see{globalenv}.
 
 }
 
@@ -1366,6 +1366,12 @@ If you need its value after the loop,
 assign it to another variable before exiting the loop.
 }
 
+@item{
+The values in @rep{var}, @rep{limit}, and @rep{step}
+can be integers or floats.
+All operations on them respect the usual rules in Lua.
+}
+
 }
 
 The generic @Rw{for} statement works over functions,
@@ -1509,17 +1515,17 @@ f()                -- adjusted to 0 results
 g(f(), x)          -- f() is adjusted to 1 result
 g(x, f())          -- g gets x plus all results from f()
 a,b,c = f(), x     -- f() is adjusted to 1 result (c gets nil)
-a,b = ...          -- a gets the first vararg parameter, b gets
+a,b = ...          -- a gets the first vararg argument, b gets
                    -- the second (both a and b can get nil if there
-                   -- is no corresponding vararg parameter)
+                   -- is no corresponding vararg argument)
 
 a,b,c = x, f()     -- f() is adjusted to 2 results
 a,b,c = f()        -- f() is adjusted to 3 results
 return f()         -- returns all results from f()
-return ...         -- returns all received vararg parameters
+return ...         -- returns all received vararg arguments
 return x,y,f()     -- returns x, y, and all results from f()
 {f()}              -- creates a list with all results from f()
-{...}              -- creates a list with all vararg parameters
+{...}              -- creates a list with all vararg arguments
 {f(), nil}         -- f() is adjusted to 1 result
 }
 
@@ -1898,7 +1904,7 @@ If the value of @bnfNter{prefixexp} has type @emph{function},
 then this function is called
 with the given arguments.
 Otherwise, the @bnfNter{prefixexp} @Q{call} metamethod is called,
-having as first parameter the value of @bnfNter{prefixexp},
+having as first argument the value of @bnfNter{prefixexp},
 followed by the original call arguments
 @see{metatable}.
 
@@ -2011,9 +2017,9 @@ initialized with the argument values:
 @producname{parlist}@producbody{namelist @bnfopt{@bnfter{,} @bnfter{...}} @Or
   @bnfter{...}}
 }
-When a function is called,
-the list of @x{arguments} is adjusted to
-the length of the list of parameters,
+When a Lua function is called,
+it adjusts its list of @x{arguments} to
+the length of its list of parameters,
 unless the function is a @def{vararg function},
 which is indicated by three dots (@Char{...})
 at the end of its parameter list.
@@ -3714,7 +3720,7 @@ Returns the type of the pushed value.
 
 }
 
-@APIEntry{size_t lua_rawlen (lua_State *L, int index);|
+@APIEntry{lua_Unsigned lua_rawlen (lua_State *L, int index);|
 @apii{0,0,-}
 
 Returns the raw @Q{length} of the value at the given index:
@@ -4223,6 +4229,8 @@ but it has no continuation @see{continuations}.
 Therefore, when the thread resumes,
 it continues the function that called
 the function calling @id{lua_yield}.
+To avoid surprises,
+this function should be called only in a tail call.
 
 }
 
@@ -5464,8 +5472,9 @@ Registers all functions in the array @id{l}
 (below optional upvalues, see next).
 
 When @id{nup} is not zero,
-all functions are created sharing @id{nup} upvalues,
-which must be previously pushed on the stack
+all functions are created with @id{nup} upvalues,
+initialized with copies of the @id{nup} values
+previously pushed on the stack
 on top of the library table.
 These values are popped from the stack after the registration.
 
@@ -5608,6 +5617,12 @@ deserve an implementation in C (e.g., @Lid{table.sort}).
 
 All libraries are implemented through the official @N{C API}
 and are provided as separate @N{C modules}.
+Unless otherwise noted,
+these library functions do not adjust its number of arguments
+to its expected parameters.
+For instance, a function documented as \verb|foo(arg)|
+should not be called without an argument.
+
 Currently, Lua has the following standard libraries:
 @itemize{
 
@@ -6503,7 +6518,13 @@ The only differences are that the options/modifiers
 and @id{p} are not supported
 and that there is an extra option, @id{q}.
 
-The @id{q} option formats a string between double quotes,
+The @id{q} option formats booleans, nil, numbers, and strings
+in a way that the result is a valid constant in Lua source code.
+Booleans and nil are written in the obvious way
+(@id{true}, @id{false}, @id{nil}).
+Floats are written in hexadecimal,
+to preserve full precision.
+A string is written between double quotes,
 using escape sequences when necessary to ensure that
 it can safely be read back by the Lua interpreter.
 For instance, the call
@@ -6926,6 +6947,27 @@ string @T{"flaaap"}, there will be two captures: @N{3 and 5}.
 
 }
 
+@sect4{@title{Multiple matches:}
+The function @Lid{string.gsub} and the iterator @Lid{string.gmatch}
+match multiple occurrences of the given pattern in the subject.
+For these functions,
+a new match is considered valid only
+if it ends at least one byte after the previous match.
+In other words, the pattern machine never accepts the
+empty string as a match immediately after another match.
+As an example,
+consider the results of the following code:
+@verbatim{
+> string.gsub("abc", "()a*()", print)
+--> 1   2
+--> 3   3
+--> 4   4
+}
+The second and third results come from Lua matching an empty
+string after @Char{b} and another one after @Char{c}.
+Lua does not match an empty string after @Char{a},
+because it would end at the same position of the previous match.
+
 }
 
 
@@ -7138,9 +7180,10 @@ Returns the destination table @id{a2}.
 
 @LibEntry{table.pack (@Cdots)|
 
-Returns a new table with all parameters stored into keys 1, 2, etc.
-and with a field @St{n} with the total number of parameters.
-Note that the resulting table may not be a sequence.
+Returns a new table with all arguments stored into keys 1, 2, etc.
+and with a field @St{n} with the total number of arguments.
+Note that the resulting table may not be a sequence,
+if some arguments are @nil.
 
 }
 
@@ -7476,7 +7519,7 @@ When the iterator function detects the end of file,
 it returns no values (to finish the loop) and automatically closes the file.
 
 The call @T{io.lines()} (with no file name) is equivalent
-to @T{io.input():lines("*l")};
+to @T{io.input():lines("l")};
 that is, it iterates over the lines of the default input file.
 In this case it does not close the file when the loop ends.
 
@@ -7913,7 +7956,7 @@ be used for a temporary file.
 The file must be explicitly opened before its use
 and explicitly removed when no longer needed.
 
-On @x{POSIX} systems,
+In @x{POSIX} systems,
 this function also creates a file with that name,
 to avoid security risks.
 (Someone else might create the file with wrong permissions
