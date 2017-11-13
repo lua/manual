@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.168 2017/05/08 18:16:14 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.169 2017/10/05 14:20:28 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -570,47 +570,104 @@ a @def{garbage collector} to collect all @emph{dead objects}
 All memory used by Lua is subject to automatic management:
 strings, tables, userdata, functions, threads, internal structures, etc.
 
-Lua implements an incremental mark-and-sweep collector.
-It uses two numbers to control its garbage-collection cycles:
-the @def{garbage-collector pause} and
-the @def{garbage-collector step multiplier}.
-Both use percentage points as units
-(e.g., a value of 100 means an internal value of 1).
+The garbage collector (GC) in Lua can work in two modes:
+incremental and generational.
+
+The default GC mode with the default parameters 
+are adequate for most uses.
+Programs that waste a large proportion of its time
+allocating and freeing memory can benefit from other settings.
+Keep in mind that the GC behavior is non-portable
+both across platforms and across different Lua releases;
+therefore, optimal settings are also non-portable.
+
+You can change the GC mode and parameters by calling
+@Lid{lua_gc} in C
+or @Lid{collectgarbage} in Lua.
+You can also use these functions to control
+the collector directly (e.g., stop and restart it).
+
+@sect3{@title{The incremental GC}
+
+In incremental mode,
+each GC cycle performs a mark-and-sweep collection in small steps
+interleaved with the program's execution.
+In this mode,
+the collector uses three numbers to control its garbage-collection cycles:
+the @def{garbage-collector pause},
+the @def{garbage-collector step multiplier},
+and the @def{garbage-collector step size}.
 
 The garbage-collector pause
 controls how long the collector waits before starting a new cycle.
+The collector starts a new cycle when the use of memory
+hits @M{n%} of the use after the previous collection.
 Larger values make the collector less aggressive.
 Values smaller than 100 mean the collector will not wait to
 start a new cycle.
 A value of 200 means that the collector waits for the total memory in use
 to double before starting a new cycle.
+The default value is 200; the maximum value is 1000.
 
 The garbage-collector step multiplier
 controls the relative speed of the collector relative to
-memory allocation.
+memory allocation,
+that is,
+how many elements it marks or sweeps for each
+kilobyte of memory allocated.
 Larger values make the collector more aggressive but also increase
 the size of each incremental step.
 You should not use values smaller than 100,
 because they make the collector too slow and
 can result in the collector never finishing a cycle.
-The default is 200,
-which means that the collector runs at @Q{twice}
-the speed of memory allocation.
+The default value is 100;  the maximum value is 1000.
 
-If you set the step multiplier to a very large number
-(larger than 10% of the maximum number of
-bytes that the program may use),
-the collector behaves like a stop-the-world collector.
-If you then set the pause to 200,
-the collector behaves as in old Lua versions,
-doing a complete collection every time Lua doubles its
-memory usage.
+The garbage-collector step size controls the
+size of each incremental step,
+specifically how many bytes the interpreter allocates
+before performing a step.
+This parameter is logarithmic:
+A value of @M{n} means the interpreter will allocate @M{2@sp{n}}
+bytes between steps and perform equivalent work during the step.
+A large value (e.g., 60) makes the collector a stop-the-world
+(non-incremental) collector.
+The default value is 13,
+which makes for steps of approximately @N{8 Kbytes}.
 
-You can change these numbers by calling @Lid{lua_gc} in C
-or @Lid{collectgarbage} in Lua.
-You can also use these functions to control
-the collector directly (e.g., stop and restart it).
+}
 
+@sect3{@title{The generational GC}
+
+In generational mode,
+the collector does frequent @emph{minor} collections,
+which traverses only objects recently created.
+If after a minor collection the use of memory is still above a limit,
+the collector does a @emph{major} collection,
+which traverses all objects.
+The generational mode uses two parameters:
+the @def{major multiplier} and the @def{the minor multiplier}.
+
+The major multiplier controls the frequency of major collections.
+For a major multiplier @M{x},
+a new major collection will be done when memory
+grows @M{x%} larger than the memory in use after the previous major
+collection.
+For instance, for a multiplier of 100,
+the collector will do a major collection when the use of memory
+gets larger than twice the use after the previous collection.
+The default value is 100; the maximum value is 1000.
+
+The minor multiplier controls the frequency of minor collections.
+For a minor multiplier @M{x},
+a new minor collection will be done when memory
+grows @M{x%} larger than the memory in use after the previous major
+collection.
+For instance, for a multiplier of 20,
+the collector will do a minor collection when the use of memory
+gets 20% larger than the use after the previous major collection.
+The default value is 20; the maximum value is 200.
+
+}
 
 @sect3{finalizers| @title{Garbage-Collection Metamethods}
 
@@ -1623,9 +1680,6 @@ floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
 besides strings.
 
-Lua also converts strings to numbers,
-whenever a number is expected.
-
 In a conversion from integer to float,
 if the integer value has an exact representation as a float,
 that is the result.
@@ -1641,14 +1695,11 @@ it is in the range of integer representation).
 If it does, that representation is the result.
 Otherwise, the conversion fails.
 
-The conversion from strings to numbers goes as follows:
-First, the string is converted to an integer or a float,
+The string library uses metamethods that try to coerce
+strings to numbers in all arithmetic operations.
+Any string operator is converted to an integer or a float,
 following its syntax and the rules of the Lua lexer.
 (The string may have also leading and trailing spaces and a sign.)
-Then, the resulting number (float or integer)
-is converted to the type (float or integer) required by the context
-(e.g., the operation that forced the conversion).
-
 All conversions from strings to numbers
 accept both a dot and the current locale mark
 as the radix character.
@@ -5734,10 +5785,19 @@ the collector @see{GC}.
 Returns the previous value for @emph{pause}.
 }
 
-@item{@St{setstepmul}|
-sets @id{arg} as the new value for the @emph{step multiplier} of
-the collector @see{GC}.
-Returns the previous value for @emph{step}.
+@item{@St{incremental}|
+Change the collector mode to incremental.
+This option can be followed by three numbers:
+the garbage-collector pause,
+the step multiplier,
+and the step size.
+}
+
+@item{@St{generational}|
+Change the collector mode to generational.
+This option can be followed by two numbers:
+the garbage-collector minor multiplier
+and the major multiplier.
 }
 
 @item{@St{isrunning}|
@@ -8375,7 +8435,7 @@ is a more portable solution.)
 @sect1{incompat| @title{Incompatibilities with the Previous Version}
 
 Here we list the incompatibilities that you may find when moving a program
-from @N{Lua 5.2} to @N{Lua 5.3}.
+from @N{Lua 5.3} to @N{Lua 5.4}.
 You can avoid some incompatibilities by compiling Lua with
 appropriate options (see file @id{luaconf.h}).
 However,
@@ -8402,41 +8462,16 @@ change between versions.
 @itemize{
 
 @item{
-The main difference between @N{Lua 5.2} and @N{Lua 5.3} is the
-introduction of an integer subtype for numbers.
-Although this change should not affect @Q{normal} computations,
-some computations
-(mainly those that involve some kind of overflow)
-can give different results.
+The coersion of strings to numbers in
+arithmetic and bitwise operations
+has been removed from the core language.
+The string library does a similar job using the string metamethods.
+However, unlike in previous versions,
+the new implementation preserves the implicit type of the numeral
+inside the string.
+For instance, the result of @T{"1" + "2"} now is an integer,
+not a float.
 
-You can fix these differences by forcing a number to be a float
-(in @N{Lua 5.2} all numbers were float),
-in particular writing constants with an ending @T{.0}
-or using @T{x = x + 0.0} to convert a variable.
-(This recommendation is only for a quick fix
-for an occasional incompatibility;
-it is not a general guideline for good programming.
-For good programming,
-use floats where you need floats
-and integers where you need integers.)
-}
-
-@item{
-The conversion of a float to a string now adds a @T{.0} suffix
-to the result if it looks like an integer.
-(For instance, the float 2.0 will be printed as @T{2.0},
-not as @T{2}.)
-You should always use an explicit format
-when you need a specific format for numbers.
-
-(Formally this is not an incompatibility,
-because Lua does not specify how numbers are formatted as strings,
-but some programs assumed a specific format.)
-}
-
-@item{
-The generational mode for the garbage collector was removed.
-(It was an experimental feature in @N{Lua 5.2}.)
 }
 
 }
@@ -8447,58 +8482,6 @@ The generational mode for the garbage collector was removed.
 @itemize{
 
 @item{
-The @id{bit32} library has been deprecated.
-It is easy to require a compatible external library or,
-better yet, to replace its functions with appropriate bitwise operations.
-(Keep in mind that @id{bit32} operates on 32-bit integers,
-while the bitwise operators in @N{Lua 5.3} operate on Lua integers,
-which by default have @N{64 bits}.)
-}
-
-@item{
-The Table library now respects metamethods
-for setting and getting elements.
-}
-
-@item{
-The @Lid{ipairs} iterator now respects metamethods and
-its @idx{__ipairs} metamethod has been deprecated.
-}
-
-
-@item{
-Option names in @Lid{io.read} do not have a starting @Char{*} anymore.
-For compatibility, Lua will continue to accept (and ignore) this character.
-}
-
-@item{
-The following functions were deprecated in the mathematical library:
-@id{atan2}, @id{cosh}, @id{sinh}, @id{tanh}, @id{pow},
-@id{frexp}, and @id{ldexp}.
-You can replace @T{math.pow(x,y)} with @T{x^y};
-you can replace @id{math.atan2} with @id{math.atan},
-which now accepts one or two parameters;
-you can replace @T{math.ldexp(x,exp)} with @T{x * 2.0^exp}.
-For the other operations,
-you can either use an external library or
-implement them in Lua.
-}
-
-@item{
-The searcher for C loaders used by @Lid{require}
-changed the way it handles versioned names.
-Now, the version should come after the module name
-(as is usual in most other tools).
-For compatibility, that searcher still tries the old format
-if it cannot find an open function according to the new style.
-(@N{Lua 5.2} already worked that way,
-but it did not document the change.)
-}
-
-@item{
-The call @T{collectgarbage("count")} now returns only one result.
-(You can compute that second result from the fractional part
-of the first result.)
 }
 
 }
@@ -8510,31 +8493,6 @@ of the first result.)
 @itemize{
 
 @item{
-Continuation functions now receive as parameters what they needed
-to get through @id{lua_getctx},
-so @id{lua_getctx} has been removed.
-Adapt your code accordingly.
-}
-
-@item{
-Function @Lid{lua_dump} has an extra parameter, @id{strip}.
-Use 0 as the value of this parameter to get the old behavior.
-}
-
-@item{
-Functions to inject/project unsigned integers
-(@id{lua_pushunsigned}, @id{lua_tounsigned}, @id{lua_tounsignedx},
-@id{luaL_checkunsigned}, @id{luaL_optunsigned})
-were deprecated.
-Use their signed equivalents with a type cast.
-}
-
-@item{
-Macros to project non-default integer types
-(@id{luaL_checkint}, @id{luaL_optint}, @id{luaL_checklong}, @id{luaL_optlong})
-were deprecated.
-Use their equivalent over @Lid{lua_Integer} with a type cast
-(or, when possible, use @Lid{lua_Integer} in your code).
 }
 
 }
