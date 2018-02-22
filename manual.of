@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.169 2017/10/05 14:20:28 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.170 2017/11/13 14:31:03 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -573,7 +573,7 @@ strings, tables, userdata, functions, threads, internal structures, etc.
 The garbage collector (GC) in Lua can work in two modes:
 incremental and generational.
 
-The default GC mode with the default parameters 
+The default GC mode with the default parameters
 are adequate for most uses.
 Programs that waste a large proportion of its time
 allocating and freeing memory can benefit from other settings.
@@ -2645,8 +2645,6 @@ When @id{nsize} is not zero,
 the allocator must behave like @id{realloc}.
 The allocator returns @id{NULL}
 if and only if it cannot fulfill the request.
-Lua assumes that the allocator never fails when
-@T{osize >= nsize}.
 
 Here is a simple implementation for the @x{allocator function}.
 It is used in the auxiliary library by @Lid{luaL_newstate}.
@@ -2665,9 +2663,6 @@ static void *l_alloc (void *ud, void *ptr, size_t osize,
 Note that @N{Standard C} ensures
 that @T{free(NULL)} has no effect and that
 @T{realloc(NULL,size)} is equivalent to @T{malloc(size)}.
-This code assumes that @id{realloc} does not fail when shrinking a block.
-(Although @N{Standard C} does not ensure this behavior,
-it seems to be a safe assumption.)
 
 }
 
@@ -2715,7 +2710,9 @@ Sets a new panic function and returns the old one @see{C-error}.
 @apii{nargs+1,nresults,e}
 
 
-Calls a function.
+Calls a function
+(or a callable object, that is,
+an object with a @idx{__call} metamethod).
 
 To call a function you must use the following protocol:
 first, the function to be called is pushed onto the stack;
@@ -2736,7 +2733,7 @@ The function results are pushed onto the stack in direct order
 (the first result is pushed first),
 so that after the call the last result is on the top of the stack.
 
-Any error inside the called function is propagated upwards
+Any error while calling and running the function is propagated upwards
 (with a @id{longjmp}).
 
 The following example shows how the host program can do the
@@ -3452,7 +3449,7 @@ This macro may evaluate its arguments more than once.
 @APIEntry{int lua_pcall (lua_State *L, int nargs, int nresults, int msgh);|
 @apii{nargs + 1,nresults|1,-}
 
-Calls a function in protected mode.
+Calls a function (or a callable object) in protected mode.
 
 Both @id{nargs} and @id{nresults} have the same meaning as
 in @Lid{lua_call}.
@@ -3870,7 +3867,8 @@ and then pops the top element.
 
 }
 
-@APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs);|
+@APIEntry{int lua_resume (lua_State *L, lua_State *from, int nargs,
+                          int *nresults);|
 @apii{?,?,-}
 
 Starts and resumes a coroutine in the given thread @id{L}.
@@ -3880,8 +3878,11 @@ you push onto the thread stack the main function plus any arguments;
 then you call @Lid{lua_resume},
 with @id{nargs} being the number of arguments.
 This call returns when the coroutine suspends or finishes its execution.
-When it returns, the stack contains all values passed to @Lid{lua_yield},
-or all values returned by the body function.
+When it returns,
+@id{nresults} is updated and
+the top of the stack contains
+the @id{nresults} values passed to @Lid{lua_yield}
+or returned by the body function.
 @Lid{lua_resume} returns
 @Lid{LUA_YIELD} if the coroutine yields,
 @Lid{LUA_OK} if the coroutine finishes its execution
@@ -3894,7 +3895,7 @@ so you can use the debug API over it.
 The error object is on the top of the stack.
 
 To resume a coroutine,
-you remove any results from the last @Lid{lua_yield},
+you remove all results from the last @Lid{lua_yield},
 put on its stack only the values to
 be passed as results from @id{yield},
 and then call @Lid{lua_resume}.
@@ -4442,7 +4443,7 @@ the number of upvalues of the function.
 }
 
 @item{@id{nparams}|
-the number of fixed parameters of the function
+the number of parameters of the function
 (always @N{0 for} @N{C functions}).
 }
 
@@ -4907,7 +4908,7 @@ you can use the buffer like this:
 @item{Then initialize it and preallocate a space of
 size @id{sz} with a call @T{luaL_buffinitsize(L, &b, sz)}.}
 
-@item{Then copy the string into that space.}
+@item{Then produce the string into that space.}
 
 @item{
 Finish by calling @T{luaL_pushresultsize(&b, sz)},
@@ -5671,7 +5672,7 @@ and are provided as separate @N{C modules}.
 Unless otherwise noted,
 these library functions do not adjust its number of arguments
 to its expected parameters.
-For instance, a function documented as \verb|foo(arg)|
+For instance, a function documented as @T{foo(arg)}
 should not be called without an argument.
 
 Currently, Lua has the following standard libraries:
@@ -6887,7 +6888,7 @@ the lowercase letters plus the @Char{-} character.
 
 You can put a closing square bracket in a set
 by positioning it as the first character in the set.
-You can put an hyphen in a set
+You can put a hyphen in a set
 by positioning it as the first or the last character in the set.
 (You can also use an escape for both cases.)
 
@@ -7101,6 +7102,8 @@ option @St{s} follows the alignment of its starting integer.
 
 All padding is filled with zeros by @Lid{string.pack}
 (and ignored by @Lid{string.unpack}).
+
+}
 
 }
 
@@ -7581,7 +7584,7 @@ it returns no values (to finish the loop) and automatically closes the file.
 The call @T{io.lines()} (with no file name) is equivalent
 to @T{io.input():lines("l")};
 that is, it iterates over the lines of the default input file.
-In this case it does not close the file when the loop ends.
+In this case, the iterator does not close the file when the loop ends.
 
 In case of errors this function raises the error,
 instead of returning an error code.
@@ -7703,13 +7706,16 @@ instead of returning an error code.
 @LibEntry{file:read (@Cdots)|
 
 Reads the file @id{file},
-according to the given formats, which specify what to read.
-For each format,
+according to the given parameters, which specify what to read.
+Each parameter can be a number or a string;
+if it is a string,
+each character in the string is handled as a format item.
+For each format item in its parameters,
 the function returns a string or a number with the characters read,
 or @nil if it cannot read data with the specified format.
 (In this latter case,
 the function does not read subsequent formats.)
-When called without formats,
+When called without parameters,
 it uses a default format that reads the next line
 (see below).
 
@@ -7724,7 +7730,7 @@ This format always reads the longest input sequence that
 is a valid prefix for a numeral;
 if that prefix does not form a valid numeral
 (e.g., an empty string, @St{0x}, or @St{3.4e-}),
-it is discarded and the function returns @nil.
+it is discarded and the format returns @nil.
 }
 
 @item{@St{a}|
@@ -7852,7 +7858,8 @@ After this optional character,
 if @id{format} is the string @St{*t},
 then @id{date} returns a table with the following fields:
 @id{year}, @id{month} (1@En{}12), @id{day} (1@En{}31),
-@id{hour} (0@En{}23), @id{min} (0@En{}59), @id{sec} (0@En{}61),
+@id{hour} (0@En{}23), @id{min} (0@En{}59),
+@id{sec} (0@En{}61, due to leap seconds),
 @id{wday} (weekday, 1@En{}7, Sunday @N{is 1}),
 @id{yday} (day of the year, 1@En{}366),
 and @id{isdst} (daylight saving flag, a boolean).
@@ -7993,11 +8000,12 @@ and @id{isdst} (default is @nil).
 Other fields are ignored.
 For a description of these fields, see the @Lid{os.date} function.
 
-The values in these fields do not need to be inside their valid ranges.
+When the function is called,
+the values in these fields do not need to be inside their valid ranges.
 For instance, if @id{sec} is -10,
-it means -10 seconds from the time specified by the other fields;
+it means 10 seconds before the time specified by the other fields;
 if @id{hour} is 1000,
-it means +1000 hours from the time specified by the other fields.
+it means 1000 hours after the time specified by the other fields.
 
 The returned value is a number, whose meaning depends on your system.
 In @x{POSIX}, @x{Windows}, and some other systems,
@@ -8006,6 +8014,12 @@ of seconds since some given start time (the @Q{epoch}).
 In other systems, the meaning is not specified,
 and the number returned by @id{time} can be used only as an argument to
 @Lid{os.date} and @Lid{os.difftime}.
+
+When called with a table,
+@id{os.time} also normalizes all the fields
+documented in the @Lid{os.date} function,
+so that they represent the same time as before the call
+but with values inside their valid ranges.
 
 }
 
@@ -8309,7 +8323,7 @@ The options are:
 @description{
 @item{@T{-e @rep{stat}}| executes string @rep{stat};}
 @item{@T{-l @rep{mod}}| @Q{requires} @rep{mod} and assigns the
-  result to global @@rep{mod};}
+  result to global @rep{mod};}
 @item{@T{-i}| enters interactive mode after running @rep{script};}
 @item{@T{-v}| prints version information;}
 @item{@T{-E}| ignores environment variables;}
@@ -8493,6 +8507,11 @@ not a float.
 @itemize{
 
 @item{
+The function @Lid{lua_resume} has an extra parameter.
+This out parameter returns the number of values in
+the top of the stack that were yielded or returned by the coroutine.
+(In older versions,
+those values were the entire stack.)
 }
 
 }
