@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.170 2017/11/13 14:31:03 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.171 2018/02/22 17:41:02 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -751,10 +751,10 @@ In any case, if either the key or the value is collected,
 the whole pair is removed from the table.
 The weakness of a table is controlled by the
 @idx{__mode} field of its metatable.
-If the @idx{__mode} field is a string containing the @N{character @Char{k}},
-the keys in the table are weak.
-If @idx{__mode} contains @Char{v},
-the values in the table are weak.
+This field, if present, must be one of the following strings:
+@St{k}, for a table with weak keys;
+@St{v}, for a table with weak values;
+or @St{kv}, for a table with both weak keys and values.
 
 A table with weak keys and strong values
 is also called an @def{ephemeron table}.
@@ -1830,9 +1830,9 @@ that satisfies the following condition:
 (border == 0 or t[border] ~= nil) and t[border + 1] == nil
 }
 In words,
-a border is any (natural) index in a table
-where a non-nil value is followed by a nil value
-(or zero, when index 1 is nil).
+a border is any (natural) index present in the table
+that is followed by an absent index
+(or zero, when index 1 is absent).
 
 A table with exactly one border is called a @def{sequence}.
 For instance, the table @T{{10, 20, 30, 40, 50}} is a sequence,
@@ -3099,13 +3099,15 @@ in particular, @N{0 means} an empty stack.
 
 }
 
-@APIEntry{int lua_getuservalue (lua_State *L, int index);|
+@APIEntry{int lua_getiuservalue (lua_State *L, int index, int n);|
 @apii{0,1,-}
 
-Pushes onto the stack the Lua value associated with the full userdata
-at the given index.
+Pushes onto the stack the @id{n}-th user value associated with the
+full userdata at the given index and
+returns the type of the pushed value.
 
-Returns the type of the pushed value.
+If the userdata does not have that value,
+pushes @nil and returns @Lid{LUA_TNONE}.
 
 }
 
@@ -3375,13 +3377,16 @@ like any Lua object.
 
 }
 
-@APIEntry{void *lua_newuserdata (lua_State *L, size_t size);|
+@APIEntry{void *lua_newuserdatauv (lua_State *L, size_t size, int nuvalue);|
 @apii{0,1,m}
 
-This function allocates a new block of memory with the given size,
-pushes onto the stack a new full userdata with the block address,
-and returns this address.
-The host program can freely use this memory.
+This function creates and pushes on the stack a new full userdata,
+with @id{nuvalue} associated Lua values (called @id{user values})
+plus an associated block of raw memory with @id{size} bytes.
+(The user values can be set and read with the functions
+@Lid{lua_setiuservalue} and @Lid{lua_getiuservalue}.)
+
+The function returns the address of the block of memory.
 
 }
 
@@ -3997,11 +4002,13 @@ If @id{index} @N{is 0}, then all stack elements are removed.
 
 }
 
-@APIEntry{void lua_setuservalue (lua_State *L, int index);|
+@APIEntry{int lua_setiuservalue (lua_State *L, int index, int n);|
 @apii{1,0,-}
 
 Pops a value from the stack and sets it as
-the new value associated to the full userdata at the given index.
+the new @id{n}-th user value associated to the
+full userdata at the given index.
+Returns 0 if the userdata does not have that value.
 
 }
 
@@ -4181,7 +4188,7 @@ otherwise, the function returns @id{NULL}.
 @apii{0,0,-}
 
 If the value at the given index is a full userdata,
-returns its block address.
+returns its memory-block address.
 If the value is a light userdata,
 returns its pointer.
 Otherwise, returns @id{NULL}.
@@ -4195,7 +4202,7 @@ Returns the type of the value in the given valid index,
 or @id{LUA_TNONE} for a non-valid (but acceptable) index.
 The types returned by @Lid{lua_type} are coded by the following constants
 defined in @id{lua.h}:
-@defid{LUA_TNIL} (0),
+@defid{LUA_TNIL},
 @defid{LUA_TNUMBER},
 @defid{LUA_TBOOLEAN},
 @defid{LUA_TSTRING},
@@ -4360,6 +4367,8 @@ typedef struct lua_Debug {
   unsigned char nparams;      /* (u) number of parameters */
   char isvararg;              /* (u) */
   char istailcall;            /* (t) */
+  unsigned short fTransfer;   /* (r) index of first value transfered */
+  unsigned short nTransfer;   /* (r) number of transfered values */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   @rep{other fields}
@@ -4450,6 +4459,19 @@ the number of parameters of the function
 @item{@id{isvararg}|
 true if the function is a vararg function
 (always true for @N{C functions}).
+}
+
+@item{@id{fTransfer}|
+the index of the first local variable being @Q{transfered},
+which means parameters in a call or return values in a return.
+This value is only meaningful during a call hook or a return hook.
+(For call hooks, this value is always 1.)
+}
+
+@item{@id{nTransfer}|
+The number of values being transfered (see previous item).
+(For calls of Lua functions,
+this value is always equal to @id{nparams}.)
 }
 
 }
@@ -5064,7 +5086,7 @@ See @Lid{lua_type} for the encoding of types for @id{t}.
 
 Checks whether the function argument @id{arg} is a userdata
 of the type @id{tname} @seeC{luaL_newmetatable} and
-returns the userdata address @seeC{lua_touserdata}.
+returns the userdata's memory-block address @seeC{lua_touserdata}.
 
 }
 
@@ -5504,9 +5526,9 @@ void luaL_requiref (lua_State *L, const char *modname,
                     lua_CFunction openf, int glb);|
 @apii{0,1,e}
 
-If @id{modname} is not already present in @Lid{package.loaded},
+If @T{package.loaded[modname]} is not true,
 calls function @id{openf} with string @id{modname} as an argument
-and sets the call result in @T{package.loaded[modname]},
+and sets the call result to @T{package.loaded[modname]},
 as if that function has been called through @Lid{require}.
 
 If @id{glb} is true,
@@ -5865,7 +5887,7 @@ for i,v in ipairs(t) do @rep{body} end
 }
 will iterate over the key@En{}value pairs
 (@T{1,t[1]}), (@T{2,t[2]}), @ldots,
-up to the first nil value.
+up to the first absent index.
 
 }
 
@@ -5952,7 +5974,7 @@ The behavior of @id{next} is undefined if,
 during the traversal,
 you assign any value to a non-existent field in the table.
 You may however modify existing fields.
-In particular, you may clear existing fields.
+In particular, you may set existing fields to nil.
 
 }
 
@@ -7453,11 +7475,7 @@ in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.
-(The value @M{n-m} cannot be negative and must fit in a Lua integer.)
 The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
-
-This function is an interface to the underling
-pseudo-random generator function provided by C.
 
 }
 
@@ -7706,11 +7724,8 @@ instead of returning an error code.
 @LibEntry{file:read (@Cdots)|
 
 Reads the file @id{file},
-according to the given parameters, which specify what to read.
-Each parameter can be a number or a string;
-if it is a string,
-each character in the string is handled as a format item.
-For each format item in its parameters,
+according to the given formats, which specify what to read.
+For each format,
 the function returns a string or a number with the characters read,
 or @nil if it cannot read data with the specified format.
 (In this latter case,
@@ -8179,11 +8194,11 @@ represent variables with no known names
 
 }
 
-@LibEntry{debug.getuservalue (u)|
+@LibEntry{debug.getuservalue (u, n)|
 
-Returns the Lua value associated to @id{u}.
-If @id{u} is not a full userdata,
-returns @nil.
+Returns the @id{n}-th user value associated
+to the userdata @id{u} plus a boolean,
+@false if the userdata does not have that value.
 
 }
 
@@ -8254,13 +8269,14 @@ Otherwise, it returns the name of the upvalue.
 
 }
 
-@LibEntry{debug.setuservalue (udata, value)|
+@LibEntry{debug.setuservalue (udata, value, n)|
 
 Sets the given @id{value} as
-the Lua value associated to the given @id{udata}.
+the @id{n}-th user value associated to the given @id{udata}.
 @id{udata} must be a full userdata.
 
-Returns @id{udata}.
+Returns @id{udata},
+or @nil if the userdata does not have that value.
 
 }
 
@@ -8479,13 +8495,13 @@ change between versions.
 The coersion of strings to numbers in
 arithmetic and bitwise operations
 has been removed from the core language.
-The string library does a similar job using the string metamethods.
+The string library does a similar job for arithmetic operations
+using the string metamethods.
 However, unlike in previous versions,
 the new implementation preserves the implicit type of the numeral
 inside the string.
 For instance, the result of @T{"1" + "2"} now is an integer,
 not a float.
-
 }
 
 }
@@ -8507,8 +8523,20 @@ not a float.
 @itemize{
 
 @item{
+Full userdata now has an arbitrary number of associated user values.
+Therefore, the functions @id{lua_newuserdata},
+@id{lua_setuservalue}, and @id{lua_getuservalue} were
+replaced by @Lid{lua_newuserdatauv},
+@Lid{lua_setiuservalue}, and @Lid{lua_getiuservalue},
+which have an extra argument.
+
+(For compatibility, the old names still work as macros assuming
+one single user value.)
+}
+
+@item{
 The function @Lid{lua_resume} has an extra parameter.
-This out parameter returns the number of values in
+This out parameter returns the number of values on
 the top of the stack that were yielded or returned by the coroutine.
 (In older versions,
 those values were the entire stack.)
