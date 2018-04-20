@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.171 2018/02/22 17:41:02 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.172 2018/03/12 14:26:44 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -587,7 +587,7 @@ or @Lid{collectgarbage} in Lua.
 You can also use these functions to control
 the collector directly (e.g., stop and restart it).
 
-@sect3{@title{The incremental GC}
+@sect3{@title{Incremental Garbage Collection}
 
 In incremental mode,
 each GC cycle performs a mark-and-sweep collection in small steps
@@ -636,7 +636,7 @@ which makes for steps of approximately @N{8 Kbytes}.
 
 }
 
-@sect3{@title{The generational GC}
+@sect3{@title{Generational Garbage Collection}
 
 In generational mode,
 the collector does frequent @emph{minor} collections,
@@ -988,8 +988,9 @@ into the string contents.
 A short literal string cannot contain unescaped line breaks
 nor escapes not forming a valid escape sequence.
 
-We can specify any byte in a short literal string by its numeric value
-(including @x{embedded zeros}).
+We can specify any byte in a short literal string,
+including @x{embedded zeros},
+by its numeric value.
 This can be done
 with the escape sequence @T{\x@rep{XX}},
 where @rep{XX} is a sequence of exactly two hexadecimal digits,
@@ -1612,14 +1613,14 @@ With the exception of exponentiation and float division,
 the arithmetic operators work as follows:
 If both operands are integers,
 the operation is performed over integers and the result is an integer.
-Otherwise, if both operands are numbers
-or strings that can be converted to
-numbers @see{coercion},
+Otherwise, if both operands are numbers,
 then they are converted to floats,
 the operation is performed following the usual rules
 for floating-point arithmetic
 (usually the @x{IEEE 754} standard),
 and the result is a float.
+(The string library coerces strings to numbers in
+arithmetic operations; see @See{coercion} for details.)
 
 Exponentiation and float division (@T{/})
 always convert their operands to floats
@@ -1673,8 +1674,7 @@ Bitwise operators always convert float operands to integers.
 Exponentiation and float division
 always convert integer operands to floats.
 All other arithmetic operations applied to mixed numbers
-(integers and floats) convert the integer operand to a float;
-this is called the @def{usual rule}.
+(integers and floats) convert the integer operand to a float.
 The C API also converts both integers to floats and
 floats to integers, as needed.
 Moreover, string concatenation accepts numbers as arguments,
@@ -1740,12 +1740,12 @@ this new object is different from any previously existing object.
 A closure is always equal to itself.
 Closures with any detectable difference
 (different behavior, different definition) are always different.
-Closures created at different times but no detectable differences
+Closures created at different times but with no detectable differences
 may be classified as equal or not
 (depending on internal cashing details).
 
 You can change the way that Lua compares tables and userdata
-by using the @Q{eq} metamethod @see{metatable}.
+by using the @idx{__eq} metamethod @see{metatable}.
 
 Equality comparisons do not convert strings to numbers
 or vice versa.
@@ -1761,7 +1761,7 @@ then they are compared according to their mathematical values
 (regardless of their subtypes).
 Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
-Otherwise, Lua tries to call the @Q{lt} or the @Q{le}
+Otherwise, Lua tries to call the @idx{__lt} or the @idx{__le}
 metamethod @see{metatable}.
 A comparison @T{a > b} is translated to @T{b < a}
 and @T{a >= b} is translated to @T{b <= a}.
@@ -1800,8 +1800,6 @@ false and nil       --> false
 false or nil        --> nil
 10 and 20           --> 20
 }
-(In this manual,
-@T{-->} indicates the result of the preceding expression.)
 
 }
 
@@ -1954,7 +1952,7 @@ first @bnfNter{prefixexp} and @bnfNter{args} are evaluated.
 If the value of @bnfNter{prefixexp} has type @emph{function},
 then this function is called
 with the given arguments.
-Otherwise, the @bnfNter{prefixexp} @Q{call} metamethod is called,
+Otherwise, the @bnfNter{prefixexp} @idx{__call} metamethod is called,
 having as first argument the value of @bnfNter{prefixexp},
 followed by the original call arguments
 @see{metatable}.
@@ -2210,7 +2208,8 @@ all such macros use each of their arguments exactly once
 and so do not generate any hidden side-effects.
 
 As in most @N{C libraries},
-the Lua API functions do not check their arguments for validity or consistency.
+the Lua API functions do not check their arguments
+for validity or consistency.
 However, you can change this behavior by compiling Lua
 with the macro @defid{LUA_USE_APICHECK} defined.
 
@@ -2588,11 +2587,11 @@ The third field, @T{x},
 tells whether the function may raise errors:
 @Char{-} means the function never raises any error;
 @Char{m} means the function may raise out-of-memory errors
-and errors running a @idx{__gc} metamethod;
+and errors running a finalizer;
+@Char{v} means the function may raise the errors explained in the text;
 @Char{e} means the function may raise any errors
-(it can run arbitrary Lua code,
-either directly or through metamethods);
-@Char{v} means the function may raise an error on purpose.
+(because it can run arbitrary Lua code,
+either directly or through metamethods).
 
 
 @APIEntry{int lua_absindex (lua_State *L, int idx);|
@@ -2709,14 +2708,11 @@ Sets a new panic function and returns the old one @see{C-error}.
 @APIEntry{void lua_call (lua_State *L, int nargs, int nresults);|
 @apii{nargs+1,nresults,e}
 
+Calls a function.
 
-Calls a function
-(or a callable object, that is,
-an object with a @idx{__call} metamethod).
-
-To call a function you must use the following protocol:
-first, the function to be called is pushed onto the stack;
-then, the arguments to the function are pushed
+To do a call you must use the following protocol:
+first, the value to be called is pushed onto the stack;
+then, the arguments to the call are pushed
 in direct order;
 that is, the first argument is pushed first.
 Finally you call @Lid{lua_call};
@@ -2735,6 +2731,8 @@ so that after the call the last result is on the top of the stack.
 
 Any error while calling and running the function is propagated upwards
 (with a @id{longjmp}).
+Like regular Lua calls,
+this function respects the @idx{__call} metamethod.
 
 The following example shows how the host program can do the
 equivalent to this Lua code:
@@ -2948,7 +2946,7 @@ and therefore never returns
 }
 
 @APIEntry{int lua_gc (lua_State *L, int what, int data);|
-@apii{0,0,m}
+@apii{0,0,v}
 
 Controls the garbage collector.
 
@@ -2999,9 +2997,10 @@ returns a boolean that tells whether the collector is running
 }
 
 }
-
 For more details about these options,
 see @Lid{collectgarbage}.
+
+This function may raise errors when calling finalizers.
 
 }
 
@@ -3391,7 +3390,7 @@ The function returns the address of the block of memory.
 }
 
 @APIEntry{int lua_next (lua_State *L, int index);|
-@apii{1,2|0,e}
+@apii{1,2|0,v}
 
 Pops a key from the stack,
 and pushes a key@En{}value pair from the table at the given index
@@ -3420,6 +3419,8 @@ Recall that @Lid{lua_tolstring} may change
 the value at the given index;
 this confuses the next call to @Lid{lua_next}.
 
+This function may raise an error if the given key
+is neither @nil nor present in the table.
 See function @Lid{next} for the caveats of modifying
 the table during its traversal.
 
@@ -3585,22 +3586,18 @@ and return its results @seeC{lua_CFunction}.
 }
 
 @APIEntry{const char *lua_pushfstring (lua_State *L, const char *fmt, ...);|
-@apii{0,1,e}
+@apii{0,1,v}
 
 Pushes onto the stack a formatted string
 and returns a pointer to this string.
 It is similar to the @ANSI{sprintf},
-but has some important differences:
-@itemize{
-
-@item{
-You do not have to allocate space for the result:
+but has two important differences.
+First,
+you do not have to allocate space for the result;
 the result is a Lua string and Lua takes care of memory allocation
 (and deallocation, through garbage collection).
-}
-
-@item{
-The conversion specifiers are quite restricted.
+Second,
+the conversion specifiers are quite restricted.
 There are no flags, widths, or precisions.
 The conversion specifiers can only be
 @Char{%%} (inserts the character @Char{%}),
@@ -3611,13 +3608,9 @@ The conversion specifiers can only be
 @Char{%d} (inserts an @T{int}),
 @Char{%c} (inserts an @T{int} as a one-byte character), and
 @Char{%U} (inserts a @T{long int} as a @x{UTF-8} byte sequence).
-}
 
-}
-
-Unlike other push functions,
-this function checks for the stack space it needs,
-including the slot for its result.
+This function may raise errors due to memory overflow
+or an invalid conversion specifier.
 
 }
 
@@ -3722,7 +3715,7 @@ onto the stack.
 const char *lua_pushvfstring (lua_State *L,
                               const char *fmt,
                               va_list argp);|
-@apii{0,1,m}
+@apii{0,1,v}
 
 Equivalent to @Lid{lua_pushfstring}, except that it receives a @id{va_list}
 instead of a variable number of arguments.
@@ -4281,7 +4274,7 @@ and pushes them onto the stack @id{to}.
 }
 
 @APIEntry{int lua_yield (lua_State *L, int nresults);|
-@apii{?,?,e}
+@apii{?,?,v}
 
 This function is equivalent to @Lid{lua_yieldk},
 but it has no continuation @see{continuations}.
@@ -4299,7 +4292,7 @@ int lua_yieldk (lua_State *L,
                 int nresults,
                 lua_KContext ctx,
                 lua_KFunction k);|
-@apii{?,?,e}
+@apii{?,?,v}
 
 Yields a coroutine (thread).
 
@@ -4335,9 +4328,10 @@ it will continue the normal execution
 of the (Lua) function that triggered the hook.
 
 This function can raise an error if it is called from a thread
-with a pending C call with no continuation function,
+with a pending C call with no continuation function
+(what is called a @emphx{C-call boundary},
 or it is called from a thread that is not running inside a resume
-(e.g., the main thread).
+(typically the main thread).
 
 }
 
@@ -4367,8 +4361,8 @@ typedef struct lua_Debug {
   unsigned char nparams;      /* (u) number of parameters */
   char isvararg;              /* (u) */
   char istailcall;            /* (t) */
-  unsigned short fTransfer;   /* (r) index of first value transfered */
-  unsigned short nTransfer;   /* (r) number of transfered values */
+  unsigned short ftransfer;   /* (r) index of first value transferred */
+  unsigned short ntransfer;   /* (r) number of transferred values */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   @rep{other fields}
@@ -4461,15 +4455,20 @@ true if the function is a vararg function
 (always true for @N{C functions}).
 }
 
-@item{@id{fTransfer}|
-the index of the first local variable being @Q{transfered},
-which means parameters in a call or return values in a return.
-This value is only meaningful during a call hook or a return hook.
+@item{@id{ftransfer}|
+the index on the stack of the first value being @Q{transferred},
+that is, parameters in a call or return values in a return.
+(The other values are in consecutive indices.)
+Using this index, you can access and modify these values
+through @Lid{lua_getlocal} and @Lid{lua_setlocal}.
+This field is only meaningful during a
+call hook, denoting the first parameter,
+or a return hook, denoting the first value being returned.
 (For call hooks, this value is always 1.)
 }
 
-@item{@id{nTransfer}|
-The number of values being transfered (see previous item).
+@item{@id{ntransfer}|
+The number of values being transferred (see previous item).
 (For calls of Lua functions,
 this value is always equal to @id{nparams}.)
 }
@@ -4500,7 +4499,7 @@ Returns the current hook mask.
 }
 
 @APIEntry{int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);|
-@apii{0|1,0|1|2,e}
+@apii{0|1,0|1|2,m}
 
 Gets information about a specific function or function invocation.
 
@@ -4509,7 +4508,7 @@ the parameter @id{ar} must be a valid activation record that was
 filled by a previous call to @Lid{lua_getstack} or
 given as argument to a hook @seeC{lua_Hook}.
 
-To get information about a function you push it onto the stack
+To get information about a function, you push it onto the stack
 and start the @id{what} string with the character @Char{>}.
 (In that case,
 @id{lua_getinfo} pops the function from the top of the stack.)
@@ -4559,20 +4558,21 @@ Non-valid lines include empty lines and comments.)
 
 If this option is given together with option @Char{f},
 its table is pushed after the function.
+
+This is the only option that can raise a memory error.
 }
 
 }
 
-This function returns 0 on error
-(for instance, an invalid option in @id{what}).
+This function returns 0 if given an invalid option in @id{what}.
 
 }
 
 @APIEntry{const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);|
 @apii{0,0|1,-}
 
-Gets information about a local variable of
-a given activation record or a given function.
+Gets information about a local variable or a temporary value
+of a given activation record or a given function.
 
 In the first case,
 the parameter @id{ar} must be a valid activation record that was
@@ -5103,7 +5103,7 @@ are using the same address space.
 }
 
 @APIEntry{int luaL_dofile (lua_State *L, const char *filename);|
-@apii{0,?,e}
+@apii{0,?,m}
 
 Loads and runs the given file.
 It is defined as the following macro:
@@ -5168,7 +5168,7 @@ file-related functions in the standard library
 @apii{0,0|1,m}
 
 Pushes onto the stack the field @id{e} from the metatable
-of the object at index @id{obj} and returns the type of pushed value.
+of the object at index @id{obj} and returns the type of the pushed value.
 If the object does not have a metatable,
 or if the metatable does not have this field,
 pushes nothing and returns @id{LUA_TNIL}.
@@ -5178,9 +5178,9 @@ pushes nothing and returns @id{LUA_TNIL}.
 @APIEntry{int luaL_getmetatable (lua_State *L, const char *tname);|
 @apii{0,1,m}
 
-Pushes onto the stack the metatable associated with name @id{tname}
-in the registry @seeC{luaL_newmetatable}
-(@nil if there is no metatable associated with that name).
+Pushes onto the stack the metatable associated with the name @id{tname}
+in the registry @seeC{luaL_newmetatable},
+or @nil if there is no metatable associated with that name.
 Returns the type of the pushed value.
 
 }
@@ -5370,7 +5370,7 @@ Opens all standard Lua libraries into the given state.
 
 @APIEntry{
 T luaL_opt (L, func, arg, dflt);|
-@apii{0,0,e}
+@apii{0,0,-}
 
 This macro is defined as follows:
 @verbatim{
@@ -6138,7 +6138,7 @@ and @St{userdata}.
 
 A global variable (not a function) that
 holds a string containing the running Lua version.
-The current value of this variable is @St{Lua 5.3}.
+The current value of this variable is @St{Lua 5.4}.
 
 }
 
@@ -6328,7 +6328,7 @@ The path used by @Lid{require} to search for a @N{C loader}.
 
 Lua initializes the @N{C path} @Lid{package.cpath} in the same way
 it initializes the Lua path @Lid{package.path},
-using the environment variable @defid{LUA_CPATH_5_3},
+using the environment variable @defid{LUA_CPATH_5_4},
 or the environment variable @defid{LUA_CPATH},
 or a default path defined in @id{luaconf.h}.
 
@@ -6384,7 +6384,7 @@ plus other Unix systems that support the @id{dlfcn} standard).
 The path used by @Lid{require} to search for a Lua loader.
 
 At start-up, Lua initializes this variable with
-the value of the environment variable @defid{LUA_PATH_5_3} or
+the value of the environment variable @defid{LUA_PATH_5_4} or
 the environment variable @defid{LUA_PATH} or
 with a default path defined in @id{luaconf.h},
 if those environment variables are not defined.
@@ -6725,9 +6725,9 @@ x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
     end)
 --> x="4+5 = 9"
 
-local t = {name="lua", version="5.3"}
+local t = {name="lua", version="5.4"}
 x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
---> x="lua-5.3.tar.gz"
+--> x="lua-5.4.tar.gz"
 }
 
 }
@@ -7053,6 +7053,7 @@ because it would end at the same position of the previous match.
 
 }
 
+}
 
 @sect3{pack| @title{Format Strings for Pack and Unpack}
 
@@ -7124,8 +7125,6 @@ option @St{s} follows the alignment of its starting integer.
 
 All padding is filled with zeros by @Lid{string.pack}
 (and ignored by @Lid{string.unpack}).
-
-}
 
 }
 
@@ -7475,15 +7474,21 @@ in the range @C{(} @M{[0,1)}.  @C{]}
 When called with two integers @id{m} and @id{n},
 @id{math.random} returns a pseudo-random integer
 with uniform distribution in the range @M{[m, n]}.
-The call @T{math.random(n)} is equivalent to @T{math.random(1,n)}.
+The call @T{math.random(n)}, for a positive @id{n},
+is equivalent to @T{math.random(1,n)}.
+The call @T{math.random(0)} produces an integer with
+all bits random.
 
 }
 
-@LibEntry{math.randomseed (x)|
+@LibEntry{math.randomseed (x [, y])|
 
-Sets @id{x} as the @Q{seed}
+Sets @id{x} and @id{y} as the @Q{seed}
 for the pseudo-random generator:
 equal seeds produce equal sequences of numbers.
+The default for @id{y} is zero.
+Lua initializes its pseudo-random generator with
+the equivalent to a call @T{math.randomseed(0, 0)}.
 
 }
 
@@ -8353,7 +8358,7 @@ when the standard input (@id{stdin}) is a terminal,
 and as @T{lua -} otherwise.
 
 When called without option @T{-E},
-the interpreter checks for an environment variable @defid{LUA_INIT_5_3}
+the interpreter checks for an environment variable @defid{LUA_INIT_5_4}
 (or @defid{LUA_INIT} if the versioned name is not defined)
 before running any argument.
 If the variable content has the format @T{@At@rep{filename}},
@@ -8492,7 +8497,7 @@ change between versions.
 @itemize{
 
 @item{
-The coersion of strings to numbers in
+The coercion of strings to numbers in
 arithmetic and bitwise operations
 has been removed from the core language.
 The string library does a similar job for arithmetic operations
