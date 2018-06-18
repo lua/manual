@@ -1,4 +1,4 @@
-@Ci{$Id: manual.of,v 1.173 2018/04/20 19:31:53 roberto Exp roberto $}
+@Ci{$Id: manual.of,v 1.174 2018/06/18 19:14:16 roberto Exp roberto $}
 @C{[(-------------------------------------------------------------------------}
 @manual{
 
@@ -63,13 +63,13 @@ This section describes the basic concepts of the language.
 
 @sect2{TypesSec| @title{Values and Types}
 
-Lua is a @emph{dynamically typed language}.
+Lua is a dynamically typed language.
 This means that
 variables do not have types; only values do.
 There are no type definitions in the language.
 All values carry their own type.
 
-All values in Lua are @emph{first-class values}.
+All values in Lua are first-class values.
 This means that all values can be stored in variables,
 passed as arguments to other functions, and returned as results.
 
